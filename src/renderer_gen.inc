@@ -192,7 +192,10 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
     f |= T3_GEN_SHADOW;
     shadow = true;
   }
-  /* lights: the exact vector when the table has it, else the smallest one that covers the frame's */
+  /* lights: the exact vector when the table has it, else the smallest one that
+   * covers the frame's: its extra lights get inert values. With shadows the
+   * casters must match exactly (they come first in each type); extra
+   * unshadowed lights are covered the same way. */
   uint8_t want[4] = { 0, 0, 0, 0 };
   if (kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL) {
     want[0] = (uint8_t)r->ls.num_dir; want[1] = (uint8_t)r->ls.num_point; want[2] = (uint8_t)r->ls.num_spot; want[3] = (uint8_t)r->ls.num_hemi;
@@ -207,7 +210,7 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
     if (shadow && memcmp(p->cast, cast, 3)) continue;
     bool covers = true;
     int cost = 0;
-    for (int k = 0; k < 4; k++) { if (p->lights[k] < want[k] || (shadow && p->lights[k] != want[k])) covers = false; cost += p->lights[k]; }
+    for (int k = 0; k < 4; k++) { if (p->lights[k] < want[k]) covers = false; cost += p->lights[k]; }
     if (covers && cost < best_cost) { best = p; best_cost = cost; }
   }
   if (!best) {

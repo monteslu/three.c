@@ -100,7 +100,7 @@ pipeline, the state names and how to add a state.
 
 ## Same pixels as three.js r186
 
-`tools/parity-r186.mjs` renders 33 scenes (three.lua's compare scenes and
+`tools/parity-r186.mjs` renders 34 scenes (three.lua's compare scenes and
 three.c's feature scenes in `test/scenes`) with three.c and with unmodified
 three.js r186 on the same backend, and compares frame 100 (frame 3 for the
 compare scenes). A scene matches when at most 8 pixels differ by more than 2
@@ -109,8 +109,8 @@ paths produces.
 
 | Backend | three.js reference | Match | Differ |
 | --- | --- | --- | --- |
-| WebGPU | r186 WebGPURenderer on webgpu-node | 30 | 3, all r186 defects below |
-| GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 25 | 8: 4 r186 defects, 3 notes and 1 open bug below |
+| WebGPU | r186 WebGPURenderer on webgpu-node | 31 | 3, all r186 defects below |
+| GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 25 | 9: 4 r186 defects, 4 notes and 1 open bug below |
 
 The defects are three.js's. `tools/r186-defects/` reproduces each with
 three.js alone (no three.c) in Chromium, next to a control that shows the
@@ -133,7 +133,7 @@ materials that should not share it:
 On GLES, with nothing blended, no tone mapping and an sRGB output, three.c
 encodes colour in each program and draws straight to the screen instead of
 drawing into a half-float target and encoding in a separate pass, which
-saves about 0.07 ms per 720p frame of GPU time. The three GL notes come from
+saves about 0.07 ms per 720p frame of GPU time. The four GL notes come from
 the native bench drawing straight into its EGL pbuffer surface, where a few
 pixel-centre ties on triangle edges (specular sparkles, one box edge)
 resolve differently. The same three.c frames drawn into a framebuffer

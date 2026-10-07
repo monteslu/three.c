@@ -37,11 +37,11 @@ TFLAGS="$TFLAGS $SIMDF"
 LINKX=""
 [ "${PROFILE:-0}" = 1 ] && LINKX="--profiling-funcs"
 
-NEWEST_H=$(ls -t "$ROOT"/include/*.h "$ROOT"/src/*.h "$ROOT"/src/gen/*.h "$WASMCART"/include/*.h | head -1)
+NEWEST_H=$(ls -t "$ROOT"/include/*.h "$ROOT"/src/*.h "$ROOT"/src/*.inc "$ROOT"/src/gen/*.h "$WASMCART"/include/*.h | head -1)
 pids=()
 cc() { # out src flags...
   local o=$1 s=$2; shift 2
-  # Rebuild when the source OR ANY HEADER is newer: a struct that grew in
+  # Rebuild when the source OR ANY HEADER (or a .inc renderer.c includes) is newer: a struct that grew in
   # three.h left core.o allocating materials at the old size while renderer.o
   # wrote the new fields past the end (heap corruption that crashed Chromium).
   if [ ! -f "$o" ] || [ "$s" -nt "$o" ] || [ "$NEWEST_H" -nt "$o" ] || [ "${FORCE:-0}" = 1 ]; then

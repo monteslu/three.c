@@ -713,6 +713,69 @@ static void xm_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── t6-shadow-cover ──────────────────────────────────────────────── */
+static t3_mesh *sc_balls[3];
+static t3_light *sc_flash;
+static void sc_setup(void) {
+  R = make_renderer(0x182028);
+  t3_renderer_set_shadow_map(R, true, T3_PCF_SHADOW_MAP);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 5, 11);
+  t3_object_look_at(C, 0, 0.5f, 0);
+  enum { N = 16 };
+  static const uint8_t tints[6][3] = { { 200, 120, 90 }, { 90, 160, 220 }, { 230, 230, 240 }, { 60, 70, 60 }, { 160, 200, 140 }, { 120, 100, 180 } };
+  static uint8_t fd[6][N * N * 4];
+  const uint8_t *fp[6];
+  for (int f = 0; f < 6; f++) {
+    for (int i = 0; i < N * N; i++) { memcpy(fd[f] + i * 4, tints[f], 3); fd[f][i * 4 + 3] = 255; }
+    fp[f] = fd[f];
+  }
+  t3_texture *env = t3_cube_texture_new(N, fp);
+  env->generate_mipmaps = false;
+  env->min_filter = T3_LINEAR;
+  t3_scene_set_environment(S, env);
+  t3_release(env);
+  t3_geometry *pg = t3_plane_geometry_new(16, 16, 1, 1);
+  t3_material *gm = t3_mesh_standard_material_new(0x8090a0);
+  gm->roughness = 0.9f;
+  t3_mesh *ground = add_mesh(&S->base, pg, gm);
+  t3_object_set_rotation(ground, -3.141592653589793f / 2, 0, 0);
+  ground->base.receive_shadow = true;
+  t3_release(pg); t3_release(gm);
+  t3_geometry *geo = t3_sphere_geometry_new(0.8f, 32, 16);
+  static const uint32_t cols[3] = { 0xe05040, 0x40a0e0, 0xe0c040 };
+  for (int i = 0; i < 3; i++) {
+    t3_material *m = t3_mesh_standard_material_new(cols[i]);
+    m->roughness = 0.3f + i * 0.2f; m->metalness = i * 0.4f;
+    sc_balls[i] = add_mesh(&S->base, geo, m);
+    t3_object_set_position(sc_balls[i], (float)((i - 1) * 2.5), 0.8f, 0);
+    sc_balls[i]->base.cast_shadow = sc_balls[i]->base.receive_shadow = true;
+    t3_release(m);
+  }
+  t3_release(geo);
+  add_light(t3_hemisphere_light_new(0x8090ff, 0x302010, 0.6f));
+  t3_light *sun = t3_directional_light_new(0xffffff, 1.5f);
+  t3_object_set_position(sun, 4, 8, 3);
+  sun->base.cast_shadow = true;
+  sun->shadow->map_width = sun->shadow->map_height = 1024;
+  t3_camera *sh = sun->shadow->camera;
+  sh->left = -8; sh->right = 8; sh->top = 8; sh->bottom = -8; sh->near = 1; sh->far = 30;
+  t3_camera_update_projection_matrix(sh);
+  sun->shadow->bias = -0.0005f;
+  add_light(sun);
+  sc_flash = t3_point_light_new(0xffa040, 25, 0, 2);
+  t3_object_add(&S->base, sc_flash);
+  t3_release(sc_flash);
+}
+static void sc_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  t3_object_set_position(sc_flash, (float)(sin(t) * 3), 1.5f, (float)(cos(t) * 2 + 1));
+  for (int i = 0; i < 3; i++) sc_balls[i]->base.position.y = (float)(0.8 + fabs(sin(t * 2 + i)) * 0.8);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── w1-world-matrix ─────────────────────────────────────────────── */
 static t3_object *w1_group;
 static t3_mesh *w1_a, *w1_boxes[6];

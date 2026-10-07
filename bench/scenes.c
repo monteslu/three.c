@@ -1105,6 +1105,7 @@ const bench_scene bench_scenes[] = {
   { "t5-transparent-basic", t5_setup, t5_frame },
   { "p1-physical", p1_setup, p1_frame },
   { "p2-transmission", xm_setup, xm_frame },
+  { "t6-shadow-cover", sc_setup, sc_frame },
   { "q1-gpu-timer", q1_setup, q1_frame, q1_probe },
   { "x1-texture-from-gl", x1_setup, t1_frame },
   { "s1-stress", stress_setup, stress_frame, stress_probe },

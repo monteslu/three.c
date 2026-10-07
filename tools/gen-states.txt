@@ -685,3 +685,9 @@ standard+map+rep+instbig+nmap+ao+rmap+shadow+senv+icol+l1301+s100
 standard+map+rep+instbig+nmap+ao+rmap+shadow+senv+l1301+s100
 standard+map+rep+nmap+ao+rmap+shadow+senv+l1301+s100
 standard+shadow+senv+l1301+s100
+# the same game's second survey
+physical+instbig+shadow+senv+sheen+l1301+s100
+physical+shadow+senv+sheen+l1301+s100
+standard+instbig+shadow+senv+icol+l1301+s100
+physical+trans+senv+irid+l1301
+physical+trans+shadow+senv+irid+l1301+s100
