@@ -12,7 +12,10 @@
 #define MAX_BG 64
 
 struct pipe { t3_wgpu_state st; WGPURenderPipeline p; };
-struct bg { WGPUTextureView views[8]; WGPUSampler samplers[8]; uint32_t gen; WGPUBindGroup g; };
+struct bg { WGPUTextureView views[8]; WGPUSampler samplers[8]; uint32_t gen, epoch; WGPUBindGroup g; };
+/* bumped when three.c releases a view: a cached bind group keyed by a view
+ * pointer must not match a new view that reuses the address */
+static uint32_t view_epoch;
 
 struct gen_wgpu_prog {
   WGPUShaderModule vs, fs;
@@ -325,7 +328,7 @@ WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextur
   int nt = wg->n_tex[group];
   for (int k = 0; k < wg->n_bgs[group]; k++) {
     struct bg *b = &wg->bgs[group][k];
-    if (b->gen == w->stream_gen && !memcmp(b->views, views, sizeof(WGPUTextureView) * (size_t)nt) &&
+    if (b->gen == w->stream_gen && b->epoch == view_epoch && !memcmp(b->views, views, sizeof(WGPUTextureView) * (size_t)nt) &&
         !memcmp(b->samplers, samplers, sizeof(WGPUSampler) * (size_t)nt))
       return b->g;
   }
@@ -352,6 +355,7 @@ WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextur
   memcpy(b->views, views, sizeof(WGPUTextureView) * (size_t)nt);
   memcpy(b->samplers, samplers, sizeof(WGPUSampler) * (size_t)nt);
   b->gen = w->stream_gen;
+  b->epoch = view_epoch;
   b->g = bg;
   return bg;
 }
@@ -615,7 +619,9 @@ static void cube_mips_cpu(t3_wgpu *w, WGPUTexture tex, const uint8_t *faces, int
   }
 }
 
-struct tex { WGPUTexture t; WGPUTextureView v, v0; uint32_t version; int w, h; WGPUTextureFormat fmt; uint32_t levels; };
+struct dmap { WGPUTexture t; WGPUTextureView sample, faces[6]; int w, h; bool cube; uint32_t version; };
+struct tex { WGPUTexture t; WGPUTextureView v, v0; uint32_t version; int w, h; WGPUTextureFormat fmt; uint32_t levels;
+             bool borrowed_t, borrowed_v; /* t3_texture_adopt_wgpu: the embedder's texture / view, not released here */ };
 WGPUTextureView t3_wgpu_texture(t3_wgpu *w, t3_texture *t) {
   struct tex *x = t->_wgpu;
   if (x && x->version == t->version) return x->v;
@@ -700,9 +706,65 @@ static WGPUTextureView level_view(WGPUTexture t, WGPUTextureFormat fmt, uint32_t
 static void tex_drop(struct tex *x) {
   if (!x) return;
   if (x->v0) wgpuTextureViewRelease(x->v0);
-  if (x->v) wgpuTextureViewRelease(x->v);
-  if (x->t) wgpuTextureRelease(x->t);
+  if (x->v && !x->borrowed_v) wgpuTextureViewRelease(x->v);
+  if (x->t && !x->borrowed_t) wgpuTextureRelease(x->t);
   memset(x, 0, sizeof *x);
+  view_epoch++;
+}
+
+/* an embedder's texture as a t3_texture's image */
+void t3_wgpu_adopt(t3_texture *t, WGPUTexture tex, WGPUTextureView view, int levels, bool owns) {
+  struct tex *x = t->_wgpu;
+  if (x) tex_drop(x);
+  else { x = calloc(1, sizeof *x); T3_CHECK_ALLOC(x); t->_wgpu = x; }
+  x->t = tex;
+  x->borrowed_t = !owns;
+  if (view) { x->v = view; x->borrowed_v = !owns; }
+  else {
+    WGPUTextureViewDescriptor vd = { .format = WGPUTextureFormat_Undefined, .dimension = t->is_cube ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2D,
+                                     .mipLevelCount = (uint32_t)(levels > 0 ? levels : 1), .arrayLayerCount = t->is_cube ? 6 : 1, .aspect = WGPUTextureAspect_All };
+    x->v = wgpuTextureCreateView(tex, &vd);
+  }
+  x->version = t->version;
+  x->w = t->width; x->h = t->height; x->levels = (uint32_t)(levels > 0 ? levels : 1);
+}
+
+/* the WebGPU objects of a three.c object being freed (t3__wgpu_release) */
+void t3_wgpu_release(uint32_t kind, void *thing) {
+  switch (kind) {
+  case T3_KIND_TEXTURE: {
+    t3_texture *t = thing;
+    tex_drop(t->_wgpu);
+    free(t->_wgpu);
+    t->_wgpu = NULL;
+    break;
+  }
+  case T3_KIND_ATTRIBUTE: {
+    t3_attribute *a = thing;
+    struct vbuf *v = a->_wgpu;
+    if (v && v->b) wgpuBufferRelease(v->b);
+    free(v);
+    a->_wgpu = NULL;
+    break;
+  }
+  case T3_KIND_RENDER_TARGET:
+    t3_wgpu_render_target_free(thing);   /* (its texture goes with the texture) */
+    view_epoch++;
+    break;
+  case T3_KIND_GEOMETRY: {
+    t3_geometry *g = thing;
+    struct dmap *x = g->_wgpu;   /* the morph texture */
+    if (x) {
+      if (x->sample) wgpuTextureViewRelease(x->sample);
+      if (x->t) wgpuTextureRelease(x->t);
+      free(x);
+      view_epoch++;
+    }
+    g->_wgpu = NULL;
+    break;
+  }
+  default: break;
+  }
 }
 void t3_wgpu_render_target_free(t3_render_target *rt) {
   struct rtx *x = rt->_wgpu;
@@ -773,7 +835,6 @@ void t3_wgpu_render_target_done(t3_wgpu *w, t3_render_target *rt) {
 }
 
 /* ── shadow maps and morph arrays ────────────────────────────────────── */
-struct dmap { WGPUTexture t; WGPUTextureView sample, faces[6]; int w, h; bool cube; uint32_t version; };
 WGPUTextureView t3_wgpu_depth_map(t3_wgpu *w, void **slot, int width, int height, bool cube, WGPUTextureView *face_views) {
   struct dmap *x = *slot;
   if (!x || x->w != width || x->h != height || x->cube != cube) {

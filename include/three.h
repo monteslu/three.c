@@ -212,6 +212,20 @@ void t3_texture_adopt_gl(t3_texture *t, unsigned gl_name, int width, int height,
 /* exchange two textures' GL objects (with their sizes and pixels), e.g. to
  * hot-reload an image under the t3_texture materials already hold */
 void t3_texture_swap_gl(t3_texture *a, t3_texture *b);
+/* The WebGPU counterparts: an embedder's WGPUTexture (a 2D texture, or a cube
+ * of 6 layers made with a cube textureBindingViewDimension for compatibility
+ * mode) with `levels` mip levels, sampled by three.c and never written. view
+ * is the WGPUTextureView to sample (a cube view for a cube), or NULL for
+ * three.c to make one. Unlike GL, WebGPU samplers are separate objects: the
+ * t3_texture's wrap and filter fields choose them (a texture with one level
+ * gets T3_LINEAR minification). color_space as for t3_texture_from_gl. owns:
+ * true, three.c releases the texture and view when the t3_texture is
+ * released; false, the embedder releases them after that (and after the
+ * last render that used it). Returns NULL from a build without T3_WGPU. A
+ * cube adopted this way works as scene.background, envMap and as the source
+ * of t3_pmrem_from_cubemap. */
+t3_texture *t3_texture_from_wgpu(void *wgpu_texture, void *wgpu_view, int width, int height, int levels, bool is_cube, bool owns);
+void t3_texture_adopt_wgpu(t3_texture *t, void *wgpu_texture, void *wgpu_view, int width, int height, int levels, bool owns);
 /* CubeTexture from six size x size RGBA8 faces (px, nx, py, ny, pz, nz; each
  * row 0 = top, no flipY): mipmapped, linear */
 t3_texture *t3_cube_texture_new(int size, const uint8_t *const faces[6]);

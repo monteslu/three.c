@@ -393,7 +393,28 @@ static bool wgpu_clear(t3_renderer *r, bool color, bool depth) {
   return true;
 }
 
+void t3_texture_adopt_wgpu(t3_texture *t, void *texture, void *view, int w, int h, int levels, bool owns) {
+  t3__wgpu_release = t3_wgpu_release;   /* (an adopted texture may come before any renderer) */
+  free(t->pixels);
+  t->pixels = NULL;   /* never uploaded */
+  t->width = w;
+  t->height = h;
+  t->flip_y = false;
+  t->generate_mipmaps = false;
+  t3_wgpu_adopt(t, (WGPUTexture)texture, (WGPUTextureView)view, levels, owns);
+}
+t3_texture *t3_texture_from_wgpu(void *texture, void *view, int w, int h, int levels, bool is_cube, bool owns) {
+  t3_texture *t = t3_texture_new(1, 1, NULL);
+  if (is_cube) {
+    t->is_cube = t->needs_flip_env_map = true;
+    t->mapping = T3_CUBE_REFLECTION_MAPPING;
+  }
+  if (levels <= 1) t->min_filter = T3_LINEAR;
+  t3_texture_adopt_wgpu(t, texture, view, w, h, levels, owns);
+  return t;
+}
 void t3_renderer_use_wgpu(t3_renderer *r, void *device, void *queue, int out_format) {
+  t3__wgpu_release = t3_wgpu_release;
   r->wgpu = t3_wgpu_new((WGPUDevice)device, (WGPUQueue)queue, (WGPUTextureFormat)out_format);
   r->wg_out_format = out_format;
   r->auto_instancing = true;
@@ -418,5 +439,12 @@ void t3_renderer_wgpu_defer(t3_renderer *r, bool on) { (void)r; (void)on; }
 void t3_renderer_wgpu_submit(t3_renderer *r) { (void)r; }
 void t3_renderer_wgpu_set_encoder(t3_renderer *r, void *encoder) { (void)r; (void)encoder; }
 void t3_renderer_wgpu_set_output(t3_renderer *r, void *view, int format) { (void)r; (void)view; (void)format; }
+void t3_texture_adopt_wgpu(t3_texture *t, void *texture, void *view, int w, int h, int levels, bool owns) {
+  (void)t; (void)texture; (void)view; (void)w; (void)h; (void)levels; (void)owns;
+}
+t3_texture *t3_texture_from_wgpu(void *texture, void *view, int w, int h, int levels, bool is_cube, bool owns) {
+  (void)texture; (void)view; (void)w; (void)h; (void)levels; (void)is_cube; (void)owns;
+  return NULL;   /* (this three.c was built without T3_WGPU) */
+}
 static bool wgpu_clear(t3_renderer *r, bool color, bool depth) { (void)r; (void)color; (void)depth; return false; }
 #endif

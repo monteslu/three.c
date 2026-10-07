@@ -1,7 +1,8 @@
 /* The WebGPU embedder hooks: a t3_external_target drawn into the caller's
  * colour and depth views (its load ops, clear values and rect), recorded on
  * the caller's encoder, flip_y for attachments stored bottom-up, and
- * t3_renderer_render_depth_to on a caller's depth view. A MeshNormalMaterial
+ * t3_renderer_render_depth_to on a caller's depth view, and an embedder's
+ * cube (t3_texture_from_wgpu) as background and PMREM source. A MeshNormalMaterial
  * box seen at an angle colours each face by its normal, so a wrong front
  * face (back faces drawn) changes the picture, not just a mirror.
  *
@@ -81,6 +82,65 @@ static int distinct(const uint8_t *a) {
     if (k == n) seen[n++] = v;
   }
   return n;
+}
+
+
+/* six faces of one colour each, 0 / 255 per channel (exact as half floats too) */
+static const uint8_t face_rgb[6][3] = { { 255, 0, 0 }, { 0, 255, 0 }, { 0, 0, 255 }, { 255, 255, 0 }, { 0, 255, 255 }, { 255, 0, 255 } };
+#define CS 16
+/* an embedder's RGBA16Float cube (one level), as a procedural sky would make */
+static WGPUTexture half_cube(void) {
+  WGPUTextureBindingViewDimension bvd = { .chain = { .sType = WGPUSType_TextureBindingViewDimension }, .textureBindingViewDimension = WGPUTextureViewDimension_Cube };
+  WGPUTextureDescriptor d = { .nextInChain = &bvd.chain, .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst, .dimension = WGPUTextureDimension_2D,
+                              .size = { CS, CS, 6 }, .format = WGPUTextureFormat_RGBA16Float, .mipLevelCount = 1, .sampleCount = 1 };
+  WGPUTexture t = wgpuDeviceCreateTexture(dev, &d);
+  static uint16_t px[CS * CS * 4];
+  for (int f = 0; f < 6; f++) {
+    for (int i = 0; i < CS * CS; i++)
+      for (int c = 0; c < 4; c++) px[i * 4 + c] = c == 3 || face_rgb[f][c] ? 0x3C00 : 0;   /* 1.0 / 0.0 */
+    WGPUTexelCopyTextureInfo dst = { .texture = t, .origin = { 0, 0, (uint32_t)f }, .aspect = WGPUTextureAspect_All };
+    WGPUTexelCopyBufferLayout lay = { .bytesPerRow = CS * 8, .rowsPerImage = CS };
+    WGPUExtent3D ext = { CS, CS, 1 };
+    wgpuQueueWriteTexture(queue, &dst, px, sizeof px, &lay, &ext);
+  }
+  return t;
+}
+/* the same cube uploaded by three.c */
+static t3_texture *cpu_cube(void) {
+  static uint8_t faces[6][CS * CS * 4];
+  const uint8_t *fp[6];
+  for (int f = 0; f < 6; f++) {
+    for (int i = 0; i < CS * CS; i++) { memcpy(faces[f] + i * 4, face_rgb[f], 3); faces[f][i * 4 + 3] = 255; }
+    fp[f] = faces[f];
+  }
+  t3_texture *t = t3_cube_texture_new(CS, fp);
+  t->generate_mipmaps = false;
+  t->min_filter = T3_LINEAR;
+  return t;
+}
+/* a sky (background) and a mirror sphere lit by the sky's PMREM, into the caller's view */
+static void sky_frame(t3_renderer *r, t3_texture *cube, const t3_external_target *et, WGPUTexture ct, uint8_t *out) {
+  t3_scene *s = t3_scene_new();
+  t3_scene_set_background_texture(s, cube);
+  t3_pmrem_generator *pg = t3_pmrem_generator_new(r);
+  t3_render_target *env = t3_pmrem_from_cubemap(pg, cube);
+  t3_geometry *g = t3_sphere_geometry_new(1, 32, 16);
+  t3_material *m = t3_mesh_standard_material_new(0xffffff);
+  m->metalness = 1; m->roughness = 0.4f;
+  t3_material_set_texture(m, T3_ENV_MAP, env->texture);
+  t3_mesh *ball = t3_mesh_new(g, m);
+  t3_object_add(&s->base, ball);
+  t3_camera *cam = t3_perspective_camera_new(70, 1, 0.1f, 20);
+  t3_object_set_position(cam, 0.5f, 0.8f, 3);
+  t3_object_look_at(cam, 0, 0, 0);
+  t3_renderer_set_external_target(r, et);
+  t3_renderer_render(r, s, cam);
+  t3_renderer_wgpu_submit(r);
+  read_back(ct, false, out);
+  t3_release(ball); t3_release(g); t3_release(m); t3_release(cam);
+  t3_release(env);
+  t3_pmrem_generator_destroy(pg);
+  t3_release(s);
 }
 
 static int fails;
@@ -181,6 +241,29 @@ int main(void) {
     }
   printf("      render_depth_to flip_y: %d texels differ from the plain depth mirrored\n", nd);
   check(nd <= S / 4, "render_depth_to with flip_y stores the depth bottom-up");
+
+  /* E: an embedder's RGBA16Float cube (t3_texture_from_wgpu) as background and
+   * PMREM source: the same pixels as three.c's own upload of the same cube */
+  et.flip_y = false; et.load_color = et.load_depth = false;
+  static uint8_t ea[S * S * 4], eb[S * S * 4];
+  WGPUTexture hc = half_cube();
+  t3_texture *adopted = t3_texture_from_wgpu(hc, NULL, CS, CS, 1, true, false);
+  check(adopted != NULL, "t3_texture_from_wgpu made a texture");
+  sky_frame(r, adopted, &et, ct, ea);
+  t3_texture *own = cpu_cube();
+  sky_frame(r, own, &et, ct, eb);
+  int ne = differ(ea, eb, false);
+  printf("      adopted cube vs three.c's upload: %d texels differ, %d colours\n", ne, distinct(ea));
+  check(distinct(ea) >= 6, "the adopted cube drew a sky and a lit sphere");
+  check(ne <= 4, "an adopted cube draws as three.c's own upload of it (background and PMREM)");
+  t3_release(adopted);
+  t3_release(own);
+  wgpuTextureRelease(hc);   /* (the embedder's, released after the t3_texture) */
+  /* released textures' views are gone: a new texture must not hit a stale bind group */
+  t3_texture *again = cpu_cube();
+  sky_frame(r, again, &et, ct, ea);
+  check(differ(ea, eb, false) <= 4, "after releases, a new texture draws as before");
+  t3_release(again);
 
   const char *err = t3_renderer_last_error(r);
   check(!err, err ? err : "no renderer error");

@@ -76,6 +76,9 @@ WGPUBuffer t3_wgpu_floats(t3_wgpu *w, void **slot, const float *data, size_t n_f
 WGPUTextureView t3_wgpu_texture(t3_wgpu *w, t3_texture *t);
 WGPUTextureView t3_wgpu_data_texture(t3_wgpu *w, void **slot, int width, int height, WGPUTextureFormat fmt, const void *data, uint32_t bytes_per_row);
 WGPUSampler t3_wgpu_sampler(t3_wgpu *w, const t3_texture *t, bool compare);
+/* t3_texture_adopt_wgpu; and releasing a freed object's WebGPU side */
+void t3_wgpu_adopt(t3_texture *t, WGPUTexture tex, WGPUTextureView view, int levels, bool owns);
+void t3_wgpu_release(uint32_t kind, void *thing);
 /* a render target texture of a format, recreated when the size changes */
 WGPUTextureView t3_wgpu_target(t3_wgpu *w, void **slot, int width, int height, WGPUTextureFormat fmt, bool sampled);
 

@@ -35,6 +35,7 @@ void *t3__alloc(size_t size, uint32_t kind);
 /* Set by the renderer so releasing a geometry / texture / attribute frees its
  * GL objects (three.js's 'dispose' event). */
 extern void (*t3__gl_release)(uint32_t kind, void *thing);
+extern void (*t3__wgpu_release)(uint32_t kind, void *thing);   /* set by t3_renderer_use_wgpu */
 
 void t3__fatal(const char *what);
 

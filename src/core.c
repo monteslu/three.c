@@ -6,6 +6,7 @@
 #include "internal.h"
 
 void (*t3__gl_release)(uint32_t kind, void *thing);
+void (*t3__wgpu_release)(uint32_t kind, void *thing);
 
 /* ── the allocator (t3_set_allocator) ─────────────────────────────── */
 static void *(*g_malloc)(size_t);
@@ -81,6 +82,7 @@ void t3_release(void *thing) {
   case T3_KIND_TEXTURE: {
     t3_texture *t = thing;
     if (t3__gl_release && t->_gl) t3__gl_release(T3_KIND_TEXTURE, t);
+    if (t3__wgpu_release && t->_wgpu) t3__wgpu_release(T3_KIND_TEXTURE, t);
     free(t->pixels);
     free(t);
     break;
@@ -88,6 +90,7 @@ void t3_release(void *thing) {
   case T3_KIND_ATTRIBUTE: {
     t3_attribute *a = thing;
     if (t3__gl_release && a->_gl) t3__gl_release(T3_KIND_ATTRIBUTE, a);
+    if (t3__wgpu_release && a->_wgpu) t3__wgpu_release(T3_KIND_ATTRIBUTE, a);
     free(a->array);
     free(a);
     break;
@@ -95,6 +98,7 @@ void t3_release(void *thing) {
   case T3_KIND_RENDER_TARGET: {
     t3_render_target *rt = thing;
     if (t3__gl_release && rt->_gl) t3__gl_release(T3_KIND_RENDER_TARGET, rt);
+    if (t3__wgpu_release && rt->_wgpu) t3__wgpu_release(T3_KIND_RENDER_TARGET, rt);
     t3_release(rt->texture);
     t3_release(rt->depth_texture);
     free(rt);
@@ -1271,6 +1275,7 @@ void t3_object_traverse(void *p, void (*fn)(t3_object *, void *), void *ctx) {
 /* ── geometry lifetime (builders live in geometry.c) ─────────────── */
 static void geometry_free(t3_geometry *g) {
   if (t3__gl_release && g->_gl) t3__gl_release(T3_KIND_GEOMETRY, g);
+  if (t3__wgpu_release && g->_wgpu) t3__wgpu_release(T3_KIND_GEOMETRY, g);
   for (int i = 0; i < T3_ATTR_COUNT; i++) t3_release(g->attributes[i]);
   t3_release(g->index);
   for (int i = 0; i < g->morph_count; i++) {
