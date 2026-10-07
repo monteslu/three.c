@@ -128,7 +128,7 @@ const FEATURES = {
   sheen: (m) => { needs(m, 'sheen'); m.sheen = 0.5; },
   irid: (m) => { needs(m, 'iridescence'); m.iridescence = 0.5; },
   aniso: (m) => { needs(m, 'anisotropy'); m.anisotropy = 0.5; },
-  xmit: (m) => { needs(m, 'transmission'); m.transmission = 0.5; },           // the InstancedMesh has instance colours (setColorAt): an instanced vec3 attribute
+  transm: (m) => { needs(m, 'transmission'); m.transmission = 0.5; },           // the InstancedMesh has instance colours (setColorAt): an instanced vec3 attribute
   // the other maps, each its own texture so the manifest names its source;
   // a feature a material kind lacks is an error (the table never pairs them)
   nmap: (m) => { needs(m, 'normalMap'); m.normalMap = dataTexture(); },
@@ -357,6 +357,8 @@ async function capture(stateName, backend) {
   // the scene: one mesh with the material, lights for a lit kind, the fog
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100); camera.position.z = 4;
+  // transmission reads the camera's world position: make it a sentinel there
+  if (features.includes('transm')) camera.position.set(sentinel(), sentinel(), 4 + sentinel());
   const props = {};   // property name -> [value, bytesExpectedLinear?]
   const mat = KINDS[kind]();
   for (const f of features) FEATURES[f](mat);
@@ -392,7 +394,7 @@ async function capture(stateName, backend) {
       const a = sentinel(), rot = sentinel(); mat.anisotropy = a; mat.anisotropyRotation = rot;
       props['material.anisotropyVector'] = { kind: 'vec2', value: [a * Math.cos(rot), a * Math.sin(rot)] };
     }
-    if (features.includes('xmit')) {
+    if (features.includes('transm')) {
       setNum(mat, 'transmission', 'material.transmission'); setNum(mat, 'thickness', 'material.thickness');
       setNum(mat, 'attenuationDistance', 'material.attenuationDistance'); setColor(mat, 'attenuationColor', 'material.attenuationColor');
     }
@@ -567,6 +569,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
   props['renderer.viewport'] = { kind: 'vec4', value: [WORLD.vx, WORLD.vy, WORLD.vw, WORLD.vh], optional: true };
   props['renderer.halfHeight'] = { kind: 'f32', value: [WORLD.h / 2], optional: true };
   props['camera.worldMatrix'] = { kind: 'mat4', value: Array.from(camera.matrixWorld.elements), optional: true };
+  if (features.includes('transm')) { camera.updateMatrixWorld(); const cp = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld); props['camera.position'] = { kind: 'vec3', value: [cp.x, cp.y, cp.z], optional: true }; }   // (also the translation of camera.worldMatrix)
   // the normal matrix r186 uploads: Matrix3.getNormalMatrix(object.matrixWorld) (ModelNode.js)
   props['object.normalMatrix'] = { kind: 'mat3', value: Array.from(new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld).elements), optional: true };   // only programs that transform normals have it
   for (const [path, pos] of viewPos) {
@@ -727,6 +730,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     if (t.name === 'DFG_LUT') return 'dfg_lut';
     if (kind === 'output') return 'output';   // the framebuffer target the scene was drawn into
     if (AUX.has(kind)) return kind.startsWith('bg') ? 'background' : 'pmrem.source';
+    if (t.isFramebufferTexture) return 'viewport';   // ViewportTextureNode: a mipmapped copy of the framebuffer (transmission)
     return 'unknown:' + (t.name || t.constructor?.name); };
   const bufOf = (b) => (b.buffer instanceof ArrayBuffer ? b.buffer : b.buffer.buffer ?? b.buffer);
   const groups = [];

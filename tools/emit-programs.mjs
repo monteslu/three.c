@@ -20,7 +20,7 @@ const KINDS = ['basic', 'lambert', 'phong', 'standard', 'physical', 'depth', 'po
 // feature bits (64): the order is the C ABI of the table, append only
 const FEATURE_NAMES = ['map', 'vcol', 'fog', 'inst', 'trans', 'flat', 'rep', 'nearest', 'instbig', 'nmap', 'ao', 'emap', 'rmap', 'mmap',
   'amap', 'bump', 'spec', 'shadow', 'skin', 'morph', 'env', 'senv', 'lmap', 'noatten', 'tmlinear', 'tmreinhard', 'tmcineon', 'tmaces',
-  'tmagx', 'tmneutral', 'lin', 'fog2', 'clip', 'clipi', 'atest', 'tan', 'morphn', 'dmap', 'cenv', 'refr', 'mix', 'add', 'ds', 'bs', 'cm', 'icol', 'cc', 'ccn', 'sheen', 'irid', 'aniso', 'xmit'];
+  'tmagx', 'tmneutral', 'lin', 'fog2', 'clip', 'clipi', 'atest', 'tan', 'morphn', 'dmap', 'cenv', 'refr', 'mix', 'add', 'ds', 'bs', 'cm', 'icol', 'cc', 'ccn', 'sheen', 'irid', 'aniso', 'transm'];
 const FEATURE_BITS = Object.fromEntries(FEATURE_NAMES.map((n, i) => [n, 1n << BigInt(i)]));
 const SAMPLE = { float: 'T3_BK_SAMPLE_FLOAT', 'unfilterable-float': 'T3_BK_SAMPLE_UNFILTERABLE_FLOAT', depth: 'T3_BK_SAMPLE_DEPTH', sint: 'T3_BK_SAMPLE_SINT', uint: 'T3_BK_SAMPLE_UINT' };
 const DIM = { '2d': 'T3_BK_DIM_2D', '2d-array': 'T3_BK_DIM_2D_ARRAY', cube: 'T3_BK_DIM_CUBE', '3d': 'T3_BK_DIM_3D' };

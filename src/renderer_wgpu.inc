@@ -23,6 +23,14 @@ static WGPUTextureView wgpu_dfg(t3_renderer *r) {
 
 /* bind every group of gl for this draw: stream its uniform struct and extra
  * buffers, bind its textures; dynamic offsets in binding order */
+static t3_texture *vp_sampler(t3_renderer *r) {
+  if (!r->vp_sampler) {
+    r->vp_sampler = t3_texture_new(1, 1, NULL);
+    r->vp_sampler->mag_filter = T3_NEAREST;
+    r->vp_sampler->min_filter = T3_LINEAR_MIPMAP_LINEAR;
+  }
+  return r->vp_sampler;
+}
 static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, const t3_object *o, const t3_geometry *g,
                              WGPUTextureView output_view) {
   t3_wgpu *w = r->wgpu;
@@ -71,6 +79,10 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
         views[nt] = t3_wgpu_texture(w, (t3_texture *)tx);
         samplers[nt] = t3_wgpu_sampler(w, tx, false);
         if (!views[nt]) return false;
+      } else if (!strcmp(src, "viewport")) {   /* transmission's framebuffer copy, this side's */
+        views[nt] = (WGPUTextureView)r->wg_vp_view[m && m->side == T3_BACK_SIDE];
+        samplers[nt] = t3_wgpu_sampler(w, vp_sampler(r), false);
+        if (!views[nt]) return false;
       } else if (!strcmp(src, "morphTexture")) {
         if (!g || !g->morph_count) return false;
         void **slot = &((t3_geometry *)g)->_wgpu;
@@ -103,7 +115,24 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
 /* one draw with program gl; state: the material whose render state (side,
  * depth, blending) applies (a shadow caster's is a copy with r186's shadow
  * side) */
+/* transmission's framebuffer copy on WebGPU: the pass ends, the colour
+ * attachment drawn so far is copied (with its mipmaps), and the pass goes on
+ * with LOAD, as r186 WebGPUBackend.copyFramebufferToTexture */
+static void wgpu_viewport_copy(t3_renderer *r, int which) {
+  if (r->vp_done[which]) return;
+  r->vp_done[which] = true;
+  if (!r->wg_cur_src) { gen_note(r, "transmission: no copy of an external target's colour (it draws without the backdrop)"); return; }
+  t3_wgpu *w = r->wgpu;
+  t3_wgpu_end_pass(w);
+  r->wg_vp_view[which] = t3_wgpu_viewport_copy(w, &r->wg_vp[which], (WGPUTextureView)r->wg_cur_src, (WGPUTextureFormat)r->wg_cur_src_format,
+                                               r->wg_cur_w, r->wg_cur_h);
+  t3_wgpu_pass P = r->wg_cur_pass;
+  P.load_color = P.load_depth = true;
+  t3_wgpu_begin_pass(w, &P);
+}
+
 static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camera *cam, t3_gen_gl *gl, const t3_material *state) {
+  if (gl->src->features & T3_GEN_TRANSM) wgpu_viewport_copy(r, state->side == T3_BACK_SIDE);
   t3_object *o = it->object;
   const t3_material *m = it->material;
   t3_geometry *g = it->geometry;
@@ -311,7 +340,7 @@ static void wgpu_destination(t3_renderer *r, wgpu_dest *d) {
     r->wg_samples = T.samples;
     return;
   }
-  d->out = r->wg_ext_out ? (WGPUTextureView)r->wg_ext_out : t3_wgpu_target(w, &r->wg_out, r->width, r->height, r->wg_out_format, false);
+  d->out = r->wg_ext_out ? (WGPUTextureView)r->wg_ext_out : t3_wgpu_target(w, &r->wg_out, r->width, r->height, r->wg_out_format, true);
   d->depth = t3_wgpu_target(w, &r->wg_depth, r->width, r->height, WGPUTextureFormat_Depth24Plus, false);
   /* r186 draws straight into the canvas when the output needs no conversion
    * (no tone mapping, linear output colour space): no target, no output pass */
@@ -354,9 +383,22 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
     P.scissor = r->scissor_test; P.sx = r->sc_x; P.sy = r->sc_y; P.sw = r->sc_w; P.sh = r->sc_h;
   }
   t3_wgpu_begin_pass(w, &P);
+  backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r186's do) */
+  /* what transmission copies: the colour drawn into (the resolve target when multisampled) */
+  r->wg_cur_pass = P;
+  r->wg_cur_src = D.ext ? NULL : (void *)(D.resolve ? D.resolve : D.color);
+  r->wg_cur_src_format = r->wg_pass_format;
+  r->wg_cur_w = rt ? rt->width : r->width;
+  r->wg_cur_h = rt ? rt->height : r->height;
   gen_background(r, scene, cam);
   for (int i = 0; i < r->opaque.n; i++) wgpu_draw_item(r, &r->opaque.items[i], cam);
+  if (r->backpass.n) {
+    backpass_side(r, T3_BACK_SIDE);
+    for (int i = 0; i < r->backpass.n; i++) wgpu_draw_item(r, &r->backpass.items[i], cam);
+    backpass_side(r, T3_FRONT_SIDE);
+  }
   for (int i = 0; i < r->transparent.n; i++) wgpu_draw_item(r, &r->transparent.items[i], cam);
+  backpass_side(r, T3_DOUBLE_SIDE);
   t3_wgpu_end_pass(w);
   if (!D.direct) wgpu_output_pass(r, D.color, D.out);
   t3_wgpu_end_frame(w);

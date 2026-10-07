@@ -135,7 +135,7 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
     if (m->sheen > 0) f |= T3_GEN_SHEEN;
     if (m->iridescence > 0) f |= T3_GEN_IRID;
     if (m->anisotropy > 0) f |= T3_GEN_ANISO;
-    if (m->transmission > 0) f |= T3_GEN_XMIT;
+    if (m->transmission > 0) f |= T3_GEN_TRANSM;
   }
   /* instanced draws take r186's instanced-attribute program whatever the count
    * (its uniform-buffer program bakes the count into the shader) */
@@ -385,6 +385,7 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
     case GOP_DRAWBUF_SIZE: { float v[2] = { (float)r->width, (float)r->height }; memcpy(b, v, 8); break; }
     case GOP_HALF_HEIGHT: putf(b, (float)r->height * 0.5f); break;
     case GOP_CAM_WORLD: if (cam) memcpy(b, cam->base.matrix_world.e, 64); break;
+    case GOP_CAM_POS: if (cam) memcpy(b, cam->base.matrix_world.e + 12, 12); break;   /* the world position */
     case GOP_TONE_EXPOSURE: putf(b, r->tone_mapping_exposure); break;
     case GOP_SHADOW: {
       int type = op->sub >> 4, field = op->sub & 15;
@@ -710,6 +711,15 @@ static void gen_bind_textures_g(t3_renderer *r, t3_gen_gl *gl, const t3_material
   for (int i = 0; i < gl->n_textures; i++) {
     const char *src = gl->tex[i].layout->source;
     if (!strcmp(src, "dfg_lut")) { tu_bind(i, gen_dfg_texture(r), true); continue; }
+    if (!strcmp(src, "viewport")) {   /* transmission's framebuffer copy, this side's */
+      t3_render_target *v = r->vp_rt[m && m->side == T3_BACK_SIDE];
+      if (v) {
+        tu_bind(i, ((texture_gl *)v->texture->_gl)->tex, true);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+      }
+      continue;
+    }
     if (!strncmp(src, "shadow:", 7)) { gen_bind_shadow(r, src + 7, i); continue; }
     {
       const t3_texture *aux = !strcmp(src, "envMap") || !strcmp(src, "environment") ? r->aux.env
@@ -780,6 +790,11 @@ static void gen_prepare(t3_renderer *r, const t3_camera *cam) {
   r->gen_stage_n = 0;
   gen_prepare_list(r, &r->opaque, cam);
   gen_prepare_list(r, &r->transparent, cam);
+  if (r->backpass.n) {   /* the back-face pass's programs (BackSide) */
+    backpass_side(r, T3_BACK_SIDE);
+    gen_prepare_list(r, &r->backpass, cam);
+    backpass_side(r, T3_FRONT_SIDE);
+  }
   for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) r->gen_bound_buf[i] = 0;
   if (!r->gen_stage_n) return;
   if (!r->gen_ubo) glGenBuffers(1, &r->gen_ubo);
@@ -799,10 +814,46 @@ static void gen_draw(t3_renderer *r, const render_item *it, const t3_camera *cam
 }
 /* state: the material whose render state (side, depth, blending) applies:
  * the item's own, or for a shadow caster a copy with r186's shadow side */
+/* transmission's framebuffer copy on GLES: what has been drawn so far (the
+ * current framebuffer, resolved when multisampled) into a mipmapped texture
+ * of the framebuffer's type, as r186 copyFramebufferToTexture + mipmaps */
+static void gl_viewport_copy(t3_renderer *r, int which) {
+  if (r->vp_done[which]) return;
+  r->vp_done[which] = true;
+  int w = r->target ? r->target->width : r->width, h = r->target ? r->target->height : r->height;
+  t3_texture_type type = r->target ? r->target->texture->type : r->out_fbo && r->cur_fbo == r->out_fbo ? T3_HALF_FLOAT_TYPE : T3_UNSIGNED_BYTE_TYPE;
+  t3_render_target *v = r->vp_rt[which];
+  if (!v || v->width != w || v->height != h || v->texture->type != type) {
+    t3_release(v);
+    t3_render_target_options o = t3_render_target_options_default();
+    o.type = type;
+    o.mag_filter = T3_NEAREST;
+    o.min_filter = T3_LINEAR_MIPMAP_LINEAR;
+    o.generate_mipmaps = true;
+    o.depth_buffer = false;
+    v = r->vp_rt[which] = t3_render_target_new(w, h, &o);
+  }
+  GLuint src = r->cur_fbo;
+  int scissor = r->cur_scissor;
+  rt_gl *g = rt_setup(r, v);
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, src);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, g->fbo);
+  glDisable(GL_SCISSOR_TEST);   /* (the blit honours the scissor) */
+  glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+  if (scissor == 1) glEnable(GL_SCISSOR_TEST);
+  r->cur_scissor = scissor;
+  glBindFramebuffer(GL_FRAMEBUFFER, src);
+  r->fb_known = true;
+  r->cur_fbo = src;
+  tu_bind(T3_SCRATCH_UNIT, ((texture_gl *)v->texture->_gl)->tex, true);
+  glGenerateMipmap(GL_TEXTURE_2D);
+}
+
 static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *cam, t3_gen_gl *gl, const t3_material *state) {
   t3_object *o = it->object;
   const t3_material *m = it->material;
   t3_geometry *g = it->geometry;
+  if (gl->src->features & T3_GEN_TRANSM) gl_viewport_copy(r, state->side == T3_BACK_SIDE);
   if (r->cur_program != gl->program) {
     glUseProgram(gl->program);
     r->cur_program = gl->program;

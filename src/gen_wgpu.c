@@ -928,6 +928,46 @@ WGPUSampler t3_wgpu_sampler(t3_wgpu *w, const t3_texture *t, bool cmp) {
   if (w->n_samplers < 64) w->samplers[w->n_samplers++] = (struct sampler_entry){ key, s };
   return s;
 }
+/* r186 ViewportTextureNode (transmission): a mipmapped copy of src, a view of
+ * the colour attachment just drawn into (no pass open), at its format.
+ * Level 0 is a same-size blit with the mipmap pipeline, then the chain. */
+struct vpcopy { WGPUTexture t; WGPUTextureView v; int w, h; WGPUTextureFormat fmt; uint32_t levels; };
+WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView src, WGPUTextureFormat fmt, int width, int height) {
+  struct vpcopy *x = *slot;
+  if (!x || x->w != width || x->h != height || x->fmt != fmt) {
+    if (x) { wgpuTextureViewRelease(x->v); wgpuTextureRelease(x->t); view_epoch++; }
+    else { x = calloc(1, sizeof *x); T3_CHECK_ALLOC(x); *slot = x; }
+    uint32_t levels = 1;
+    for (int m = width > height ? width : height; m > 1; m >>= 1) levels++;
+    WGPUTextureDescriptor d = { .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_RenderAttachment, .dimension = WGPUTextureDimension_2D,
+      .size = { (uint32_t)width, (uint32_t)height, 1 }, .format = fmt, .mipLevelCount = levels, .sampleCount = 1 };
+    x->t = wgpuDeviceCreateTexture(w->dev, &d);
+    x->v = wgpuTextureCreateView(x->t, NULL);
+    x->w = width; x->h = height; x->fmt = fmt; x->levels = levels;
+  }
+  WGPURenderPipeline p = mip_pipeline(w, fmt);
+  WGPUBindGroupLayout bgl = wgpuRenderPipelineGetBindGroupLayout(p, 0);
+  WGPUTextureViewDescriptor dv = { .format = fmt, .dimension = WGPUTextureViewDimension_2D, .baseMipLevel = 0, .mipLevelCount = 1,
+                                   .baseArrayLayer = 0, .arrayLayerCount = 1, .aspect = WGPUTextureAspect_All };
+  WGPUTextureView dst = wgpuTextureCreateView(x->t, &dv);
+  WGPUBindGroupEntry e[3] = { { .binding = 0, .sampler = w->mip_sampler }, { .binding = 1, .textureView = src },
+                              { .binding = 2, .buffer = w->mip_noflip, .size = 4 } };
+  WGPUBindGroupDescriptor bd = { .layout = bgl, .entryCount = 3, .entries = e };
+  WGPUBindGroup bg = wgpuDeviceCreateBindGroup(w->dev, &bd);
+  WGPURenderPassColorAttachment ca = { .view = dst, .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED, .loadOp = WGPULoadOp_Clear, .storeOp = WGPUStoreOp_Store };
+  WGPURenderPassDescriptor pd = { .colorAttachmentCount = 1, .colorAttachments = &ca };
+  WGPURenderPassEncoder pe = wgpuCommandEncoderBeginRenderPass(w->enc, &pd);
+  wgpuRenderPassEncoderSetPipeline(pe, p);
+  wgpuRenderPassEncoderSetBindGroup(pe, 0, bg, 0, NULL);
+  wgpuRenderPassEncoderDraw(pe, 3, 1, 0, 0);
+  wgpuRenderPassEncoderEnd(pe);
+  wgpuRenderPassEncoderRelease(pe);
+  wgpuBindGroupRelease(bg);
+  wgpuTextureViewRelease(dst);
+  wgpuBindGroupLayoutRelease(bgl);
+  if (x->levels > 1) generate_mipmaps(w, x->t, fmt, x->levels);
+  return x->v;
+}
 WGPUTextureView t3_wgpu_target(t3_wgpu *w, void **slot, int width, int height, WGPUTextureFormat fmt, bool sampled) {
   struct target *x = *slot;
   if (x && x->w == width && x->h == height && x->fmt == fmt) return x->view;

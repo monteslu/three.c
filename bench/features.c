@@ -667,6 +667,52 @@ static void p1_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── p2-transmission ─────────────────────────────────────────────── */
+static t3_mesh *xm_blocks[4];
+static void xm_setup(void) {
+  R = make_renderer(0x202830);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(45, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 0.5f, 9);
+  t3_object_look_at(C, 0, 0, 0);
+  static const uint32_t stripes[4] = { 0xe04040, 0xe0e040, 0x40c060, 0x4080e0 };
+  t3_geometry *sg = t3_box_geometry_new(0.6f, 6, 0.2f, 1, 1, 1);
+  for (int i = 0; i < 12; i++) {
+    t3_material *m = t3_mesh_standard_material_new(stripes[i % 4]);
+    m->roughness = 0.7f;
+    t3_mesh *st = add_mesh(&S->base, sg, m);
+    t3_object_set_position(st, -6.6f + i * 1.2f, 0, -2);
+    t3_release(m);
+  }
+  t3_release(sg);
+  t3_geometry *geo = t3_box_geometry_new(1.6f, 1.6f, 1.6f, 1, 1, 1);
+  for (int i = 0; i < 4; i++) {
+    t3_material *m = t3_mesh_physical_material_new(i == 3 ? 0xfff0e0 : 0xffffff);
+    m->metalness = 0;
+    m->transmission = 1;
+    switch (i) {
+    case 0: m->roughness = 0.05f; m->thickness = 0.5f; m->ior = 1.5f; break;
+    case 1: m->roughness = 0.45f; m->thickness = 0.5f; m->ior = 1.5f; break;
+    case 2: m->roughness = 0.1f; m->thickness = 2; m->ior = 1.4f; m->attenuation_color = t3_color_hex(0x40c0ff); m->attenuation_distance = 1.5f; break;
+    case 3: m->transmission = 0.9f; m->roughness = 0.15f; m->thickness = 1; m->ior = 1.6f; m->side = T3_DOUBLE_SIDE; break;
+    }
+    xm_blocks[i] = add_mesh(&S->base, geo, m);
+    t3_object_set_position(xm_blocks[i], -3.6f + i * 2.4f, 0, 0);
+    t3_release(m);
+  }
+  t3_release(geo);
+  add_light(t3_ambient_light_new(0x606070, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 2);
+  t3_object_set_position(sun, 3, 5, 4);
+  add_light(sun);
+}
+static void xm_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  for (int i = 0; i < 4; i++) t3_object_set_rotation(xm_blocks[i], (float)(t * 0.4 + i), (float)(t * 0.6), 0);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── w1-world-matrix ─────────────────────────────────────────────── */
 static t3_object *w1_group;
 static t3_mesh *w1_a, *w1_boxes[6];

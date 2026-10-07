@@ -281,3 +281,18 @@ physical+cc+sheen+irid+aniso+trans+shadow+senv+l1001
 physical+cc+sheen+irid+aniso+instbig+shadow+senv+l1001
 physical+cc+sheen+irid+aniso+instbig+icol+shadow+senv+l1001
 physical+cc+sheen+irid+aniso+trans+instbig+icol+shadow+senv+l1001
+# transmission (r186 framebuffer copy); bs: the back-face pass of a double-sided one
+physical+transm
+physical+transm+shadow+senv+l1001
+physical+transm+instbig+shadow+senv+l1001
+physical+transm+instbig+icol+shadow+senv+l1001
+physical+map+rep+nmap+ao+rmap+transm+shadow+senv+l1001
+physical+map+rep+nmap+ao+rmap+transm+instbig+shadow+senv+l1001
+physical+map+rep+nmap+ao+rmap+transm+instbig+icol+shadow+senv+l1001
+physical+transm+bs
+physical+transm+bs+shadow+senv+l1001
+physical+transm+bs+instbig+shadow+senv+l1001
+physical+transm+bs+instbig+icol+shadow+senv+l1001
+physical+map+rep+nmap+ao+rmap+transm+bs+shadow+senv+l1001
+physical+map+rep+nmap+ao+rmap+transm+bs+instbig+shadow+senv+l1001
+physical+map+rep+nmap+ao+rmap+transm+bs+instbig+icol+shadow+senv+l1001

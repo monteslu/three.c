@@ -95,7 +95,7 @@ static const struct { const char *tail; uint8_t op; } OPS[] = {
   { "hemisphere[].skyColor", GOP_HEMI_SKY }, { "hemisphere[].groundColor", GOP_HEMI_GROUND }, { "hemisphere[].position", GOP_HEMI_POS },
   { "fog.color", GOP_FOG_COLOR }, { "fog.near", GOP_FOG_NEAR }, { "fog.far", GOP_FOG_FAR }, { "fog.density", GOP_FOG_DENSITY },
   { "renderer.viewport", GOP_VIEWPORT_RECT }, { "renderer.viewportSize", GOP_VIEWPORT_SIZE },
-  { "renderer.drawingBufferSize", GOP_DRAWBUF_SIZE }, { "renderer.halfHeight", GOP_HALF_HEIGHT }, { "camera.worldMatrix", GOP_CAM_WORLD },
+  { "renderer.drawingBufferSize", GOP_DRAWBUF_SIZE }, { "renderer.halfHeight", GOP_HALF_HEIGHT }, { "camera.worldMatrix", GOP_CAM_WORLD }, { "camera.position", GOP_CAM_POS },
   { "renderer.toneMappingExposure", GOP_TONE_EXPOSURE },
   { "skin.bindMatrix", GOP_SKIN_BIND }, { "skin.bindMatrixInverse", GOP_SKIN_BIND_INV },
   { "morph.baseInfluence", GOP_MORPH_BASE }, { "morph.influence[]", GOP_MORPH_INFLUENCE },

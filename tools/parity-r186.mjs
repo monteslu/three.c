@@ -22,7 +22,7 @@ if (wgpu) out = join(out, 'wgpu');
 mkdirSync(out, { recursive: true });
 const FEATURES = ['t1-texture', 't2-fog', 't3-shadow-dir', 't4-shadow-spot-point', 'g1-box-textured', 'g2-cesium-man', 'g3-morph-cube',
   'g4-water-bottle', 'g5-normal-tangent', 'r1-render-target', 'r2-tone-mapping', 'r4-env-map', 'r5-pmrem', 'r6-sprite-points',
-  'r7-lod', 'r9-physical-lights', 'r10-light-map', 'w1-world-matrix', 'i1-instance-color', 't5-transparent-basic', 'p1-physical'];
+  'r7-lod', 'r9-physical-lights', 'r10-light-map', 'w1-world-matrix', 'i1-instance-color', 't5-transparent-basic', 'p1-physical', 'p2-transmission'];
 const scenes = ['01-cubes', '02-lit', '03-instanced', '04-geometry', '05-heavy', '06-heavy-instanced', '07-static-instanced', '09-static-64', '10-static-256', '11-mixed', '12-suzanne']
   .concat(FEATURES)
   .filter((s) => !want.length || want.some((w) => s.startsWith(w)));

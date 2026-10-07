@@ -64,9 +64,9 @@ typedef enum { T3_GEN_BASIC, T3_GEN_LAMBERT, T3_GEN_PHONG, T3_GEN_STANDARD, T3_G
 #define T3_GEN_SHEEN 281474976710656ull
 #define T3_GEN_IRID 562949953421312ull
 #define T3_GEN_ANISO 1125899906842624ull
-#define T3_GEN_XMIT 2251799813685248ull
+#define T3_GEN_TRANSM 2251799813685248ull
 /* the feature names by bit, as in state names */
-#define T3_GEN_FEATURE_NAMES { "map", "vcol", "fog", "inst", "trans", "flat", "rep", "nearest", "instbig", "nmap", "ao", "emap", "rmap", "mmap", "amap", "bump", "spec", "shadow", "skin", "morph", "env", "senv", "lmap", "noatten", "tmlinear", "tmreinhard", "tmcineon", "tmaces", "tmagx", "tmneutral", "lin", "fog2", "clip", "clipi", "atest", "tan", "morphn", "dmap", "cenv", "refr", "mix", "add", "ds", "bs", "cm", "icol", "cc", "ccn", "sheen", "irid", "aniso", "xmit" }
+#define T3_GEN_FEATURE_NAMES { "map", "vcol", "fog", "inst", "trans", "flat", "rep", "nearest", "instbig", "nmap", "ao", "emap", "rmap", "mmap", "amap", "bump", "spec", "shadow", "skin", "morph", "env", "senv", "lmap", "noatten", "tmlinear", "tmreinhard", "tmcineon", "tmaces", "tmagx", "tmneutral", "lin", "fog2", "clip", "clipi", "atest", "tan", "morphn", "dmap", "cenv", "refr", "mix", "add", "ds", "bs", "cm", "icol", "cc", "ccn", "sheen", "irid", "aniso", "transm" }
 
 /* where a renderer-side property lives in the program's uniform data:
  * "material.color" -> group (index into groups), byte offset and length;

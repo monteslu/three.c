@@ -135,6 +135,14 @@ struct t3_renderer {
   t3_scene *env_scene;    /* the scene being rendered (its environment intensity / rotation) */
 
   render_list opaque, transparent, scratch;
+  /* transmission (r186): double-sided transmissive items, drawn back faces
+   * first; and per render, the framebuffer copied once for each side at its
+   * first transmissive draw ([0] front, [1] back: r186's two ViewportTextureNodes) */
+  render_list backpass;
+  bool vp_done[2];
+  t3_render_target *vp_rt[2];   /* GL copies */
+  void *wg_vp[2], *wg_vp_view[2];   /* WebGPU copies */
+  t3_texture *vp_sampler;       /* the copies' filtering (FramebufferTexture: nearest, mipmapped minification) */
   /* per-frame batch table, filled while the scene is walked */
   struct batch_entry *batches;
   int batch_n, batch_cap;
@@ -235,6 +243,10 @@ struct t3_renderer {
   bool exact_output;   /* t3_renderer_set_exact_output: always r186's output pass */
   int wg_pass_format, wg_depth_format, wg_samples;
   bool wg_flip;   /* the pass's target is stored bottom-up (t3_external_target.flip_y) */
+#ifdef T3_WGPU
+  t3_wgpu_pass wg_cur_pass;     /* the scene pass, restarted after a transmission copy */
+#endif
+  void *wg_cur_src; int wg_cur_src_format, wg_cur_w, wg_cur_h;
   void *wg_ext_out; int wg_ext_out_format;   /* an embedder's output view (t3_renderer_wgpu_set_output) */   /* the attachments of the pass being recorded */
   /* the generated programs' environment / background / PMREM values for the
    * draw being filled (renderer_gen.inc, renderer_env.inc) */
@@ -341,6 +353,9 @@ void t3_renderer_destroy(t3_renderer *r) {
   if (!r) return;
   if (r->info.gpu_timer_supported == 1) glDeleteQueries(4, r->gq);
   t3_release(r->bg_sphere);
+  for (int i = 0; i < 2; i++) t3_release(r->vp_rt[i]);
+  t3_release(r->vp_sampler);
+  free(r->backpass.items);
   pm186_free(r);
 #ifdef T3_WGPU
   for (int i = 0; i < r->gen_n; i++) if (r->wgpu) t3_gen_wgpu_free(r->gen[i].gl); else t3_gen_gl_free(r->gen[i].gl);
@@ -1239,10 +1254,7 @@ static void rt_finish(t3_renderer *r, t3_render_target *rt) {
   rt_gl *g = rt->_gl;
   if (!g) return;
   t3_texture *t = rt->texture;
-  if (needs_mipmaps(t)) {
-    tu_bind(T3_SCRATCH_UNIT, ((texture_gl *)t->_gl)->tex, true);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  }
+  /* resolve first: the mipmaps are built from the resolved image */
   if (rt->samples) {
     GLbitfield mask = GL_COLOR_BUFFER_BIT | (rt->depth_buffer ? GL_DEPTH_BUFFER_BIT : 0) |
                       (rt->stencil_buffer ? GL_STENCIL_BUFFER_BIT : 0);
@@ -1252,6 +1264,10 @@ static void rt_finish(t3_renderer *r, t3_render_target *rt) {
     glBindFramebuffer(GL_FRAMEBUFFER, g->msaa_fbo);
     r->fb_known = true;
     r->cur_fbo = g->msaa_fbo;
+  }
+  if (needs_mipmaps(t)) {
+    tu_bind(T3_SCRATCH_UNIT, ((texture_gl *)t->_gl)->tex, true);
+    glGenerateMipmap(GL_TEXTURE_2D);
   }
 }
 
@@ -1459,6 +1475,11 @@ static void list_push(render_list *l, render_item it) {
   }
   l->items[l->n++] = it;
 }
+/* the materials of the back-face pass, set to one side for a pass (r186
+ * mutates material.side the same way) */
+static void backpass_side(t3_renderer *r, t3_side side) {
+  for (int i = 0; i < r->backpass.n; i++) ((t3_material *)r->backpass.items[i].material)->side = side;
+}
 
 /* Frustum.intersectsObject: the geometry's bounding sphere through the world
  * matrix. World matrices are affine, so the centre needs no divide
@@ -1488,9 +1509,11 @@ static float item_z(const t3_renderer *r, const t3_object *o) {
 T3_HOT static void push_mesh_item(t3_renderer *r, t3_object *o, t3_geometry *g, t3_material *m, const t3_group *grp,
                            bool can_batch) {
   if (!m || !m->visible) return;
-  if (can_batch && !m->transparent) { batch_add(r, o, g, m, grp); return; }
+  /* r186 RenderList: transmission goes with the transparent objects */
+  bool tr = m->transparent || (m->type == T3_MESH_PHYSICAL_MATERIAL && m->transmission > 0);
+  if (can_batch && !tr) { batch_add(r, o, g, m, grp); return; }
   render_item it = { o, g, m, grp, item_z(r, o), o->render_order, 0, 0 };
-  list_push(m->transparent ? &r->transparent : &r->opaque, it);
+  list_push(tr ? &r->transparent : &r->opaque, it);
 }
 
 /* projectObject for one object (not its children). in_frustum: the frustum
@@ -2149,6 +2172,15 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   finish_batches(r);
   sort_items(&r->opaque, &r->scratch, painter_sort);
   sort_items(&r->transparent, &r->scratch, reverse_painter_sort);
+  /* r186 _renderTransparents: double-sided transmissive objects draw their back
+   * faces first (material.side set to BackSide, then FrontSide for the
+   * transparent list, then back to DoubleSide) */
+  r->backpass.n = 0;
+  r->vp_done[0] = r->vp_done[1] = false;
+  for (int i = 0; i < r->transparent.n; i++) {
+    const t3_material *m = r->transparent.items[i].material;
+    if (m->type == T3_MESH_PHYSICAL_MATERIAL && m->transmission > 0 && m->side == T3_DOUBLE_SIDE) list_push(&r->backpass, r->transparent.items[i]);
+  }
 
   r->info.programs = (unsigned)r->gen_n;
   gen_env_prepare(r, scene);
@@ -2197,11 +2229,18 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
                       (r->auto_clear ? GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT : 0);
     glClear(bits);
   }
+  backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r186's do) */
   gen_prepare(r, cam);
   gen_background(r, scene, cam);
 
   for (int i = 0; i < r->opaque.n; i++) draw_item(r, &r->opaque.items[i], cam);
+  if (r->backpass.n) {
+    backpass_side(r, T3_BACK_SIDE);
+    for (int i = 0; i < r->backpass.n; i++) draw_item(r, &r->backpass.items[i], cam);
+    backpass_side(r, T3_FRONT_SIDE);
+  }
   for (int i = 0; i < r->transparent.n; i++) draw_item(r, &r->transparent.items[i], cam);
+  backpass_side(r, T3_DOUBLE_SIDE);
 
   if (r->target) {
     rt_finish(r, r->target);
