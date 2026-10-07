@@ -109,15 +109,23 @@ paths produces.
 | WebGPU | r186 WebGPURenderer on webgpu-node | 28 | 3, all r186 defects below |
 | GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 25 | 6: 4 r186 defects, 2 notes below |
 
-The defects are r186's own, each confirmed by changing the scene until r186
-draws what three.c draws:
+The defects are three.js's. `tools/r186-defects/` reproduces each with
+three.js alone (no three.c) in Chromium, next to a control that shows the
+correct result: the same object alone in a fresh renderer. All four reproduce
+on both backends in r186 and in the three.js dev branch as of r187dev (in
+r186 the minimal environment-map page draws no environment at all, so that
+one is shown there with test/scenes/r5-pmrem.js against the same scene with
+one row of spheres). In each case a program is shared between objects or
+materials that should not share it:
 
-- A Sprite's center is uploaded from another sprite (both backends).
-- Phong materials with `combine` Mix and Add share one program, so the Add
-  material draws as Mix.
-- Every material of a program is drawn with the first material's
+- A Sprite takes another Sprite's `center`.
+- A Phong material with `combine` Add draws as Mix when a Mix material is in
+  the scene.
+- Every Standard material of a program reflects the first one's
   environment map.
-- On WebGL, a DepthTexture map and a colour map share one program.
+- A DepthTexture map and a colour map share one program: the colour map
+  samples black on WebGL; on WebGPU the draws fail validation. (The r1
+  scene does not hit it on WebGPU, so parity lists it for WebGL only.)
 
 On GLES, with nothing blended, no tone mapping and an sRGB output, three.c
 encodes colour in each program and draws straight to the screen instead of

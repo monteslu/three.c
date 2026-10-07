@@ -19,7 +19,9 @@ const require_write = (log) => writeFileSync(process.env.HITLOG || '/dev/null', 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const THREE_LUA = resolve(process.env.THREE_LUA || join(ROOT, '..', 'three.lua'));
 const WASMCART = resolve(process.env.WASMCART || join(ROOT, '..', 'wasmcart'));
-const PKG = join(ROOT, 'build', 'three-r186', 'package');
+// THREE_PKG: another three.js tree (with build/ and examples/), e.g. a dev checkout; SCENES: another scene directory
+const PKG = resolve(process.env.THREE_PKG || join(ROOT, 'build', 'three-r186', 'package'));
+const SCENE_DIR = resolve(process.env.SCENES || join(ROOT, 'test', 'scenes'));
 // --webgpu: r186's WebGPU backend in Chromium (its adapter: SwiftShader when headless)
 const WEBGPU = process.argv.includes('--webgpu');
 const [scene, out, frameArg = '100'] = process.argv.slice(2).filter((a) => a !== '--webgpu');
@@ -34,7 +36,7 @@ const server = createServer((req, res) => {
   if (p === '/') return send('<!doctype html><script type="importmap">{"imports":{"three":"/build/three.webgpu.js"}}</script><canvas id="c" width="1280" height="720"></canvas>', 'text/html');
   let f;
   if (p.startsWith('/build/') || p.startsWith('/examples/')) f = join(PKG, normalize(p.slice(1)));
-  else if (p.startsWith('/scenes/')) f = join(ROOT, 'test', 'scenes', normalize(p.slice(8)));
+  else if (p.startsWith('/scenes/')) f = join(SCENE_DIR, normalize(p.slice(8)));
   else f = join(ROOT, 'test', 'assets', normalize(p.slice(1)));
   if (!existsSync(f)) { res.writeHead(404); res.end(); return; }
   send(readFileSync(f), MIME[extname(f)] || 'application/octet-stream');

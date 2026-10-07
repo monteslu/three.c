@@ -1,0 +1,15 @@
+<script type="module">
+// c=alone: sprite B (center 1,1) alone. c=withA: sprite A (center 0,0) added first, then B.
+// center (1,1) puts B down-left of its position: x 0..1 -> pixels 32..47.
+import { THREE, makeRenderer, shot, done, W, CASE } from './common.js';
+const r = await makeRenderer();
+const cam = new THREE.OrthographicCamera(-2, 2, 2, -2, -10, 10);
+const sprite = (cx, cy, x) => { const s = new THREE.Sprite(new THREE.SpriteNodeMaterial({ color: 0xffffff })); s.center.set(cx, cy); s.position.set(x, 0, 0); return s; };
+const s = new THREE.Scene();
+if (CASE === 'withA') s.add(sprite(0, 0, -1));
+s.add(sprite(1, 1, 1));
+const px = await shot(r, s, cam);
+let x0 = 1e9, x1 = -1e9;
+for (let y = 0; y < W; y++) for (let x = W / 2 - 4; x < W; x++) if (px[(y * W + x) * 4] > 128) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+done({ case: CASE, bPixelsX: [x0, x1] });
+</script>

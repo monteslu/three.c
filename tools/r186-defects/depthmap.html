@@ -1,0 +1,21 @@
+<script type="module">
+// A RenderTarget's DepthTexture as a map on the left plane, a green DataTexture as a map on the right.
+// c=greenAlone: only the green plane. c=depthFirst / greenFirst: both, in that order.
+import { THREE, makeRenderer, shot, at, done, dataTex, CASE } from './common.js';
+const r = await makeRenderer();
+const rt = new THREE.RenderTarget(32, 32); rt.depthTexture = new THREE.DepthTexture(32, 32);
+const inner = new THREE.Scene(); const icam = new THREE.PerspectiveCamera(60, 1, 0.5, 5); icam.position.z = 2;
+inner.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xff0000 })));
+r.setRenderTarget(rt); r.render(inner, icam); r.setRenderTarget(null);
+const green = dataTex([0, 255, 0]);
+const cam = new THREE.OrthographicCamera(-2, 2, 2, -2, -10, 10); cam.position.z = 5;
+const plane = new THREE.PlaneGeometry(1.6, 1.6);
+const scene = new THREE.Scene();
+const d = new THREE.Mesh(plane, new THREE.MeshBasicMaterial({ map: rt.depthTexture })); d.position.x = -1;
+const g = new THREE.Mesh(plane, new THREE.MeshBasicMaterial({ map: green })); g.position.x = 1;
+if (CASE === 'greenAlone') scene.add(g);
+if (CASE === 'depthFirst') { scene.add(d); scene.add(g); }
+if (CASE === 'greenFirst') { scene.add(g); scene.add(d); }
+const px = await shot(r, scene, cam);
+done({ case: CASE, left: at(px, 16, 32), right: at(px, 48, 32) });
+</script>

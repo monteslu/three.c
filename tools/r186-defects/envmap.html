@@ -1,0 +1,19 @@
+<script type="module">
+// Metal smooth Standard spheres. c=redAlone / blueAlone: one sphere with a red / blue cube envMap.
+// c=together: red-env sphere left, blue-env sphere right.
+import { THREE, makeRenderer, shot, at, done, cubeOf, CASE } from './common.js';
+const r = await makeRenderer();
+let red = cubeOf([255, 0, 0]), blue = cubeOf([0, 0, 255]);
+// pmrem*: the envMaps are PMREMGenerator.fromCubemap results, as test/scenes/r5-pmrem.js uses them
+if (CASE.startsWith('pmrem')) { const g = new THREE.PMREMGenerator(r); red = g.fromCubemap(red).texture; blue = g.fromCubemap(blue).texture; }
+const C = CASE.replace('pmrem', '').replace(/^./, (c) => c.toLowerCase());
+const cam = new THREE.OrthographicCamera(-2, 2, 2, -2, -10, 10); cam.position.z = 5;
+const geo = new THREE.SphereGeometry(0.8, 32, 16);
+const scene = new THREE.Scene();
+const add = (env, x) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0, envMap: env })); m.position.x = x; scene.add(m); };
+if (C === 'redAlone') add(red, -1);
+if (C === 'blueAlone') add(blue, 1);
+if (C === 'together') { add(red, -1); add(blue, 1); }
+const px = await shot(r, scene, cam);
+done({ case: CASE, left: at(px, 16, 32), right: at(px, 48, 32) });
+</script>

@@ -1,0 +1,17 @@
+<script type="module">
+// c=mixAlone / addAlone: one Phong sphere (combine Mix or Add, reflectivity 0.5, white cube envMap).
+// c=together: the Mix sphere on the left, the Add sphere on the right.
+import { THREE, makeRenderer, shot, at, done, cubeOf, CASE } from './common.js';
+const r = await makeRenderer();
+const env = cubeOf([255, 255, 255]);
+const cam = new THREE.OrthographicCamera(-2, 2, 2, -2, -10, 10); cam.position.z = 5;
+const mat = (combine) => new THREE.MeshPhongMaterial({ color: 0x808080, envMap: env, combine, reflectivity: 0.5 });
+const geo = new THREE.SphereGeometry(0.8, 32, 16);
+const scene = new THREE.Scene(); scene.add(new THREE.AmbientLight(0xffffff, 1));
+const add = (combine, x) => { const m = new THREE.Mesh(geo, mat(combine)); m.position.x = x; scene.add(m); };
+if (CASE === 'mixAlone') add(THREE.MixOperation, -1);
+if (CASE === 'addAlone') add(THREE.AddOperation, 1);
+if (CASE === 'together') { add(THREE.MixOperation, -1); add(THREE.AddOperation, 1); }
+const px = await shot(r, scene, cam);
+done({ case: CASE, left: at(px, 16, 32), right: at(px, 48, 32) });
+</script>
