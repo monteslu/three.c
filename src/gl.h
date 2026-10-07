@@ -18,6 +18,14 @@ __attribute__((import_module("gl"), import_name("glRenderbufferStorageMultisampl
 extern void glRenderbufferStorageMultisample(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width,
                                              GLsizei height);
 __attribute__((import_module("gl"), import_name("glGetFloatv"))) extern void glGetFloatv(GLenum pname, GLfloat *data);
+__attribute__((import_module("gl"), import_name("glGetFramebufferAttachmentParameteriv")))
+extern void glGetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment, GLenum pname, GLint *params);
+#ifndef GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE
+#define GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE 0x8211
+#endif
+#ifndef GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE
+#define GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE 0x8212
+#endif
 #ifndef GL_DEPTH24_STENCIL8
 #define GL_DEPTH24_STENCIL8 0x88F0
 #endif
