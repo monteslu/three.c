@@ -96,7 +96,7 @@ void t3_wgpu_render_target(t3_wgpu *w, t3_render_target *rt, t3_wgpu_rt *out);
 void t3_wgpu_render_target_done(t3_wgpu *w, t3_render_target *rt);
 /* transmission's framebuffer copy (r186 ViewportTextureNode): src is the colour
  * attachment just drawn into, with no pass open; returns the mipmapped copy */
-WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView src, WGPUTextureFormat fmt, int width, int height);
+WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView src, WGPUTextureFormat fmt, int width, int height, bool flip);
 void t3_wgpu_render_target_free(t3_render_target *rt);
 
 /* a shadow map: a Depth24Plus texture (6 layers for a point light's cube)

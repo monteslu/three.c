@@ -14,7 +14,7 @@ run test_math ./build/test/test_math
   src/{math,core,geometry,curves,animation,raycaster,loaders,gltf,renderer,backend_gles,gen_program}.c \
   src/gen/programs_gl.c src/gen/programs_dfg.c -w -lGLESv2 -lm -o build/test/test_free
 run test_free ./build/test/test_free
-for t in test_backend_seam test_shared_geometry test_instance_color; do
+for t in test_backend_seam test_shared_geometry test_instance_color test_gl_transmission_fbo; do
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done

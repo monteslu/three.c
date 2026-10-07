@@ -121,11 +121,11 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
 static void wgpu_viewport_copy(t3_renderer *r, int which) {
   if (r->vp_done[which]) return;
   r->vp_done[which] = true;
-  if (!r->wg_cur_src) { gen_note(r, "transmission: no copy of an external target's colour (it draws without the backdrop)"); return; }
+  if (!r->wg_cur_src) { gen_note(r, "transmission: no colour attachment to copy (a depth-only target)"); return; }
   t3_wgpu *w = r->wgpu;
   t3_wgpu_end_pass(w);
   r->wg_vp_view[which] = t3_wgpu_viewport_copy(w, &r->wg_vp[which], (WGPUTextureView)r->wg_cur_src, (WGPUTextureFormat)r->wg_cur_src_format,
-                                               r->wg_cur_w, r->wg_cur_h);
+                                               r->wg_cur_w, r->wg_cur_h, r->wg_flip);
   t3_wgpu_pass P = r->wg_cur_pass;
   P.load_color = P.load_depth = true;
   t3_wgpu_begin_pass(w, &P);
@@ -386,7 +386,9 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
   backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r186's do) */
   /* what transmission copies: the colour drawn into (the resolve target when multisampled) */
   r->wg_cur_pass = P;
-  r->wg_cur_src = D.ext ? NULL : (void *)(D.resolve ? D.resolve : D.color);
+  /* (an external target's colour view, or its resolve view, must have TextureBinding usage;
+   * with flip_y its rows are bottom-up and the copy flips them back) */
+  r->wg_cur_src = (void *)(D.resolve ? D.resolve : D.color);
   r->wg_cur_src_format = r->wg_pass_format;
   r->wg_cur_w = rt ? rt->width : r->width;
   r->wg_cur_h = rt ? rt->height : r->height;

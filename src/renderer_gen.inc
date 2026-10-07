@@ -821,7 +821,15 @@ static void gl_viewport_copy(t3_renderer *r, int which) {
   if (r->vp_done[which]) return;
   r->vp_done[which] = true;
   int w = r->target ? r->target->width : r->width, h = r->target ? r->target->height : r->height;
-  t3_texture_type type = r->target ? r->target->texture->type : r->out_fbo && r->cur_fbo == r->out_fbo ? T3_HALF_FLOAT_TYPE : T3_UNSIGNED_BYTE_TYPE;
+  /* r186: the framebuffer's type (an embedder's FBO (set_framebuffer /
+   * external target) by what its colour attachment holds) */
+  t3_texture_type type = r->target ? r->target->texture->type : T3_UNSIGNED_BYTE_TYPE;
+  if (!r->target && r->cur_fbo) {
+    GLint ct = 0, bits = 0;
+    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE, &ct);
+    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE, &bits);
+    if (ct == GL_FLOAT) type = bits > 16 ? T3_FLOAT_TYPE : T3_HALF_FLOAT_TYPE;
+  }
   t3_render_target *v = r->vp_rt[which];
   if (!v || v->width != w || v->height != h || v->texture->type != type) {
     t3_release(v);

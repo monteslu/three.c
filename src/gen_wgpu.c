@@ -58,7 +58,7 @@ struct t3_wgpu {
   /* r186's mipmap generator (WebGPUTexturePassUtils): one pipeline per format */
   WGPUShaderModule mip_module;
   WGPUSampler mip_sampler;
-  WGPUBuffer mip_noflip;
+  WGPUBuffer mip_noflip, mip_flip;
   struct { WGPUTextureFormat fmt; WGPURenderPipeline p; } mip_pipes[8];
   int n_mip_pipes;
 };
@@ -78,6 +78,11 @@ void t3_wgpu_destroy(t3_wgpu *w) {
   if (!w) return;
   if (w->stream) wgpuBufferRelease(w->stream);
   for (int i = 0; i < w->n_samplers; i++) wgpuSamplerRelease(w->samplers[i].s);
+  for (int i = 0; i < w->n_mip_pipes; i++) wgpuRenderPipelineRelease(w->mip_pipes[i].p);
+  if (w->mip_module) wgpuShaderModuleRelease(w->mip_module);
+  if (w->mip_sampler) wgpuSamplerRelease(w->mip_sampler);
+  if (w->mip_noflip) wgpuBufferRelease(w->mip_noflip);
+  if (w->mip_flip) wgpuBufferRelease(w->mip_flip);
   free(w->stage);
   free(w);
 }
@@ -468,8 +473,10 @@ static WGPURenderPipeline mip_pipeline(t3_wgpu *w, WGPUTextureFormat fmt) {
     w->mip_sampler = wgpuDeviceCreateSampler(w->dev, &sd);
     WGPUBufferDescriptor bd = { .usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst, .size = 16 };
     w->mip_noflip = wgpuDeviceCreateBuffer(w->dev, &bd);
-    uint32_t zero[4] = { 0 };
+    w->mip_flip = wgpuDeviceCreateBuffer(w->dev, &bd);
+    uint32_t zero[4] = { 0 }, one[4] = { 1 };
     wgpuQueueWriteBuffer(w->q, w->mip_noflip, 0, zero, 16);
+    wgpuQueueWriteBuffer(w->q, w->mip_flip, 0, one, 16);
   }
   WGPUColorTargetState ct = { .format = fmt, .writeMask = WGPUColorWriteMask_All };
   WGPUFragmentState fs = { .module = w->mip_module, .entryPoint = SV("main_2d"), .targetCount = 1, .targets = &ct };
@@ -932,7 +939,7 @@ WGPUSampler t3_wgpu_sampler(t3_wgpu *w, const t3_texture *t, bool cmp) {
  * the colour attachment just drawn into (no pass open), at its format.
  * Level 0 is a same-size blit with the mipmap pipeline, then the chain. */
 struct vpcopy { WGPUTexture t; WGPUTextureView v; int w, h; WGPUTextureFormat fmt; uint32_t levels; };
-WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView src, WGPUTextureFormat fmt, int width, int height) {
+WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView src, WGPUTextureFormat fmt, int width, int height, bool flip) {
   struct vpcopy *x = *slot;
   if (!x || x->w != width || x->h != height || x->fmt != fmt) {
     if (x) { wgpuTextureViewRelease(x->v); wgpuTextureRelease(x->t); view_epoch++; }
@@ -951,7 +958,7 @@ WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView s
                                    .baseArrayLayer = 0, .arrayLayerCount = 1, .aspect = WGPUTextureAspect_All };
   WGPUTextureView dst = wgpuTextureCreateView(x->t, &dv);
   WGPUBindGroupEntry e[3] = { { .binding = 0, .sampler = w->mip_sampler }, { .binding = 1, .textureView = src },
-                              { .binding = 2, .buffer = w->mip_noflip, .size = 4 } };
+                              { .binding = 2, .buffer = flip ? w->mip_flip : w->mip_noflip, .size = 4 } };
   WGPUBindGroupDescriptor bd = { .layout = bgl, .entryCount = 3, .entries = e };
   WGPUBindGroup bg = wgpuDeviceCreateBindGroup(w->dev, &bd);
   WGPURenderPassColorAttachment ca = { .view = dst, .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED, .loadOp = WGPULoadOp_Clear, .storeOp = WGPUStoreOp_Store };

@@ -38,7 +38,7 @@ static void error_cb(WGPUDevice const *d, WGPUErrorType t, WGPUStringView m, voi
 static void map_cb(WGPUMapAsyncStatus st, WGPUStringView m, void *u1, void *u2) { (void)m; (void)u2; *(int *)u1 = st == WGPUMapAsyncStatus_Success ? 1 : -1; }
 
 static WGPUTexture texture(WGPUTextureFormat f) {
-  WGPUTextureDescriptor d = { .usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_CopySrc, .dimension = WGPUTextureDimension_2D,
+  WGPUTextureDescriptor d = { .usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_CopySrc | WGPUTextureUsage_TextureBinding, .dimension = WGPUTextureDimension_2D,
                               .size = { S, S, 1 }, .format = f, .mipLevelCount = 1, .sampleCount = 1 };
   return wgpuDeviceCreateTexture(dev, &d);
 }
@@ -141,6 +141,36 @@ static void sky_frame(t3_renderer *r, t3_texture *cube, const t3_external_target
   t3_release(env);
   t3_pmrem_generator_destroy(pg);
   t3_release(s);
+}
+
+/* a striped wall behind a glass block (transmission), into the caller's view */
+static void glass_frame(t3_renderer *r, const t3_external_target *et, WGPUTexture ct, uint8_t *out) {
+  t3_scene *s = t3_scene_new();
+  t3_geometry *bar = t3_box_geometry_new(0.3f, 4, 0.2f, 1, 1, 1);
+  for (int i = 0; i < 8; i++) {
+    t3_material *m = t3_mesh_basic_material_new(i % 2 ? 0xe04040 : 0x40c060);
+    t3_mesh *b = t3_mesh_new(bar, m);
+    t3_object_set_position(b, -2.1f + i * 0.6f, (float)(i % 3) * 0.3f, -2);
+    t3_object_add(&s->base, b);
+    t3_release(b); t3_release(m);
+  }
+  t3_geometry *g = t3_box_geometry_new(1.4f, 1.4f, 1.4f, 1, 1, 1);
+  t3_material *m = t3_mesh_physical_material_new(0xffffff);
+  m->metalness = 0; m->roughness = 0.1f; m->transmission = 1; m->thickness = 1; m->ior = 1.5f;
+  t3_mesh *glass = t3_mesh_new(g, m);
+  t3_object_set_rotation(glass, 0.5f, 0.7f, 0);
+  t3_object_set_position(glass, 0.2f, 0.3f, 0);
+  t3_object_add(&s->base, glass);
+  t3_light *sun = t3_directional_light_new(0xffffff, 2);
+  t3_object_set_position(sun, 2, 3, 4);
+  t3_object_add(&s->base, sun);
+  t3_camera *cam = t3_perspective_camera_new(50, 1, 0.1f, 20);
+  t3_object_set_position(cam, 0, 0, 4);
+  t3_renderer_set_external_target(r, et);
+  t3_renderer_render(r, s, cam);
+  t3_renderer_wgpu_submit(r);
+  read_back(ct, false, out);
+  t3_release(glass); t3_release(g); t3_release(m); t3_release(bar); t3_release(sun); t3_release(cam); t3_release(s);
 }
 
 static int fails;
@@ -264,6 +294,22 @@ int main(void) {
   sky_frame(r, again, &et, ct, ea);
   check(differ(ea, eb, false) <= 4, "after releases, a new texture draws as before");
   t3_release(again);
+
+  /* F: transmission on the caller's target: its colour view is the backdrop the
+   * glass copies; with flip_y the same picture stored bottom-up. The control
+   * is the glass with transmission off (the backdrop must show through). */
+  static uint8_t fa[S * S * 4], fb[S * S * 4];
+  et.flip_y = false; et.load_color = et.load_depth = false; et.x = 0; et.y = 0; et.w = S; et.h = S;
+  glass_frame(r, &et, ct, fa);
+  et.flip_y = true;
+  glass_frame(r, &et, ct, fb);
+  int nf = differ(fa, fb, true);
+  printf("      transmission flip_y: %d texels differ from the plain render mirrored\n", nf);
+  check(nf <= S / 4, "transmission on a flip_y target draws the same picture, rows bottom-up");
+  int green = 0;   /* the backdrop's stripes seen through the glass, at its centre */
+  for (int y = S / 2 - 4; y < S / 2 + 4; y++) for (int x = S / 2 - 4; x < S / 2 + 4; x++) { const uint8_t *p = fa + (y * S + x) * 4; if (p[1] > p[0] + 20 || p[0] > p[1] + 20) green++; }
+  check(green > 8, "the glass shows the coloured backdrop (copied from the caller's view)");
+  et.flip_y = false;
 
   const char *err = t3_renderer_last_error(r);
   check(!err, err ? err : "no renderer error");
