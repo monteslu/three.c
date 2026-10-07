@@ -1102,6 +1102,7 @@ const bench_scene bench_scenes[] = {
   { "a1-allocator", a1_setup, g4_frame, a1_probe },
   { "w1-world-matrix", w1_setup, w1_frame },
   { "i1-instance-color", i1_setup, i1_frame },
+  { "t5-transparent-basic", t5_setup, t5_frame },
   { "q1-gpu-timer", q1_setup, q1_frame, q1_probe },
   { "x1-texture-from-gl", x1_setup, t1_frame },
   { "s1-stress", stress_setup, stress_frame, stress_probe },

@@ -508,6 +508,10 @@ static void gl_viewport(t3_renderer *r, int x, int y, int w, int h) {
 }
 static void gl_fbo(t3_renderer *r, GLuint fbo) {
   if (r->fb_known && r->cur_fbo == fbo) return;
+  /* hosts unbind a texture attached to the framebuffer being drawn into
+   * (WebGL: no feedback loops), so the output target's texture, which the
+   * output pass samples, is forgotten as its framebuffer is bound */
+  if (fbo && fbo == r->out_fbo) tu_forget(r->out_tex);
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   r->fb_known = true;
   r->cur_fbo = fbo;

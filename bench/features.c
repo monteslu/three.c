@@ -582,6 +582,37 @@ static void i1_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── t5-transparent-basic ───────────────────────────────────────────── */
+static t3_mesh *t5_boxes[8];
+static void t5_setup(void) {
+  R = make_renderer(0x202a33);
+  S = t3_scene_new();
+  C = t3_orthographic_camera_new(-16, 16, 16.5f, -1.5f, -10, 10);
+  t3_object_set_position(C, 0, 0, 5);
+  t3_material *solid = t3_mesh_basic_material_new(0xe0a040), *ground = t3_mesh_basic_material_new(0x5a6676);
+  t3_material *glass = t3_mesh_basic_material_new(0x4aa3df);
+  glass->transparent = true;
+  glass->opacity = 0.6f;
+  t3_geometry *box = t3_box_geometry_new(1, 1, 1, 1, 1, 1);
+  t3_mesh *floor_ = add_mesh(&S->base, box, ground);
+  t3_object_set_scale(floor_, 32, 1, 1);
+  for (int i = 0; i < 8; i++) {
+    t5_boxes[i] = add_mesh(&S->base, box, i % 3 == 0 ? glass : solid);
+    t3_object_set_position(t5_boxes[i], -12 + i * 3.2f, 3, i % 3 == 0 ? 1 : 0);
+    t3_object_set_scale(t5_boxes[i], 1.6f, 1.6f, 1);
+  }
+  t3_release(box); t3_release(solid); t3_release(ground); t3_release(glass);
+}
+static void t5_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  for (int i = 0; i < 8; i++) {
+    t5_boxes[i]->base.position.y = (float)(3 + sin(t * 2 + i) * 2);
+    t3_object_set_rotation(t5_boxes[i], 0, 0, (float)(t + i));
+  }
+  t3_renderer_render(R, S, C);
+}
+
 /* ── w1-world-matrix ─────────────────────────────────────────────── */
 static t3_object *w1_group;
 static t3_mesh *w1_a, *w1_boxes[6];

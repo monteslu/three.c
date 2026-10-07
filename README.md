@@ -97,7 +97,7 @@ pipeline, the state names and how to add a state.
 
 ## Same pixels as three.js r186
 
-`tools/parity-r186.mjs` renders 30 scenes (three.lua's compare scenes and
+`tools/parity-r186.mjs` renders 31 scenes (three.lua's compare scenes and
 three.c's feature scenes in `test/scenes`) with three.c and with unmodified
 three.js r186 on the same backend, and compares frame 100 (frame 3 for the
 compare scenes). A scene matches when at most 8 pixels differ by more than 2
@@ -106,8 +106,8 @@ paths produces.
 
 | Backend | three.js reference | Match | Differ |
 | --- | --- | --- | --- |
-| WebGPU | r186 WebGPURenderer on webgpu-node | 27 | 3, all r186 defects below |
-| GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 24 | 6: 4 r186 defects, 2 notes below |
+| WebGPU | r186 WebGPURenderer on webgpu-node | 28 | 3, all r186 defects below |
+| GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 25 | 6: 4 r186 defects, 2 notes below |
 
 The defects are r186's own, each confirmed by changing the scene until r186
 draws what three.c draws:
