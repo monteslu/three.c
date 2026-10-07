@@ -1,0 +1,12 @@
+{
+  "name": "three.c-tools",
+  "private": true,
+  "type": "module",
+  "description": "Node tools for three.c: program capture, reference renders and parity checks (the C library itself needs none of this)",
+  "license": "MIT",
+  "devDependencies": {
+    "playwright": "^1.63.0",
+    "webgl-node": "^1.6.1",
+    "webgpu-node": "^0.2.0"
+  }
+}
