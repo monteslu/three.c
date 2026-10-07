@@ -65,3 +65,8 @@ standard+shadow+senv+l1201+s100
 # InstancedMesh instance colours with one shadowed sun
 standard+instbig+icol+shadow+l1000
 standard+instbig+shadow+l1000
+# a 3D sample game: shadowed sun, hemisphere, scene.environment, glass and instanced shards
+standard+trans+shadow+senv+l1001
+standard+instbig+shadow+senv+l1001
+standard+instbig+senv+icol+l1001
+standard+trans+instbig+senv+icol+l1001

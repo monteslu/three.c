@@ -358,7 +358,8 @@ async function capture(stateName, backend) {
   if (kind !== 'depth' && 'color' in mat) setColor(mat, 'color', 'material.color');
   if (kind === 'psprite') setNum(mat, 'size', 'material.size');   // (rotation / center are SpriteNodeMaterial's, not PointsNodeMaterial's)
   if (kind === 'sprite') setNum(mat, 'rotation', 'material.rotation');
-  if (kind !== 'depth' && !('trans' in features) && !features.includes('trans')) setNum(mat, 'opacity', 'material.opacity'); else props['material.opacity'] = { kind: 'f32', value: [0.5] };
+  // (a transparent material's opacity is a sentinel too: 0.5 also sits in a shadow matrix)
+  if (kind !== 'depth') setNum(mat, 'opacity', 'material.opacity'); else props['material.opacity'] = { kind: 'f32', value: [0.5] };
   if ('emissive' in mat) setColor(mat, 'emissive', 'material.emissive');
   if ('emissiveIntensity' in mat) setNum(mat, 'emissiveIntensity', 'material.emissiveIntensity');
   if ('specular' in mat) setColor(mat, 'specular', 'material.specular');
