@@ -42,6 +42,7 @@ struct t3_wgpu {
   WGPUBuffer stream;
   size_t stream_size;
   uint32_t stream_gen;
+  bool stream_ext;   /* the stream holds data for commands on an embedder's encoder (not yet known to be submitted) */
   uint8_t *stage;
   size_t stage_n, stage_cap;
   WGPUCommandEncoder enc;
@@ -389,6 +390,11 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
   }
   w->stage_n = 0;
   w->written = 0;
+  /* commands recorded on an embedder's encoder read this buffer when the
+   * embedder submits, after any queue write made now: so the next frame gets
+   * a new buffer instead of overwriting it (the commands keep the old alive) */
+  if (w->stream_ext && w->stream) { wgpuBufferRelease(w->stream); w->stream = NULL; }
+  w->stream_ext = w->ext != NULL;
   /* the stream buffer must exist (and be big enough) before bind groups refer
    * to it: a new buffer is a new generation of bind groups */
   size_t want = estimate < 65536 ? 65536 : estimate;

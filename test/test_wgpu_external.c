@@ -311,6 +311,43 @@ int main(void) {
   check(green > 8, "the glass shows the coloured backdrop (copied from the caller's view)");
   et.flip_y = false;
 
+  /* G: PMREM and the scene recorded on one external encoder, one submit (the
+   * embedder's frame): the same picture as each submitting on its own */
+  {
+    static uint8_t ga[S * S * 4], gb[S * S * 4];
+    t3_texture *cube = cpu_cube();
+    sky_frame(r, cube, &et, ct, ga);   /* own submits */
+    WGPUCommandEncoder enc = wgpuDeviceCreateCommandEncoder(dev, NULL);
+    t3_renderer_set_external_encoder(r, (uintptr_t)enc);
+    t3_scene *sc = t3_scene_new();
+    t3_scene_set_background_texture(sc, cube);
+    t3_pmrem_generator *pg = t3_pmrem_generator_new(r);
+    t3_render_target *env = t3_pmrem_from_cubemap(pg, cube);   /* recorded on enc */
+    t3_geometry *g = t3_sphere_geometry_new(1, 32, 16);
+    t3_material *m = t3_mesh_standard_material_new(0xffffff);
+    m->metalness = 1; m->roughness = 0.4f;
+    t3_material_set_texture(m, T3_ENV_MAP, env->texture);
+    t3_mesh *ball = t3_mesh_new(g, m);
+    t3_object_add(&sc->base, ball);
+    t3_camera *cam = t3_perspective_camera_new(70, 1, 0.1f, 20);
+    t3_object_set_position(cam, 0.5f, 0.8f, 3);
+    t3_object_look_at(cam, 0, 0, 0);
+    t3_renderer_set_external_encoder(r, (uintptr_t)enc);   /* (the embedder sets it again for its scene pass) */
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, sc, cam);
+    t3_renderer_set_external_encoder(r, 0);
+    WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
+    wgpuQueueSubmit(queue, 1, &cb);
+    wgpuCommandBufferRelease(cb);
+    wgpuCommandEncoderRelease(enc);
+    read_back(ct, false, gb);
+    int ng = differ(ga, gb, false);
+    printf("      PMREM + scene on one external encoder vs own submits: %d texels differ\n", ng);
+    check(ng <= 4, "PMREM recorded on the embedder's encoder lights the scene as when it submits itself");
+    t3_release(ball); t3_release(g); t3_release(m); t3_release(cam); t3_release(env);
+    t3_pmrem_generator_destroy(pg); t3_release(sc); t3_release(cube);
+  }
+
   const char *err = t3_renderer_last_error(r);
   check(!err, err ? err : "no renderer error");
   check(errors == 0, "no WebGPU validation errors");
