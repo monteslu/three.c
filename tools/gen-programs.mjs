@@ -121,7 +121,14 @@ const FEATURES = {
   // attributes beyond that (Instance.js): a game's big batches get the
   // attribute program, so both are captured (inst = 4 instances, instbig = 2000)
   instbig: () => {},
-  icol: () => {},           // the InstancedMesh has instance colours (setColorAt): an instanced vec3 attribute
+  icol: () => {},
+  // MeshPhysicalMaterial's optional lobes: r186 compiles each in when its strength is above 0
+  cc: (m) => { needs(m, 'clearcoat'); m.clearcoat = 0.5; },
+  ccn: (m) => { needs(m, 'clearcoatNormalMap'); m.clearcoatNormalMap = dataTexture(); },
+  sheen: (m) => { needs(m, 'sheen'); m.sheen = 0.5; },
+  irid: (m) => { needs(m, 'iridescence'); m.iridescence = 0.5; },
+  aniso: (m) => { needs(m, 'anisotropy'); m.anisotropy = 0.5; },
+  xmit: (m) => { needs(m, 'transmission'); m.transmission = 0.5; },           // the InstancedMesh has instance colours (setColorAt): an instanced vec3 attribute
   // the other maps, each its own texture so the manifest names its source;
   // a feature a material kind lacks is an error (the table never pairs them)
   nmap: (m) => { needs(m, 'normalMap'); m.normalMap = dataTexture(); },
@@ -205,6 +212,8 @@ function allStates() {
   // InstancedMesh.instanceColor (three.c draws every InstancedMesh with the attribute program)
   for (const kind of ['basic', 'lambert', 'phong', 'standard', 'physical']) out.push(`${kind}+instbig+icol`);
   out.push('standard+instbig+icol+shadow');
+  // MeshPhysicalMaterial's lobes, alone and together
+  out.push('physical+cc', 'physical+cc+ccn', 'physical+sheen', 'physical+irid', 'physical+aniso', 'physical+cc+sheen+irid');
   // double-sided and back-sided materials (glTF doubleSided is common)
   for (const kind of ['basic', 'lambert', 'phong', 'standard', 'physical']) out.push(`${kind}+ds`, `${kind}+map+ds`, `${kind}+bs`);
   out.push('standard+map+nmap+ao+emap+rmap+mmap+ds', 'normal+ds');
@@ -367,10 +376,29 @@ async function capture(stateName, backend) {
   if ('roughness' in mat) setNum(mat, 'roughness', 'material.roughness');
   if ('metalness' in mat) setNum(mat, 'metalness', 'material.metalness');
   if ('ior' in mat) { const v = 1.3 + sentinel(); mat.ior = v; props['material.ior'] = { kind: 'f32', value: [v] }; }
-  if ('clearcoat' in mat) setNum(mat, 'clearcoat', 'material.clearcoat');
-  if ('clearcoatRoughness' in mat) setNum(mat, 'clearcoatRoughness', 'material.clearcoatRoughness');
+  // physical: each lobe's values only when the feature turns it on (a value above 0 is what turns it on)
+  if (kind === 'physical') {
+    setNum(mat, 'specularIntensity', 'material.specularIntensity');
+    setColor(mat, 'specularColor', 'material.specularColor');
+    if (features.includes('cc')) { setNum(mat, 'clearcoat', 'material.clearcoat'); setNum(mat, 'clearcoatRoughness', 'material.clearcoatRoughness'); }
+    if (features.includes('ccn')) { const nx = sentinel(), ny = sentinel(); mat.clearcoatNormalScale.set(nx, ny); props['material.clearcoatNormalScale'] = { kind: 'vec2', value: [nx, ny] }; }
+    if (features.includes('sheen')) { setNum(mat, 'sheen', 'material.sheen'); setColor(mat, 'sheenColor', 'material.sheenColor'); setNum(mat, 'sheenRoughness', 'material.sheenRoughness'); }
+    if (features.includes('irid')) {
+      setNum(mat, 'iridescence', 'material.iridescence');
+      const v = 1.2 + sentinel(); mat.iridescenceIOR = v; props['material.iridescenceIOR'] = { kind: 'f32', value: [v] };
+      const t = 300 + sentinel(); mat.iridescenceThicknessRange[1] = t; props['material.iridescenceThicknessMax'] = { kind: 'f32', value: [t] };
+    }
+    if (features.includes('aniso')) {
+      const a = sentinel(), rot = sentinel(); mat.anisotropy = a; mat.anisotropyRotation = rot;
+      props['material.anisotropyVector'] = { kind: 'vec2', value: [a * Math.cos(rot), a * Math.sin(rot)] };
+    }
+    if (features.includes('xmit')) {
+      setNum(mat, 'transmission', 'material.transmission'); setNum(mat, 'thickness', 'material.thickness');
+      setNum(mat, 'attenuationDistance', 'material.attenuationDistance'); setColor(mat, 'attenuationColor', 'material.attenuationColor');
+    }
+  }
   // every texture's uv transform is a uniform of its own (texture.matrix): sentinel offset / repeat on each
-  const TEX_KEYS = ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'bumpMap', 'specularMap', 'lightMap'];
+  const TEX_KEYS = ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'bumpMap', 'specularMap', 'lightMap', 'clearcoatNormalMap'];
   for (const key of TEX_KEYS) if (mat[key]) { mat[key].offset.set(sentinel(), sentinel()); mat[key].repeat.set(1 + sentinel(), 1 + sentinel()); }
   if (mat.normalMap) { const nx = sentinel(), ny = sentinel(); mat.normalScale.set(nx, ny); props['material.normalScale'] = { kind: 'vec2', value: [nx, ny] }; }
   if (mat.aoMap) setNum(mat, 'aoMapIntensity', 'material.aoMapIntensity');
@@ -694,7 +722,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
       const type = l.isDirectionalLight ? 'directional' : l.isSpotLight ? 'spot' : 'point';
       return `shadow:${type}[${scene.children.filter((o) => o.constructor === l.constructor && o.castShadow).indexOf(l)}]`;
     }
-    for (const k of ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'specularMap', 'envMap', 'lightMap', 'bumpMap', 'displacementMap']) if (mat[k] === t) return k;
+    for (const k of ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'specularMap', 'envMap', 'lightMap', 'bumpMap', 'displacementMap', 'clearcoatNormalMap']) if (mat[k] === t) return k;
     if (scene.environment && t === scene.environment) return 'environment';   /* (the material's own is 'envMap') */
     if (t.name === 'DFG_LUT') return 'dfg_lut';
     if (kind === 'output') return 'output';   // the framebuffer target the scene was drawn into

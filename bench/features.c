@@ -613,6 +613,60 @@ static void t5_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── p1-physical ─────────────────────────────────────────────────── */
+static t3_mesh *p1_balls[6];
+static void p1_setup(void) {
+  R = make_renderer(0x181c22);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(45, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 0.6f, 9);
+  t3_object_look_at(C, 0, 0, 0);
+  enum { N = 32 };
+  static uint8_t nd[N * N * 4];
+  for (int y = 0; y < N; y++)
+    for (int x = 0; x < N; x++) {
+      uint8_t *p = nd + (y * N + x) * 4;
+      double a = sin(x * 0.8) * 0.5, b = cos(y * 0.6) * 0.5;
+      p[0] = (uint8_t)lround((a * 0.5 + 0.5) * 255); p[1] = (uint8_t)lround((b * 0.5 + 0.5) * 255); p[2] = 230; p[3] = 255;
+    }
+  t3_texture *bumps = t3_data_texture_new(N, N, nd);
+  bumps->wrap_s = bumps->wrap_t = T3_REPEAT;
+  bumps->repeat = (t3_vec2){ 3, 2 };
+  t3_geometry *geo = t3_sphere_geometry_new(0.8f, 48, 24);
+  static const uint32_t colors[6] = { 0xc04040, 0x2050c0, 0x20a050, 0x602040, 0x202020, 0xb0b0b0 };
+  for (int i = 0; i < 6; i++) {
+    t3_material *m = t3_mesh_physical_material_new(colors[i]);
+    m->metalness = 0;
+    switch (i) {
+    case 0: m->roughness = 0.5f; m->ior = 1.8f; m->specular_intensity = 0.7f; m->specular_color = t3_color_hex(0xffd0a0); break;
+    case 1: m->roughness = 0.6f; m->clearcoat = 1; m->clearcoat_roughness = 0.05f; break;
+    case 2: m->roughness = 0.6f; m->clearcoat = 0.8f; m->clearcoat_roughness = 0.2f;
+            t3_material_set_texture(m, T3_CLEARCOAT_NORMAL_MAP, bumps); m->clearcoat_normal_scale = (t3_vec2){ 0.8f, 0.8f }; break;
+    case 3: m->roughness = 0.8f; m->sheen = 1; m->sheen_color = t3_color_hex(0xffa0c0); m->sheen_roughness = 0.4f; break;
+    case 4: m->roughness = 0.25f; m->metalness = 0.9f; m->iridescence = 1; m->iridescence_ior = 1.6f;
+            m->iridescence_thickness_range[0] = 100; m->iridescence_thickness_range[1] = 520; break;
+    case 5: m->roughness = 0.4f; m->metalness = 1; m->anisotropy = 0.8f; m->anisotropy_rotation = 0.6f; break;
+    }
+    p1_balls[i] = add_mesh(&S->base, geo, m);
+    t3_object_set_position(p1_balls[i], (float)((i % 3 - 1) * 2.3), i < 3 ? 1.1f : -1.1f, 0);
+    t3_release(m);
+  }
+  t3_release(geo); t3_release(bumps);
+  add_light(t3_ambient_light_new(0x404050, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 2.5f);
+  t3_object_set_position(sun, 3, 4, 5);
+  add_light(sun);
+  t3_light *lamp = t3_point_light_new(0xffd8a0, 30, 0, 2);
+  t3_object_set_position(lamp, -3, -1, 4);
+  add_light(lamp);
+}
+static void p1_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  for (int i = 0; i < 6; i++) t3_object_set_rotation(p1_balls[i], (float)(t * 0.3), (float)(t * 0.5 + i), 0);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── w1-world-matrix ─────────────────────────────────────────────── */
 static t3_object *w1_group;
 static t3_mesh *w1_a, *w1_boxes[6];

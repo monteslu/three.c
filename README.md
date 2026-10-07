@@ -52,17 +52,19 @@ top of `include/three.h`.
 Object3D / Group / Scene, perspective and orthographic cameras, ambient /
 hemisphere / directional / point / spot lights with shadows (PCF, 2D and
 cube), Fog and FogExp2, Basic / Lambert / Phong / Standard / Physical /
-Normal materials with map, normalMap (tangent space, vertex tangents),
-aoMap, emissiveMap, roughnessMap, metalnessMap, alphaMap and lightMap,
-vertex colours, transparency, alphaTest, flat shading, double and back
-sides, Texture / DataTexture / CubeTexture / DepthTexture, Box / Plane /
-Sphere / Cylinder / Cone / Torus / TorusKnot / Circle / Ring / Polyhedron /
-Icosahedron geometry, InstancedMesh (with instance colours), SkinnedMesh /
-Bone / Skeleton, morph targets (positions and normals), render targets
-(depth textures, mipmaps, half float and float, multisample), every r186
-tone mapping (Linear, Reinhard, Cineon, ACESFilmic, AgX, Neutral),
-environment maps (PMREM cube-UV for Standard / Physical, cube reflection and
-refraction for Basic / Lambert / Phong), PMREMGenerator (fromCubemap,
+Normal materials (Physical with clearcoat and its normal map, sheen,
+iridescence, anisotropy, ior and specular intensity / colour) with map,
+normalMap (tangent space, vertex tangents), aoMap, emissiveMap,
+roughnessMap, metalnessMap, alphaMap and lightMap, vertex colours,
+transparency, alphaTest, flat shading, double and back sides, Texture /
+DataTexture / CubeTexture / DepthTexture, Box / Plane / Sphere / Cylinder /
+Cone / Torus / TorusKnot / Circle / Ring / Polyhedron / Icosahedron
+geometry, InstancedMesh (with instance colours), SkinnedMesh / Bone /
+Skeleton, morph targets (positions and normals), render targets (depth
+textures, mipmaps, half float and float, multisample), every r186 tone
+mapping (Linear, Reinhard, Cineon, ACESFilmic, AgX, Neutral), environment
+maps (PMREM cube-UV for Standard / Physical, cube reflection and refraction
+for Basic / Lambert / Phong), PMREMGenerator (fromCubemap,
 fromEquirectangular, fromScene), scene backgrounds and scene.environment,
 Sprite and Points, Line, LOD, Raycaster, curves, AnimationMixer, a glTF 2.0
 loader (cgltf + stb_image: PBR materials, skins, morph targets, animations)
@@ -74,10 +76,12 @@ For embedders: `t3_set_allocator`, world matrices the embedder owns
 into any target (`t3_renderer_render_depth`, GLES), and GL / WebGPU hooks to
 draw into the embedder's own framebuffer, command encoder and swapchain view.
 
-Not covered yet: wireframe, premultipliedAlpha, dithering, mirrored repeat
-on a map, a texture's `channel` (a second UV set), an equirectangular background without blurriness, and the node
-materials' own extension points (TSL). A draw the program tables do not
-cover is skipped and named by `t3_renderer_generated_missing`.
+Not covered yet: MeshPhysicalMaterial transmission, wireframe,
+premultipliedAlpha, dithering, mirrored repeat on a map, a texture's
+`channel` (a second UV set), an equirectangular background without
+blurriness, and the node materials' own extension points (TSL). A draw the
+program tables do not cover is skipped and named by
+`t3_renderer_generated_missing`.
 
 ## How it draws
 
@@ -97,7 +101,7 @@ pipeline, the state names and how to add a state.
 
 ## Same pixels as three.js r186
 
-`tools/parity-r186.mjs` renders 31 scenes (three.lua's compare scenes and
+`tools/parity-r186.mjs` renders 32 scenes (three.lua's compare scenes and
 three.c's feature scenes in `test/scenes`) with three.c and with unmodified
 three.js r186 on the same backend, and compares frame 100 (frame 3 for the
 compare scenes). A scene matches when at most 8 pixels differ by more than 2
@@ -106,8 +110,8 @@ paths produces.
 
 | Backend | three.js reference | Match | Differ |
 | --- | --- | --- | --- |
-| WebGPU | r186 WebGPURenderer on webgpu-node | 28 | 3, all r186 defects below |
-| GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 25 | 6: 4 r186 defects, 2 notes below |
+| WebGPU | r186 WebGPURenderer on webgpu-node | 29 | 3, all r186 defects below |
+| GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 25 | 7: 4 r186 defects, 3 notes below |
 
 The defects are three.js's. `tools/r186-defects/` reproduces each with
 three.js alone (no three.c) in Chromium, next to a control that shows the
@@ -130,9 +134,9 @@ materials that should not share it:
 On GLES, with nothing blended, no tone mapping and an sRGB output, three.c
 encodes colour in each program and draws straight to the screen instead of
 drawing into a half-float target and encoding in a separate pass, which
-saves about 0.07 ms per 720p frame of GPU time. The two GL notes come from
+saves about 0.07 ms per 720p frame of GPU time. The three GL notes come from
 the native bench drawing straight into its EGL pbuffer surface, where a few
-pixel-centre ties on triangle edges (a specular sparkle ring, one box edge)
+pixel-centre ties on triangle edges (specular sparkles, one box edge)
 resolve differently. The same three.c frames drawn into a framebuffer
 object match r186 at 0 pixels: through a wasmcart GL cart, or with
 `t3_renderer_set_exact_output`, which takes r186's target and output

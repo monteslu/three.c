@@ -82,7 +82,7 @@ static GLuint compile(GLenum type, const char *src, char *err, size_t errcap) {
 }
 
 const char *const t3_gen_tex_names[T3_GEN_TEX_COUNT] = { "map", "normalMap", "aoMap", "emissiveMap", "roughnessMap", "metalnessMap",
-                                                         "alphaMap", "bumpMap", "specularMap", "lightMap" };
+                                                         "alphaMap", "bumpMap", "specularMap", "lightMap", "clearcoatNormalMap" };
 
 static const struct { const char *tail; uint8_t op; } OPS[] = {
   { "camera.projectionMatrix", GOP_CAM_PROJ }, { "camera.matrixWorldInverse", GOP_CAM_VIEW },
@@ -104,6 +104,13 @@ static const struct { const char *tail; uint8_t op; } OPS[] = {
   { "material.emissiveIntensity", GOP_MAT_EMISSIVE_I }, { "material.roughness", GOP_MAT_ROUGH }, { "material.metalness", GOP_MAT_METAL },
   { "material.specular", GOP_MAT_SPECULAR }, { "material.shininess", GOP_MAT_SHININESS }, { "material.ior", GOP_MAT_IOR },
   { "material.clearcoat", GOP_MAT_CLEARCOAT }, { "material.clearcoatRoughness", GOP_MAT_CLEARCOAT_R },
+  { "material.specularIntensity", GOP_MAT_SPEC_INTENSITY }, { "material.specularColor", GOP_MAT_SPEC_COLOR },
+  { "material.clearcoatNormalScale", GOP_MAT_CC_NORMAL_SCALE }, { "material.sheen", GOP_MAT_SHEEN },
+  { "material.sheenColor", GOP_MAT_SHEEN_COLOR }, { "material.sheenRoughness", GOP_MAT_SHEEN_R },
+  { "material.iridescence", GOP_MAT_IRID }, { "material.iridescenceIOR", GOP_MAT_IRID_IOR },
+  { "material.iridescenceThicknessMax", GOP_MAT_IRID_THICK_MAX }, { "material.anisotropyVector", GOP_MAT_ANISO_VEC },
+  { "material.transmission", GOP_MAT_TRANSMISSION }, { "material.thickness", GOP_MAT_THICKNESS },
+  { "material.attenuationDistance", GOP_MAT_ATTEN_DIST }, { "material.attenuationColor", GOP_MAT_ATTEN_COLOR },
   { "material.normalScale", GOP_NORMAL_SCALE }, { "material.aoMapIntensity", GOP_AO_INTENSITY },
   { "material.bumpScale", GOP_BUMP_SCALE }, { "material.rotation", GOP_MAT_ROTATION }, { "material.size", GOP_MAT_SIZE }, { "material.alphaTest", GOP_MAT_ALPHATEST },
   { "sprite.center", GOP_SPRITE_CENTER }, { "material.lightMapIntensity", GOP_LIGHTMAP_INTENSITY },

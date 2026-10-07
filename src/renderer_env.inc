@@ -326,7 +326,7 @@ static void gen_set_aux(t3_renderer *r, const t3_material *m) {
   r->aux.env_intensity = 1;
   memset(&r->aux.env_rotation, 0, sizeof r->aux.env_rotation);
   if (!m) return;
-  bool pbr = m->type == T3_MESH_STANDARD_MATERIAL;
+  bool pbr = m->type == T3_MESH_STANDARD_MATERIAL || m->type == T3_MESH_PHYSICAL_MATERIAL;
   if (m->env_map) {
     r->aux.env = pbr ? pm186_cached(r, m->env_map) : m->env_map;
     r->aux.env_intensity = m->env_map_intensity;
@@ -346,7 +346,7 @@ static void gen_env_prepare(t3_renderer *r, t3_scene *scene) {
   for (int l = 0; l < 2; l++)
     for (int i = 0; i < ls[l]->n; i++) {
       const t3_material *m = ls[l]->items[i].material;
-      if (m->env_map && m->type == T3_MESH_STANDARD_MATERIAL) pm186_for(r, m->env_map);
+      if (m->env_map && (m->type == T3_MESH_STANDARD_MATERIAL || m->type == T3_MESH_PHYSICAL_MATERIAL)) pm186_for(r, m->env_map);
     }
   if (r->environment) pm186_for(r, r->environment);
   const t3_texture *bg = scene->background_texture;

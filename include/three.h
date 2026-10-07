@@ -360,7 +360,7 @@ t3_geometry *t3_ring_geometry_new(float inner, float outer, int theta_segments, 
 typedef enum {
   T3_MESH_BASIC_MATERIAL, T3_MESH_LAMBERT_MATERIAL, T3_MESH_PHONG_MATERIAL,
   T3_MESH_STANDARD_MATERIAL, T3_MESH_NORMAL_MATERIAL,
-  T3_LINE_BASIC_MATERIAL, T3_SPRITE_MATERIAL, T3_POINTS_MATERIAL
+  T3_LINE_BASIC_MATERIAL, T3_SPRITE_MATERIAL, T3_POINTS_MATERIAL, T3_MESH_PHYSICAL_MATERIAL
 } t3_material_type;
 typedef enum { T3_FRONT_SIDE = 0, T3_BACK_SIDE = 1, T3_DOUBLE_SIDE = 2 } t3_side;
 /* three.js's constants for material.blending, blendEquation, blendSrc /
@@ -427,6 +427,21 @@ typedef struct t3_material {
    * lightMapIntensity (1): irradiance added to the indirect diffuse light */
   t3_texture *light_map;
   float light_map_intensity;
+  /* MeshPhysicalMaterial (T3_MESH_PHYSICAL_MATERIAL; the Standard fields
+   * apply too). As in r186, clearcoat, sheen, iridescence, anisotropy and
+   * transmission each turn on when their strength is above 0. */
+  float ior, specular_intensity;            /* 1.5, 1 */
+  t3_color specular_color;                  /* (1, 1, 1) */
+  float clearcoat, clearcoat_roughness;     /* 0, 0 */
+  t3_texture *clearcoat_normal_map;         /* retained; t3_material_set_texture( T3_CLEARCOAT_NORMAL_MAP ) */
+  t3_vec2 clearcoat_normal_scale;           /* (1, 1) */
+  float sheen, sheen_roughness;             /* 0, 1 */
+  t3_color sheen_color;                     /* (0, 0, 0) */
+  float iridescence, iridescence_ior;       /* 0, 1.3 */
+  float iridescence_thickness_range[2];     /* 100, 400 (nm); with no thickness map the maximum is used */
+  float anisotropy, anisotropy_rotation;    /* 0, 0 */
+  float transmission, thickness, attenuation_distance;   /* 0, 0, INFINITY */
+  t3_color attenuation_color;               /* (1, 1, 1) */
 } t3_material;
 enum { T3_MULTIPLY_OPERATION = 0, T3_MIX_OPERATION = 1, T3_ADD_OPERATION = 2 };
 
@@ -437,11 +452,12 @@ t3_material *t3_line_basic_material_new(uint32_t color);
 t3_material *t3_mesh_lambert_material_new(uint32_t color);
 t3_material *t3_mesh_phong_material_new(uint32_t color);
 t3_material *t3_mesh_standard_material_new(uint32_t color);
+t3_material *t3_mesh_physical_material_new(uint32_t color);
 t3_material *t3_mesh_normal_material_new(void);
 void t3_material_set_map(t3_material *m, t3_texture *map);
 typedef enum {
   T3_MAP, T3_NORMAL_MAP, T3_AO_MAP, T3_EMISSIVE_MAP, T3_ROUGHNESS_MAP, T3_METALNESS_MAP, T3_ALPHA_MAP,
-  T3_ENV_MAP, T3_LIGHT_MAP
+  T3_ENV_MAP, T3_LIGHT_MAP, T3_CLEARCOAT_NORMAL_MAP
 } t3_map_slot;
 void t3_material_set_texture(t3_material *m, t3_map_slot slot, t3_texture *t);
 /* Material.clone: a new material with the same values, maps retained */

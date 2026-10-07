@@ -76,6 +76,7 @@ void t3_release(void *thing) {
     t3_release(m->roughness_map); t3_release(m->metalness_map); t3_release(m->alpha_map);
     t3_release(m->env_map);
     t3_release(m->light_map);
+    t3_release(m->clearcoat_normal_map);
     free(m);
     break;
   }
@@ -305,6 +306,15 @@ t3_material *t3_material_new(t3_material_type type) {
   m->normal_scale.x = m->normal_scale.y = 1;
   m->ao_map_intensity = 1;
   m->light_map_intensity = 1;
+  m->ior = 1.5f;
+  m->specular_intensity = 1;
+  m->specular_color = (t3_color){ 1, 1, 1 };
+  m->clearcoat_normal_scale.x = m->clearcoat_normal_scale.y = 1;
+  m->sheen_roughness = 1;
+  m->iridescence_ior = 1.3f;
+  m->iridescence_thickness_range[0] = 100; m->iridescence_thickness_range[1] = 400;
+  m->attenuation_distance = INFINITY;
+  m->attenuation_color = (t3_color){ 1, 1, 1 };
   m->version = 1;
   return m;
 }
@@ -319,6 +329,7 @@ t3_material *t3_line_basic_material_new(uint32_t c) { return colored(T3_LINE_BAS
 t3_material *t3_mesh_lambert_material_new(uint32_t c) { return colored(T3_MESH_LAMBERT_MATERIAL, c); }
 t3_material *t3_mesh_phong_material_new(uint32_t c) { return colored(T3_MESH_PHONG_MATERIAL, c); }
 t3_material *t3_mesh_standard_material_new(uint32_t c) { return colored(T3_MESH_STANDARD_MATERIAL, c); }
+t3_material *t3_mesh_physical_material_new(uint32_t c) { return colored(T3_MESH_PHYSICAL_MATERIAL, c); }
 t3_material *t3_mesh_normal_material_new(void) { return t3_material_new(T3_MESH_NORMAL_MATERIAL); }
 
 void t3_material_set_map(t3_material *m, t3_texture *map) { t3_material_set_texture(m, T3_MAP, map); }
@@ -327,7 +338,7 @@ void t3_material_set_texture(t3_material *m, t3_map_slot slot, t3_texture *t) {
   t3_texture **p = slot == T3_MAP ? &m->map : slot == T3_NORMAL_MAP ? &m->normal_map : slot == T3_AO_MAP ? &m->ao_map
                  : slot == T3_EMISSIVE_MAP ? &m->emissive_map : slot == T3_ROUGHNESS_MAP ? &m->roughness_map
                  : slot == T3_METALNESS_MAP ? &m->metalness_map : slot == T3_ENV_MAP ? &m->env_map
-                 : slot == T3_LIGHT_MAP ? &m->light_map : &m->alpha_map;
+                 : slot == T3_LIGHT_MAP ? &m->light_map : slot == T3_CLEARCOAT_NORMAL_MAP ? &m->clearcoat_normal_map : &m->alpha_map;
   t3_retain(t);
   t3_release(*p);
   *p = t;
@@ -344,6 +355,7 @@ t3_material *t3_material_clone(const t3_material *src) {
   t3_retain(m->roughness_map); t3_retain(m->metalness_map); t3_retain(m->alpha_map);
   t3_retain(m->env_map);
   t3_retain(m->light_map);
+  t3_retain(m->clearcoat_normal_map);
   m->version = 1;
   return m;
 }

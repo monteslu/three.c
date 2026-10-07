@@ -82,6 +82,7 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
   case T3_MESH_LAMBERT_MATERIAL: kind = T3_GEN_LAMBERT; break;
   case T3_MESH_PHONG_MATERIAL: kind = T3_GEN_PHONG; break;
   case T3_MESH_STANDARD_MATERIAL: kind = T3_GEN_STANDARD; break;
+  case T3_MESH_PHYSICAL_MATERIAL: kind = T3_GEN_PHYSICAL; break;
   case T3_MESH_NORMAL_MATERIAL: kind = T3_GEN_NORMAL; break;
   case T3_POINTS_MATERIAL: kind = T3_GEN_POINTS; break;      /* r186 draws a Points object as 1-pixel GL points */
   case T3_LINE_BASIC_MATERIAL: kind = T3_GEN_LINE; break;
@@ -128,6 +129,14 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
   if (m->metalness_map) f |= T3_GEN_MMAP;
   if (m->alpha_map) f |= T3_GEN_AMAP;
   if (m->light_map) f |= T3_GEN_LMAP;
+  if (kind == T3_GEN_PHYSICAL) {
+    /* r186 useClearcoat / useSheen / useIridescence / useAnisotropy / useTransmission */
+    if (m->clearcoat > 0) { f |= T3_GEN_CC; if (m->clearcoat_normal_map) f |= T3_GEN_CCN; }
+    if (m->sheen > 0) f |= T3_GEN_SHEEN;
+    if (m->iridescence > 0) f |= T3_GEN_IRID;
+    if (m->anisotropy > 0) f |= T3_GEN_ANISO;
+    if (m->transmission > 0) f |= T3_GEN_XMIT;
+  }
   /* instanced draws take r186's instanced-attribute program whatever the count
    * (its uniform-buffer program bakes the count into the shader) */
   if (o->type == T3_INSTANCED_MESH || batched) f |= T3_GEN_INSTBIG;
@@ -317,6 +326,7 @@ static const t3_texture *gen_tex(const t3_material *m, int which) {
   case T3_GEN_TEX_METALNESS: return m->metalness_map;
   case T3_GEN_TEX_ALPHA: return m->alpha_map;
   case T3_GEN_TEX_LIGHT: return m->light_map;
+  case T3_GEN_TEX_CLEARCOAT_NORMAL: return m->clearcoat_normal_map;
   default: return NULL;
   }
 }
@@ -476,8 +486,27 @@ static void gen_fill_draw(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, c
     case GOP_MAT_METAL: putf(b, m->metalness); break;
     case GOP_MAT_SPECULAR: put3(b, &m->specular, 1); break;
     case GOP_MAT_SHININESS: putf(b, m->shininess); break;
-    case GOP_MAT_IOR: putf(b, 1.5f); break;
-    case GOP_MAT_CLEARCOAT: case GOP_MAT_CLEARCOAT_R: putf(b, 0); break;
+    case GOP_MAT_IOR: putf(b, m->ior); break;
+    case GOP_MAT_CLEARCOAT: putf(b, m->clearcoat); break;
+    case GOP_MAT_CLEARCOAT_R: putf(b, m->clearcoat_roughness); break;
+    case GOP_MAT_SPEC_INTENSITY: putf(b, m->specular_intensity); break;
+    case GOP_MAT_SPEC_COLOR: put3(b, &m->specular_color, 1); break;
+    case GOP_MAT_CC_NORMAL_SCALE: memcpy(b, &m->clearcoat_normal_scale, 8); break;
+    case GOP_MAT_SHEEN: putf(b, m->sheen); break;
+    case GOP_MAT_SHEEN_COLOR: put3(b, &m->sheen_color, 1); break;
+    case GOP_MAT_SHEEN_R: putf(b, m->sheen_roughness); break;
+    case GOP_MAT_IRID: putf(b, m->iridescence); break;
+    case GOP_MAT_IRID_IOR: putf(b, m->iridescence_ior); break;
+    case GOP_MAT_IRID_THICK_MAX: putf(b, m->iridescence_thickness_range[1]); break;
+    case GOP_MAT_ANISO_VEC: {   /* r186 materialAnisotropyVector: anisotropy along anisotropyRotation */
+      float v[2] = { m->anisotropy * cosf(m->anisotropy_rotation), m->anisotropy * sinf(m->anisotropy_rotation) };
+      memcpy(b, v, 8);
+      break;
+    }
+    case GOP_MAT_TRANSMISSION: putf(b, m->transmission); break;
+    case GOP_MAT_THICKNESS: putf(b, m->thickness); break;
+    case GOP_MAT_ATTEN_DIST: putf(b, m->attenuation_distance); break;
+    case GOP_MAT_ATTEN_COLOR: put3(b, &m->attenuation_color, 1); break;
     case GOP_TEX_MATRIX: {
       const t3_texture *t = gen_tex(m, op->idx);
       if (t) {
