@@ -28,6 +28,12 @@
 #define STBI_ONLY_GIF
 #include "../third_party/stb_image.h"
 
+/* stb_image's inflate for a program table's packed shader text (gen_program.c),
+ * under three.c's name: an embedder may build stb_image static */
+char *t3__inflate(const void *z, int zlen, int raw, int *outlen) {
+  return stbi_zlib_decode_malloc_guesssize_headerflag((const char *)z, zlen, raw, outlen, 1);
+}
+
 typedef struct {
   const cgltf_data *d;
   t3_gltf_read_fn read;

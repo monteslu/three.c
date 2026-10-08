@@ -76,6 +76,10 @@ typedef struct { const char *name, *type; uint8_t location; bool instanced; } t3
 /* a uniform nothing varies (a flag, an identity matrix, a default): the bytes
  * r186 uploaded, written once when the program is built */
 typedef struct { uint8_t group; uint16_t offset, length; const uint8_t *bytes; } t3_gen_constant;
+/* a table's shader text, packed and deflated by tools/emit-programs.mjs
+ * (packText); the cache holds it inflated once a program of the table is built */
+typedef struct t3_gen_text_cache { char *lines; uint32_t *line_at; uint8_t *refs; uint32_t *shader_at; uint32_t n_lines, n_shaders; bool failed; } t3_gen_text_cache;
+typedef struct t3_gen_text { const uint8_t *z; uint32_t zlen, raw; t3_gen_text_cache *cache; } t3_gen_text;
 typedef struct {
   const char *state;            /* "standard+map+fog+l2200" */
   t3_gen_kind kind;
@@ -92,7 +96,11 @@ typedef struct {
    * object's own values */
   uint16_t tpl[3];
   uint8_t cast[3];              /* how many directional, point, spot lights cast (the first ones by id) */
+  /* the shader text: vertex / fragment when the program carries it (the
+   * runtime builder's), else shaders vtext / ftext of the table's packed
+   * text; t3_gen_source returns it either way */
   const char *vertex, *fragment;
+  const struct t3_gen_text *text; uint32_t vtext, ftext;
 } t3_gen_program;
 
 /* a table of programs: three.c's own (programs_gl.c, or programs_core_gl.c
@@ -100,6 +108,9 @@ typedef struct {
  * (t3_register_program_table, tools/gen-project-table.mjs) */
 typedef struct t3_gen_table { const t3_gen_program *programs; unsigned count; } t3_gen_table;
 extern const t3_gen_table t3_gen_base_gl, t3_gen_base_wgpu;
+/* a program's vertex (fragment = false) or fragment text, malloc'd; NULL with
+ * err set when the packed text does not inflate */
+char *t3_gen_source(const t3_gen_program *p, bool fragment, char *err, size_t errcap);
 
 /* r186's precomputed DFG LUT: 16 x 16, RG16F (scale, bias), linear, clamp */
 #define T3_GEN_DFG_LUT_SIZE 16

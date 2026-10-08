@@ -22,8 +22,13 @@ static void cmp(const t3_gen_program *a, const t3_gen_program *b) {
   NEQ("extension", !seq(a->extension, b->extension));
   NEQ("tpl", memcmp(a->tpl, b->tpl, sizeof a->tpl));
   NEQ("cast", memcmp(a->cast, b->cast, 3));
-  NEQ("vertex", !seq(a->vertex, b->vertex));
-  NEQ("fragment", !seq(a->fragment, b->fragment));
+  char err[256];
+  for (int fr = 0; fr < 2; fr++) {
+    char *x = t3_gen_source(a, fr, err, sizeof err), *y = t3_gen_source(b, fr, err, sizeof err);
+    bool same = seq(x, y);
+    free(x); free(y);
+    NEQ(fr ? "fragment" : "vertex", !same);
+  }
   NEQ("n_groups", a->n_groups != b->n_groups);
   for (int i = 0; i < a->n_groups; i++) {
     const t3_bk_group_layout *x = a->groups[i], *y = b->groups[i];

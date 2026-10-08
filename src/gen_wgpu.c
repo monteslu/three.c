@@ -114,9 +114,15 @@ static WGPUTextureViewDimension view_dim(t3_bk_tex_dim d) {
 
 t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_params params, char *err, size_t errcap) {
   if (src->n_groups > T3_GEN_MAX_GROUPS) { snprintf(err, errcap, "%s: %d groups", src->state, src->n_groups); return NULL; }
-  char *vt = t3_gen_apply_templates(src->vertex, src, params, err, errcap);
+  char *vsrc = t3_gen_source(src, false, err, errcap);
+  if (!vsrc) return NULL;
+  char *vt = t3_gen_apply_templates(vsrc, src, params, err, errcap);
+  free(vsrc);
   if (!vt) return NULL;
-  char *ft = t3_gen_apply_templates(src->fragment, src, params, err, errcap);
+  char *fsrc = t3_gen_source(src, true, err, errcap);
+  if (!fsrc) { free(vt); return NULL; }
+  char *ft = t3_gen_apply_templates(fsrc, src, params, err, errcap);
+  free(fsrc);
   if (!ft) { free(vt); return NULL; }
   t3_gen_gl *g = calloc(1, sizeof *g);
   struct gen_wgpu_prog *wg = calloc(1, sizeof *wg);

@@ -222,6 +222,88 @@ static char *subst(char *text, const char *from, const char *to, int *n) {
  * morph texture's row width into the vertex-index arithmetic. The capture used
  * values that occur nowhere else; each pattern must be found, or the build
  * fails. */
+/* stb_image's inflate (src/gltf.c): a table's packed shader text */
+char *t3__inflate(const void *z, int zlen, int raw, int *outlen);
+
+static uint32_t u32le(const uint8_t *p) { return p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
+static uint32_t varint(const uint8_t **p, const uint8_t *end) {
+  uint32_t v = 0;
+  for (int s = 0; *p < end && s < 35; s += 7) { uint8_t b = *(*p)++; v |= (uint32_t)(b & 127) << s; if (!(b & 128)) break; }
+  return v;
+}
+
+/* inflate a table's text (tools/emit-programs.mjs packText) and index its
+ * lines and shaders, once */
+static bool inflate_text(const t3_gen_text *t) {
+  t3_gen_text_cache *c = t->cache;
+  if (c->refs) return true;
+  if (c->failed) return false;
+  int n = 0;
+  uint8_t *raw = (uint8_t *)t3__inflate(t->z, (int)t->zlen, (int)t->raw, &n);
+  if (!raw || (uint32_t)n != t->raw || n < 12) { free(raw); c->failed = true; return false; }
+  uint32_t nl = u32le(raw), ns = u32le(raw + 4), lb = u32le(raw + 8);
+  if (12 + (uint64_t)lb > (uint64_t)n) { free(raw); c->failed = true; return false; }
+  c->line_at = malloc(((size_t)nl + 1) * sizeof *c->line_at);
+  c->shader_at = malloc(((size_t)ns + 1) * sizeof *c->shader_at);
+  if (!c->line_at || !c->shader_at) { free(raw); free(c->line_at); free(c->shader_at); c->line_at = c->shader_at = NULL; c->failed = true; return false; }
+  /* the lines end in '\n': each one's start, and the end of the last */
+  char *lines = (char *)raw + 12;
+  uint32_t k = 0, at = 0;
+  for (uint32_t i = 0; i < lb && k < nl; i++) if (lines[i] == '\n') { c->line_at[k++] = at; at = i + 1; }
+  c->line_at[k] = at;
+  /* each shader's refs: a count, then that many deltas */
+  const uint8_t *r = raw + 12 + lb, *end = raw + n;
+  uint32_t s = 0;
+  for (; s < ns && r < end; s++) {
+    c->shader_at[s] = (uint32_t)(r - (raw + 12 + lb));
+    uint32_t count = varint(&r, end);
+    for (uint32_t j = 0; j < count; j++) varint(&r, end);
+  }
+  if (k != nl || s != ns || r != end) { free(raw); free(c->line_at); free(c->shader_at); c->line_at = c->shader_at = NULL; c->failed = true; return false; }
+  c->lines = lines;
+  c->refs = raw + 12 + lb;
+  c->n_lines = nl;
+  c->n_shaders = ns;
+  return true;
+}
+
+char *t3_gen_source(const t3_gen_program *p, bool fragment, char *err, size_t errcap) {
+  const char *plain = fragment ? p->fragment : p->vertex;
+  if (plain || !p->text) {
+    size_t l = plain ? strlen(plain) : 0;
+    char *out = malloc(l + 1);
+    if (!out) { snprintf(err, errcap, "%s: out of memory", p->state); return NULL; }
+    if (l) memcpy(out, plain, l);
+    out[l] = 0;
+    return out;
+  }
+  const t3_gen_text *t = p->text;
+  if (!inflate_text(t)) { snprintf(err, errcap, "%s: the program table's shader text does not inflate", p->state); return NULL; }
+  t3_gen_text_cache *c = t->cache;
+  uint32_t which = fragment ? p->ftext : p->vtext;
+  if (which >= c->n_shaders) { snprintf(err, errcap, "%s: shader %u of %u", p->state, which, c->n_shaders); return NULL; }
+  const uint8_t *end = c->refs + (which + 1 < c->n_shaders ? c->shader_at[which + 1] : (uint32_t)(t->raw - 12 - c->line_at[c->n_lines]));
+  /* twice over the refs: the length, then the text */
+  char *out = NULL;
+  size_t len = 0;
+  for (int pass = 0; pass < 2; pass++) {
+    const uint8_t *r = c->refs + c->shader_at[which];
+    uint32_t count = varint(&r, end), line = 0;
+    size_t o = 0;
+    for (uint32_t j = 0; j < count; j++) {
+      uint32_t z = varint(&r, end);
+      line += (z >> 1) ^ (0u - (z & 1));
+      if (line >= c->n_lines) { free(out); snprintf(err, errcap, "%s: line %u of %u", p->state, line, c->n_lines); return NULL; }
+      uint32_t a = c->line_at[line], b = c->line_at[line + 1] - 1;   /* without its '\n' */
+      if (pass) { memcpy(out + o, c->lines + a, b - a); if (j + 1 < count) out[o + b - a] = '\n'; }
+      o += b - a + (j + 1 < count);
+    }
+    if (!pass) { len = o; out = malloc(len + 1); if (!out) { snprintf(err, errcap, "%s: out of memory", p->state); return NULL; } }
+    else out[len] = 0;
+  }
+  return out;
+}
+
 static char *apply_templates(const char *text, const t3_gen_program *src, t3_gen_params p, char *err, size_t errcap) {
   size_t tl0 = strlen(text);
   char *t = malloc(tl0 + 1);
@@ -260,7 +342,10 @@ static char *apply_templates(const char *text, const t3_gen_program *src, t3_gen
 
 t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params params, char *err, size_t errcap) {
   if (src->n_groups > T3_GEN_MAX_GROUPS) { snprintf(err, errcap, "%s: %d groups", src->state, src->n_groups); return NULL; }
-  char *vt = apply_templates(src->vertex, src, params, err, errcap);
+  char *vsrc = t3_gen_source(src, false, err, errcap);
+  if (!vsrc) return NULL;
+  char *vt = apply_templates(vsrc, src, params, err, errcap);
+  free(vsrc);
   if (!vt) return NULL;
   char *vs = renumber_attributes(vt, src->state, err, errcap);
   free(vt);
@@ -268,7 +353,10 @@ t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params
   GLuint v = compile(GL_VERTEX_SHADER, vs, err, errcap);
   free(vs);
   if (!v) return NULL;
-  char *ft = apply_templates(src->fragment, src, params, err, errcap);
+  char *fsrc = t3_gen_source(src, true, err, errcap);
+  if (!fsrc) { glDeleteShader(v); return NULL; }
+  char *ft = apply_templates(fsrc, src, params, err, errcap);
+  free(fsrc);
   if (!ft) { glDeleteShader(v); return NULL; }
   char *fs = encode ? encode_output(ft, src->state, err, errcap) : NULL;
   if (encode && !fs) { free(ft); glDeleteShader(v); return NULL; }
