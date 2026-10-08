@@ -432,25 +432,48 @@ void t3_gen_gl_flush(t3_gen_gl *g) {
  * renderer's own programs (programs_core_gl.c). Process-wide: register before
  * the first render. */
 #define T3_MAX_TABLES 16
+#define T3_BUILT_BLOCK 64     /* built programs per block (the blocks never move) */
+#define T3_BUILT_BLOCKS 64
 static const t3_gen_table *tables_gl[T3_MAX_TABLES], *tables_wgpu[T3_MAX_TABLES];
 static int n_gl, n_wgpu;
+/* the runtime builder's programs, per backend, in blocks of T3_BUILT_BLOCK */
+static t3_gen_table built[2][T3_BUILT_BLOCKS];
+static int n_built[2];
+static const t3_gen_table *all_tables[2][T3_MAX_TABLES + T3_BUILT_BLOCKS + 1];
 void t3_register_program_table(const struct t3_gen_table *gl_table, const struct t3_gen_table *wgpu_table) {
-  if (gl_table && n_gl < T3_MAX_TABLES - 1) tables_gl[n_gl++] = gl_table;
-  if (wgpu_table && n_wgpu < T3_MAX_TABLES - 1) tables_wgpu[n_wgpu++] = wgpu_table;
+  if (gl_table && n_gl < T3_MAX_TABLES) tables_gl[n_gl++] = gl_table;
+  if (wgpu_table && n_wgpu < T3_MAX_TABLES) tables_wgpu[n_wgpu++] = wgpu_table;
+}
+const t3_gen_program *t3_gen_add_built(const t3_gen_program *p) {
+  int b = p->backend == T3_GEN_WGPU;
+  t3_gen_table *t = n_built[b] ? &built[b][n_built[b] - 1] : NULL;
+  if (!t || t->count == T3_BUILT_BLOCK) {
+    if (n_built[b] == T3_BUILT_BLOCKS) t3__fatal("the runtime builder made more programs than it has room for");
+    t = &built[b][n_built[b]++];
+    t3_gen_program *ps = calloc(T3_BUILT_BLOCK, sizeof *ps);
+    T3_CHECK_ALLOC(ps);
+    t->programs = ps;
+  }
+  t3_gen_program *kept = &((t3_gen_program *)t->programs)[t->count++];
+  *kept = *p;
+  free((void *)p);   /* (its fields now belong to the block's copy) */
+  return kept;
 }
 int t3_gen_tables(t3_gen_backend backend, const t3_gen_table *const **out) {
-  /* the base table last: a project's programs win a tie */
-  if (backend == T3_GEN_WGPU) {
+  /* project tables, then built programs, then the base table: a project's
+   * programs win a tie */
+  int b = backend == T3_GEN_WGPU, n = 0;
+  const t3_gen_table **dst = all_tables[b];
+  const t3_gen_table *const *proj = b ? tables_wgpu : tables_gl;
+  for (int i = 0, np = b ? n_wgpu : n_gl; i < np; i++) dst[n++] = proj[i];
+  for (int i = 0; i < n_built[b]; i++) dst[n++] = &built[b][i];
+  if (b) {
 #ifdef T3_WGPU
-    tables_wgpu[n_wgpu] = &t3_gen_base_wgpu;
-    *out = tables_wgpu;
-    return n_wgpu + 1;
+    dst[n++] = &t3_gen_base_wgpu;
 #else
-    *out = NULL;
-    return 0;
+    if (!n) { *out = NULL; return 0; }
 #endif
-  }
-  tables_gl[n_gl] = &t3_gen_base_gl;
-  *out = tables_gl;
-  return n_gl + 1;
+  } else dst[n++] = &t3_gen_base_gl;
+  *out = dst;
+  return n;
 }

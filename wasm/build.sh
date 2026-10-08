@@ -8,6 +8,7 @@
 #   WGPU=1 wasm/build.sh          # dual carts: GL and WebGPU (tools/fetch-emdawnwebgpu.sh first)
 #   SIMD=0 wasm/build.sh          # scalar wasm (no simd128): SIMD is on by default
 #   PROFILE=1 wasm/build.sh       # keep function names (--profiling-funcs)
+#   T3_BUILDER=1 wasm/build.sh    # the runtime program builder (embedded QuickJS; tools/fetch-builder-deps.sh)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WASMCART="${WASMCART:-$ROOT/../wasmcart}"
@@ -24,6 +25,16 @@ if [ "${WGPU:-0}" = 1 ]; then
   [ -f "$EMDAWN/emdawnwebgpu.port.py" ] || { echo "WGPU=1: no emdawnwebgpu at $EMDAWN (run tools/fetch-emdawnwebgpu.sh, or set EMDAWN)" >&2; exit 1; }
   TOBJ="$OUT/obj/three-wgpu$TBL"
   WGPUF="-DT3_WGPU --use-port=$EMDAWN/emdawnwebgpu.port.py"
+fi
+# T3_BUILDER=1: states no table has are built on first use (src/builder.c)
+BLDF="" BLDL=""
+if [ "${T3_BUILDER:-0}" = 1 ]; then
+  QJS="$ROOT/third_party/quickjs" TPKG="$ROOT/third_party/three-0.186.1"
+  [ -f "$QJS/quickjs.c" ] && [ -f "$TPKG/build/three.webgpu.js" ] || "$ROOT/tools/fetch-builder-deps.sh"
+  TOBJ="$TOBJ-builder"
+  BLDF="-DT3_BUILDER -I $QJS"
+  # QuickJS bounds the capture's JS recursion at 1 MB of stack (src/builder.c)
+  BLDL="-sSTACK_SIZE=4194304"
 fi
 mkdir -p "$TOBJ" "$OUT/obj/box2d" "$OUT/obj/box3d"
 OPT="-O2 -DNDEBUG ${EXTRA_CFLAGS:-}"
@@ -56,8 +67,14 @@ cc() { # out src flags...
 
 SRCS="math core geometry curves animation raycaster loaders gltf renderer backend_gles gen_program gen/programs${TBL}_gl gen/programs_dfg"
 [ "${WGPU:-0}" = 1 ] && SRCS="$SRCS gen_wgpu gen/programs${TBL}_wgpu"
+if [ -n "$BLDF" ]; then
+  node "$ROOT/tools/embed-builder.mjs" "$TPKG" "$TOBJ/builder_js.c" >/dev/null
+  cc "$TOBJ/builder_js.o" "$TOBJ/builder_js.c" $OPT
+  for q in dtoa libregexp libunicode quickjs; do cc "$TOBJ/qjs_$q.o" "$QJS/$q.c" $OPT -w -D_GNU_SOURCE -I "$QJS"; done
+  SRCS="$SRCS builder"
+fi
 for s in $SRCS; do
-  cc "$TOBJ/${s//\//_}.o" "$ROOT/src/$s.c" $TFLAGS $WGPUF -std=c99 -DT3_WASMCART \
+  cc "$TOBJ/${s//\//_}.o" "$ROOT/src/$s.c" $TFLAGS $WGPUF $BLDF -std=c99 -DT3_WASMCART \
     -I "$WASMCART/include" -I "$ROOT/include" -I "$ROOT/src"
 done
 # Physics single threaded; SIMD unless SIMD=0
@@ -76,16 +93,17 @@ for p in "${pids[@]}"; do wait "$p" || fail=1; done
 [ $fail = 0 ] || { echo "compile failed" >&2; exit 1; }
 
 for scene in ${SCENES:-01-cubes 05-heavy 06-heavy-instanced physics3d physics2d}; do
-  name="three-$scene"
+  name="three-$scene$TBL"
+  [ -n "$BLDF" ] && name="$name-builder"
   CARTF=""
-  [ "${WGPU:-0}" = 1 ] && name="three-$scene-wgpu" && CARTF="$WGPUF -DCART_WGPU"
+  [ "${WGPU:-0}" = 1 ] && name="$name-wgpu" && CARTF="$WGPUF -DCART_WGPU"
   emcc $TFLAGS $CARTF -std=c11 -DCART_SCENE="\"$scene\"" -DT3_WASMCART \
     -I "$WASMCART/include" -I "$ROOT/include" -I "$ROOT/bench" -I "$BOX2D/include" -I "$BOX3D/include" \
     "$ROOT/wasm/cart.c" "$ROOT/bench/scenes.c" "$ROOT/examples/physics.c" \
     "$TOBJ"/*.o "$OUT"/obj/box3d/*.o "$OUT"/obj/box2d/*.o \
     -sSTANDALONE_WASM=1 -sEXPORTED_FUNCTIONS='["_wc_init","_wc_render","_wc_get_info"]' \
     -sERROR_ON_UNDEFINED_SYMBOLS=0 -sINITIAL_MEMORY=67108864 -sALLOW_MEMORY_GROWTH=1 \
-    --no-entry $LINKX -o "$OUT/$name.wasm"
+    --no-entry $LINKX $BLDL -o "$OUT/$name.wasm"
   # the only imports a cart may have: GL, the wasmcart env functions, WASI
   node "$ROOT/wasm/check-imports.mjs" "$OUT/$name.wasm"
   # three.c's test/assets, and three.lua's compare/assets when a checkout is

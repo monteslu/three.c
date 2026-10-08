@@ -98,7 +98,9 @@ renderer picks the program for each draw by material kind, features and
 light counts. [docs/r186-renderer.md](docs/r186-renderer.md) explains the
 pipeline, the state names, how to add a state and how an application builds
 its own table (`tools/gen-project-table.mjs`, `t3_register_program_table`,
-three.c built with `T3_TABLE=core`).
+three.c built with `T3_TABLE=core`). Built with `T3_BUILDER=1`, three.c also
+carries three.js itself in an embedded QuickJS and builds a state no table
+has on first use, the same program the tables would hold.
 
 ## Same pixels as three.js r186
 

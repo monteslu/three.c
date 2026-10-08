@@ -39,11 +39,34 @@ if [ "${WGPU:-0}" = 1 ]; then
   OUT="$ROOT/build/native-wgpu$TBL"
   mkdir -p "$OUT/obj"
 fi
+# T3_BUILDER=1: the runtime program builder (src/builder.c): states no table
+# has are captured from three.js in an embedded QuickJS on first use
+# (tools/fetch-builder-deps.sh fetches QuickJS and three.js into third_party/)
+BLD_FLAGS=""
+if [ "${T3_BUILDER:-0}" = 1 ]; then
+  QJS="$ROOT/third_party/quickjs" TPKG="$ROOT/third_party/three-0.186.1"
+  [ -f "$QJS/quickjs.c" ] && [ -f "$TPKG/build/three.webgpu.js" ] || "$ROOT/tools/fetch-builder-deps.sh"
+  OUT="$OUT-builder"
+  mkdir -p "$OUT/obj"
+  BLD_FLAGS="-DT3_BUILDER -I $QJS"
+  JSC="$OUT/obj/builder_js.c"
+  node "$ROOT/tools/embed-builder.mjs" "$TPKG" "$JSC" >/dev/null
+fi
 objs=()
+if [ -n "$BLD_FLAGS" ]; then
+  for q in dtoa libregexp libunicode quickjs; do
+    o="$OUT/obj/qjs_$q.o"
+    [ "$o" -nt "$QJS/$q.c" ] || "$CC" $CFLAGS -w -D_GNU_SOURCE -I "$QJS" -c "$QJS/$q.c" -o "$o"
+    objs+=("$o")
+  done
+  "$CC" $CFLAGS -c "$JSC" -o "$OUT/obj/builder_js.o"
+  objs+=("$OUT/obj/builder_js.o")
+  SRCS="$SRCS builder"
+fi
 for s in $SRCS; do
   o="$OUT/obj/${s//\//_}.o"
   W="$WARN"; [ "$s" = gltf ] && W="-std=c99 -w" # cgltf / stb_image compile in this unit
-  "$CC" $CFLAGS $W $WGPU_FLAGS -D_POSIX_C_SOURCE=200809L -I "$ROOT/include" -I "$ROOT/src" -c "$ROOT/src/$s.c" -o "$o"
+  "$CC" $CFLAGS $W $WGPU_FLAGS $BLD_FLAGS -D_POSIX_C_SOURCE=200809L -I "$ROOT/include" -I "$ROOT/src" -c "$ROOT/src/$s.c" -o "$o"
   objs+=("$o")
 done
 ar rcs "$OUT/libthree.a" "${objs[@]}"
@@ -65,5 +88,5 @@ done
 "$CC" $CFLAGS -std=c11 -Wall $WGPU_FLAGS -I "$ROOT/include" -I "$ROOT/bench" -I "$BOX2D/include" -I "$BOX3D/include" \
   "$ROOT/bench/native_main.c" "$ROOT/bench/scenes.c" "$ROOT/examples/physics.c" "$OUT/libthree.a" \
   "$DEPS/box3d/src/libbox3d.a" "$DEPS/box2d/src/libbox2d.a" \
-  -lEGL -lGLESv2 -lz -lm -lpthread $WGPU_LIBS -o "$OUT/bench-native"
+  -lEGL -lGLESv2 -lz -lm -lpthread $WGPU_LIBS ${BLD_FLAGS:+-ldl} -o "$OUT/bench-native"
 echo "built ${OUT#$ROOT/}/libthree.a ${OUT#$ROOT/}/bench-native"

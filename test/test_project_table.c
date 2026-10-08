@@ -4,6 +4,8 @@
  * table draws. test/run.sh builds this three ways:
  *   -DFULL     the full table, nothing registered: the reference picture
  *   -DPROJECT  the core table and the project table: the same picture
+ *   -DBUILDER  the core table and the runtime builder (T3_BUILDER=1): the
+ *              state is built on first use, the same picture again
  *   (neither)  the core table alone: the control, its draws are missing
  * and writes each frame to build/test/project-<mode>.rgba. */
 #include <EGL/egl.h>
@@ -70,6 +72,11 @@ int main(int argc, char **argv) {
   int bad = 0;
 #if defined(FULL) || defined(PROJECT)
   bad = *missing != 0;   /* every draw has a program */
+#elif defined(BUILDER)
+  /* the built state is listed (a project table would save building it), and
+   * nothing failed */
+  bad = strcmp(missing, "standard+map+nearest+l1100\n") != 0 || (t3_renderer_last_error(r) && *t3_renderer_last_error(r));
+  if (t3_renderer_last_error(r)) printf("error: %s\n", t3_renderer_last_error(r));
 #else
   bad = *missing == 0;   /* the control: the core table alone cannot draw a material */
 #endif

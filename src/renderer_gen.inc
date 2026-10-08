@@ -22,27 +22,31 @@ static bool gen_note(t3_renderer *r, const char *what) {
   return false;
 }
 
-/* a state the table lacks, in the generator's syntax (kind+features+lDPSH),
- * remembered once: t3_renderer_generated_missing lists them so a project can
- * add them to tools/gen-states.txt and regenerate */
-static void gen_record_missing(const t3_renderer *rc, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast) {
-  t3_renderer *r = (t3_renderer *)rc;
+/* a state's name in the generator's syntax (kind+features+lDPSH+sDPS) */
+static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast) {
   static const char *const kinds[] = { "basic", "lambert", "phong", "standard", "physical", "depth", "points", "psprite", "line", "sprite", "normal" };
   static const char *const feats[] = T3_GEN_FEATURE_NAMES;
-  char name[256];
-  int n = snprintf(name, sizeof name, "%s", kind < (int)(sizeof kinds / sizeof kinds[0]) ? kinds[kind] : "?");
-  for (int b = 0; b < (int)(sizeof feats / sizeof feats[0]) && n < (int)sizeof name - 16; b++)
-    if (f & (1ull << b)) n += snprintf(name + n, sizeof name - (size_t)n, "+%s", feats[b]);
+  int n = snprintf(name, cap, "%s", kind < (int)(sizeof kinds / sizeof kinds[0]) ? kinds[kind] : "?");
+  for (int b = 0; b < (int)(sizeof feats / sizeof feats[0]) && n < (int)cap - 16; b++)
+    if (f & (1ull << b)) n += snprintf(name + n, cap - (size_t)n, "+%s", feats[b]);
   if (kind != T3_GEN_BASIC && kind != T3_GEN_NORMAL && kind <= T3_GEN_PHYSICAL)
-    n += snprintf(name + n, sizeof name - (size_t)n, "+l%d%d%d%d", want[0], want[1], want[2], want[3]);
+    n += snprintf(name + n, cap - (size_t)n, "+l%d%d%d%d", want[0], want[1], want[2], want[3]);
   if (cast && (cast[0] != want[0] || cast[1] != want[1] || cast[2] != want[2]))
-    snprintf(name + n, sizeof name - (size_t)n, "+s%d%d%d", cast[0], cast[1], cast[2]);
+    snprintf(name + n, cap - (size_t)n, "+s%d%d%d", cast[0], cast[1], cast[2]);
+}
+static bool gen_missing_has(const t3_renderer *r, const char *name) {
   size_t len = strlen(name);
-  if (r->gen_missing && strstr(r->gen_missing, name)) {
-    /* already listed (as a whole line) */
-    const char *p = r->gen_missing;
-    while ((p = strstr(p, name))) { if ((p == r->gen_missing || p[-1] == '\n') && (p[len] == '\n' || !p[len])) return; p += len; }
-  }
+  for (const char *p = r->gen_missing; p && (p = strstr(p, name)); p += len)
+    if ((p == r->gen_missing || p[-1] == '\n') && (p[len] == '\n' || !p[len])) return true;
+  return false;
+}
+/* a state the tables lack, remembered once: t3_renderer_generated_missing
+ * lists them so a project can add them to its table (with the runtime
+ * builder, the states it built, which a project table would save building) */
+static void gen_record_missing_name(const t3_renderer *rc, const char *name) {
+  t3_renderer *r = (t3_renderer *)rc;
+  if (gen_missing_has(r, name)) return;
+  size_t len = strlen(name);
   size_t old = r->gen_missing ? strlen(r->gen_missing) : 0;
   r->gen_missing = realloc(r->gen_missing, old + len + 2);
   T3_CHECK_ALLOC(r->gen_missing);
@@ -56,6 +60,11 @@ static void gen_record_missing(const t3_renderer *rc, t3_gen_kind kind, uint64_t
   FILE *lf = log && *log ? fopen(log, "a") : NULL;
   if (lf) { fprintf(lf, "%s\n", name); fclose(lf); }
 #endif
+}
+static void gen_record_missing(const t3_renderer *r, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast) {
+  char name[256];
+  gen_state_name(name, sizeof name, kind, f, want, cast);
+  gen_record_missing_name(r, name);
 }
 
 /* the tables of the renderer's backend: the registered project tables, then
@@ -224,8 +233,21 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
     }
   if (!best) {
     *why = "no table state for this feature / light combination";
-    gen_record_missing(r, kind, f, want, shadow ? cast : NULL);
-    return NULL;
+    char name[256];
+    gen_state_name(name, sizeof name, kind, f, want, shadow ? cast : NULL);
+#ifdef T3_BUILDER
+    /* build it now (once: a state that failed stays on the missing list) */
+    if (!gen_missing_has(r, name)) {
+      char err[1024], msg[1400];
+      t3_gen_backend be = T3_GEN_GL;
+#ifdef T3_WGPU
+      if (r->wgpu) be = T3_GEN_WGPU;
+#endif
+      best = t3_builder_build(name, be, err, sizeof err);
+      if (!best) { snprintf(msg, sizeof msg, "%s: the runtime builder failed: %s", name, err); gen_note((t3_renderer *)r, msg); }
+    }
+#endif
+    gen_record_missing_name(r, name);
   }
   return best;
 }

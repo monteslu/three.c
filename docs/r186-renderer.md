@@ -98,8 +98,12 @@ draws other combinations, or wants a smaller binary, builds its own:
   native build writes that log with `T3_MISSING_LOG=<file>`; a cart can collect
   `t3_renderer_generated_missing`.
 - Captures are cached, so a rerun only captures new states. Capturing needs
-  Node, three.c's `npm install` and a GPU (webgl-node, webgpu-node); the
-  generated C does not, so it is usually checked in.
+  Node and three.c's `npm install`, but no GPU: it runs on a mock device that
+  answers three.js's capability queries the way the recorded real devices did
+  (`tools/mock-gpu.mjs`, `tools/gpu-answers.json`), and every capture of the
+  full table comes out byte-identical to one on real devices. `--real-gpu`
+  captures on webgl-node and webgpu-node instead. The generated C needs none
+  of this, so it is usually checked in.
 
 The tool writes `gen/mygame_gl.c` and `gen/mygame_wgpu.c`. Compile them with
 three.c's `src/` on the include path and register them before the first
@@ -113,6 +117,33 @@ Registered tables are searched before three.c's own. Built with
 itself (output pass, backgrounds, PMREM, shadow casters: about 0.35 MB per
 backend instead of the full table's tens of MB), so the project's table is
 the only source of material programs.
+
+## Building states at run time
+
+Built with `T3_BUILDER=1` (`./build.sh` or `wasm/build.sh`), three.c carries
+three.js r186 itself, in an embedded QuickJS (quickjs-ng), and a draw whose
+state no table has gets its program built on first use: the same capture
+`tools/gen-programs.mjs` runs (`tools/capture-core.mjs` on the mock GPU),
+turned into a program by the same code the emitter uses
+(`tools/program-model.mjs`), kept for the rest of the process.
+`tools/fetch-builder-deps.sh` fetches QuickJS and the three.js package
+(checked against their SHA-256); the build embeds them.
+
+    T3_BUILDER=1 T3_TABLE=core ./build.sh
+
+- A built program equals the one the emitter writes for that state, field
+  for field (`test/test_builder_parity.c` builds every state of the full
+  table both ways), and draws the same pixels.
+- Building costs a few hundred milliseconds per state on first use (each
+  capture runs in a fresh JS runtime, since three.js numbers its nodes per
+  process), so it suits development and the long tail. Built states are
+  still listed by `t3_renderer_generated_missing` and `T3_MISSING_LOG`:
+  feeding that list to `tools/gen-project-table.mjs` moves them into the
+  project's table, where they cost nothing.
+- QuickJS and three.js's 3.7 MB of JS add about 4.7 MB to the binary (a
+  core-table cart grows from 1.1 MB to 5.8 MB of wasm). The thread that renders needs a little over 1 MB of stack for a
+  build (QuickJS's own bound); `wasm/build.sh` gives a builder cart 4 MB.
+- Generator extensions (`tools/extensions/`) are offline only.
 
 ## Drawing with the tables
 

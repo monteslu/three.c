@@ -77,6 +77,13 @@ extern const char *const t3_gen_tex_names[T3_GEN_TEX_COUNT];
 /* the program tables to search for a backend, project tables first (gen_program.c) */
 int t3_gen_tables(t3_gen_backend backend, const t3_gen_table *const **out);
 
+/* the runtime builder (T3_BUILDER, builder.c): the program for a state no
+ * table has, captured from r186 now; NULL with err set when it cannot be */
+const t3_gen_program *t3_builder_build(const char *state, t3_gen_backend backend, char *err, size_t errcap);
+/* keep a built program (takes the malloc'd struct, returns where it now
+ * lives): searched after the project tables, before the base */
+const t3_gen_program *t3_gen_add_built(const t3_gen_program *p);
+
 enum { T3_GEN_LT_DIR, T3_GEN_LT_POINT, T3_GEN_LT_SPOT };
 enum { T3_GEN_SH_BIAS, T3_GEN_SH_NORMAL_BIAS, T3_GEN_SH_RADIUS, T3_GEN_SH_INTENSITY, T3_GEN_SH_MAP_SIZE, T3_GEN_SH_MATRIX };
 struct t3_gen_op { uint8_t op, idx, sub; int8_t group; uint16_t off, len; };

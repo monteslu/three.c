@@ -38,6 +38,30 @@ if [ -d build/gen-programs ] && ls build/gen-programs/standard+map+nearest.gl.js
 else
   echo "skip  test_project_table (no captures in build/gen-programs: node tools/gen-programs.mjs)"
 fi
+# the runtime builder (after T3_BUILDER=1 T3_TABLE=core ./build.sh): the core
+# table draws a material state it lacks by building it on first use in the
+# embedded QuickJS, the same picture as the full table; and a sample of the
+# full table's states built that way equals the emitted programs field for field
+if [ -f build/native_core-builder/libthree.a ]; then
+  P="-std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_project_table.c"
+  L="-lEGL -lGLESv2 -lz -lm -ldl"
+  "$CC" $P -DFULL build/native/libthree.a $L -o build/test/test_project_full
+  "$CC" $P -DBUILDER build/native_core-builder/libthree.a $L -o build/test/test_project_builder
+  ok=1
+  EGL_PLATFORM=surfaceless ./build/test/test_project_full full >/dev/null || ok=0
+  EGL_PLATFORM=surfaceless ./build/test/test_project_builder builder >/dev/null || ok=0
+  cmp -s build/test/project-full.rgba build/test/project-builder.rgba || ok=0
+  if [ $ok = 1 ]; then echo "ok    test_builder_draw"; else echo "FAIL  test_builder_draw"; fail=1; fi
+  B=build/test/parity
+  mkdir -p $B
+  "$CC" -O1 -w -I include -I src -Dt3_gen_base_gl=full_gl -c src/gen/programs_gl.c -o $B/full_gl.o
+  "$CC" -O1 -w -I include -I src -Dt3_gen_base_wgpu=full_wgpu -c src/gen/programs_wgpu.c -o $B/full_wgpu.o
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_BUILDER -I include -I src test/test_builder_parity.c $B/full_gl.o $B/full_wgpu.o \
+    build/native_core-builder/libthree.a $L -o $B/test_builder_parity
+  run test_builder_parity "./$B/test_builder_parity" "${T3_PARITY_STRIDE:-40}"
+else
+  echo "skip  test_builder_draw, test_builder_parity (T3_BUILDER=1 T3_TABLE=core ./build.sh)"
+fi
 # WebGPU (after WGPU=1 ./build.sh, with native-dawn): exit 77 = no adapter, skipped
 case "$(uname -s)-$(uname -m)" in
   Linux-x86_64) PLAT=linux-x64 ;; Linux-aarch64) PLAT=linux-arm64 ;; Darwin-arm64) PLAT=darwin-arm64 ;; Darwin-x86_64) PLAT=darwin-x64 ;; *) PLAT=unknown ;;

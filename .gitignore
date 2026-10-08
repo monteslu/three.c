@@ -2,3 +2,5 @@ build/
 out/
 node_modules/
 third_party/emdawnwebgpu/
+third_party/quickjs/
+third_party/three-*/
