@@ -315,11 +315,13 @@ t3_geometry *t3_sphere_geometry_new_ex(float radius, int ws, int hs, float phi_s
     float v = (float)iy / hs, u_off = 0;
     if (iy == 0 && theta_start == 0) u_off = 0.5f / ws;
     else if (iy == hs && theta_end == (float)M_PI) u_off = -0.5f / ws;
+    /* r186: the ring radius from the height (exact zeros at the poles) */
+    float py = radius * cosf(theta_start + v * theta_len);
+    float ring = sqrtf(radius * radius - py * py);
     for (int ix = 0; ix <= ws; ix++) {
       float u = (float)ix / ws;
-      float px = -radius * cosf(phi_start + u * phi_len) * sinf(theta_start + v * theta_len);
-      float py = radius * cosf(theta_start + v * theta_len);
-      float pz = radius * sinf(phi_start + u * phi_len) * sinf(theta_start + v * theta_len);
+      float px = -ring * cosf(phi_start + u * phi_len);
+      float pz = ring * sinf(phi_start + u * phi_len);
       t3_vec3 n = t3_vec3_normalize(t3_v3(px, py, pz));
       push_vertex(&b, px, py, pz, n.x, n.y, n.z, u + u_off, 1 - v);
       grid[iy * (ws + 1) + ix] = index++;
