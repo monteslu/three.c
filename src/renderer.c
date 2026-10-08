@@ -210,6 +210,7 @@ struct t3_renderer {
   float clear_v[4];
   GLuint cur_program, cur_vao;
   int cur_cull, cur_depth_test, cur_depth_write, cur_blend; /* -1 = unknown */
+  uint32_t vao_epoch;    /* vao_epoch when cur_vao was bound */
   bool blend_func_set;   /* glBlendFunc / glBlendEquation issued since the last reset */
   int cur_color_mask;     /* glColorMask, all four the same (1 until a material writes no colour) */
 
@@ -287,6 +288,9 @@ static int tu_active_unit(void);
 static void tu_forget_active(void);
 
 /* ── GL object lifetime ──────────────────────────────────────────── */
+/* bumped when a release deletes VAOs (no renderer at hand): GL may hand the
+ * name out again, so a renderer's remembered binding (bind_vao) is stale */
+static uint32_t vao_epoch;
 static void gl_release(uint32_t kind, void *thing) {
   switch (kind) {
   case T3_KIND_GEOMETRY: {
@@ -298,6 +302,19 @@ static void gl_release(uint32_t kind, void *thing) {
     if (gg->morph_tex) glDeleteTextures(1, &gg->morph_tex);
     free(gg);
     g->_gl = NULL;
+    vao_epoch++;
+    break;
+  }
+  case T3_KIND_OBJECT: {   /* an InstancedMesh: its own VAOs (use_geometry_bind) */
+    t3_instanced_mesh *im = thing;
+    geometry_gl *gg = im->_gl;
+    if (gg) {
+      delete_program_vaos(NULL, gg);
+      glDeleteVertexArrays(1, &gg->vao);
+      free(gg);
+      im->_gl = NULL;
+      vao_epoch++;
+    }
     break;
   }
   case T3_KIND_ATTRIBUTE: {
@@ -772,9 +789,10 @@ static void bind_float_attr(t3_attribute *a, GLuint index) {
 }
 
 static void bind_vao(t3_renderer *r, GLuint vao) {
-  if (r->cur_vao != vao) {
+  if (r->cur_vao != vao || r->vao_epoch != vao_epoch) {
     glBindVertexArray(vao);
     r->cur_vao = vao;
+    r->vao_epoch = vao_epoch;
   }
 }
 

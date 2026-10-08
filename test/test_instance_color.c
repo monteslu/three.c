@@ -7,16 +7,41 @@
  *     build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test_instance_color
  *   EGL_PLATFORM=surfaceless ./build/test_instance_color
  *
- * Exits 0 when every render returns. */
+ * Then InstancedMeshes drawn and released in a loop: three.c's live
+ * allocations (counted through t3_set_allocator) come back to the same number
+ * each time. An InstancedMesh's own VAO record (use_geometry_bind) was never
+ * freed when the mesh was.
+ *
+ * Exits 0 when every render returns and nothing leaks. */
 #include <EGL/egl.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "three.h"
 
 #define W 96
 #define H 64
 
+static long live;
+static void *cmalloc(size_t n) { void *p = malloc(n); if (p) live++; return p; }
+static void *crealloc(void *p, size_t n) { void *q = realloc(p, n); if (!p && q) live++; return q; }
+static void cfree(void *p) { if (p) live--; free(p); }
+
+/* an InstancedMesh drawn (shadow pass too) and released: the live count while it is in the scene */
+static long cycle(t3_renderer *r, t3_scene *s, t3_camera *cam, t3_geometry *g, t3_material *m) {
+  t3_instanced_mesh *im = t3_instanced_mesh_new(g, m, 4);
+  im->mesh.base.cast_shadow = true;
+  t3_instanced_mesh_set_color_at(im, 1, t3_color_hex(0x40ff80));
+  t3_object_add(&s->base, im);
+  t3_renderer_render(r, s, cam);
+  long during = live;
+  t3_object_remove(&s->base, im);
+  t3_release(im);
+  return during;
+}
+
 int main(void) {
+  t3_set_allocator(cmalloc, crealloc, cfree);
   EGLDisplay d = eglGetDisplay(EGL_DEFAULT_DISPLAY);
   if (!eglInitialize(d, NULL, NULL)) return fprintf(stderr, "eglInitialize failed\n"), 2;
   EGLint ca[] = { EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_SURFACE_TYPE, EGL_PBUFFER_BIT, EGL_NONE };
@@ -59,7 +84,16 @@ int main(void) {
   t3_renderer_render(r, s, cam);
   t3_renderer_render(r, s, cam);
 
+  t3_object_remove(&s->base, im);
   t3_release(im);
+  cycle(r, s, cam, g, m);   /* warm: its program and caches */
+  long base = live;
+  for (int i = 0; i < 4; i++) {
+    long during = cycle(r, s, cam, g, m);
+    /* the control: the mesh's own allocations were counted while it lived */
+    if (during <= base) return fprintf(stderr, "test_instance_color: %ld live during a cycle, %ld after: the count sees nothing\n", during, base), 1;
+    if (live != base) return fprintf(stderr, "test_instance_color: cycle %d leaks %ld allocations\n", i, live - base), 1;
+  }
   t3_release(g);
   t3_release(m);
   t3_release(s);
