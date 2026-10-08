@@ -219,6 +219,13 @@ wasmcart checkout's `node_modules`.
 
 three.js 0.186.1 is downloaded from npm into `build/three-r186` on first use.
 
+## Versions
+
+three.c's versions follow the three.js release they match: `0.186.N` is
+three.js r186, and N counts three.c's own releases on it (fixes and features
+that keep the same three.js). A new three.js release starts the next series
+(`0.187.0`). `T3_VERSION` and `T3_REVISION` in `three.h` say which.
+
 ## License
 
 MIT (`LICENSE`). three.c includes code and data from three.js (MIT,
