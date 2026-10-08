@@ -95,18 +95,11 @@ typedef struct {
   const char *vertex, *fragment;
 } t3_gen_program;
 
-extern const unsigned t3_gen_program_count_gl;
-const t3_gen_program *t3_gen_programs_gl(void);
-/* lights: the exact count vector wanted, or NULL for the kind's default capture
- * (l1100 for lit kinds); extension: its name or NULL. NULL when not in the table. */
-const t3_gen_program *t3_gen_program_get_gl(t3_gen_kind kind, uint64_t features, const uint8_t lights[4], const char *extension);
-const t3_gen_program *t3_gen_program_by_name_gl(const char *state);
-extern const unsigned t3_gen_program_count_wgpu;
-const t3_gen_program *t3_gen_programs_wgpu(void);
-/* lights: the exact count vector wanted, or NULL for the kind's default capture
- * (l1100 for lit kinds); extension: its name or NULL. NULL when not in the table. */
-const t3_gen_program *t3_gen_program_get_wgpu(t3_gen_kind kind, uint64_t features, const uint8_t lights[4], const char *extension);
-const t3_gen_program *t3_gen_program_by_name_wgpu(const char *state);
+/* a table of programs: three.c's own (programs_gl.c, or programs_core_gl.c
+ * in a core-only build) and any a project registers
+ * (t3_register_program_table, tools/gen-project-table.mjs) */
+typedef struct t3_gen_table { const t3_gen_program *programs; unsigned count; } t3_gen_table;
+extern const t3_gen_table t3_gen_base_gl, t3_gen_base_wgpu;
 
 /* r186's precomputed DFG LUT: 16 x 16, RG16F (scale, bias), linear, clamp */
 #define T3_GEN_DFG_LUT_SIZE 16

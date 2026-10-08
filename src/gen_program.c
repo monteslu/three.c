@@ -425,3 +425,32 @@ void t3_gen_gl_flush(t3_gen_gl *g) {
     g->dirty[i] = false;
   }
 }
+
+/* ── the program tables ───────────────────────────────────────────────
+ * Projects add their own (tools/gen-project-table.mjs) ahead of three.c's,
+ * which is the full table (programs_gl.c) or, in a core-only build, just the
+ * renderer's own programs (programs_core_gl.c). Process-wide: register before
+ * the first render. */
+#define T3_MAX_TABLES 16
+static const t3_gen_table *tables_gl[T3_MAX_TABLES], *tables_wgpu[T3_MAX_TABLES];
+static int n_gl, n_wgpu;
+void t3_register_program_table(const struct t3_gen_table *gl_table, const struct t3_gen_table *wgpu_table) {
+  if (gl_table && n_gl < T3_MAX_TABLES - 1) tables_gl[n_gl++] = gl_table;
+  if (wgpu_table && n_wgpu < T3_MAX_TABLES - 1) tables_wgpu[n_wgpu++] = wgpu_table;
+}
+int t3_gen_tables(t3_gen_backend backend, const t3_gen_table *const **out) {
+  /* the base table last: a project's programs win a tie */
+  if (backend == T3_GEN_WGPU) {
+#ifdef T3_WGPU
+    tables_wgpu[n_wgpu] = &t3_gen_base_wgpu;
+    *out = tables_wgpu;
+    return n_wgpu + 1;
+#else
+    *out = NULL;
+    return 0;
+#endif
+  }
+  tables_gl[n_gl] = &t3_gen_base_gl;
+  *out = tables_gl;
+  return n_gl + 1;
+}

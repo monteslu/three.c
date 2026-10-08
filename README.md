@@ -96,7 +96,9 @@ explains fails the capture. `tools/emit-programs.mjs` turns the captures into
 C tables (`src/gen/programs_gl.c`, `src/gen/programs_wgpu.c`), and the
 renderer picks the program for each draw by material kind, features and
 light counts. [docs/r186-renderer.md](docs/r186-renderer.md) explains the
-pipeline, the state names and how to add a state.
+pipeline, the state names, how to add a state and how an application builds
+its own table (`tools/gen-project-table.mjs`, `t3_register_program_table`,
+three.c built with `T3_TABLE=core`).
 
 ## Same pixels as three.js r186
 

@@ -16,11 +16,13 @@ BOX3D="${BOX3D:-$ROOT/../box3d}"
 OUT="$ROOT/build/wasm"
 # WGPU=1: dual carts (GL and WebGPU through wasmcart's WebGPU tier, emdawnwebgpu)
 EMDAWN="${EMDAWN:-$ROOT/third_party/emdawnwebgpu}"   # tools/fetch-emdawnwebgpu.sh
-TOBJ="$OUT/obj/three"
+# T3_TABLE=core: only the renderer's own programs (a project registers its table)
+TBL=""; [ "${T3_TABLE:-full}" = core ] && TBL="_core"
+TOBJ="$OUT/obj/three$TBL"
 WGPUF=""
 if [ "${WGPU:-0}" = 1 ]; then
   [ -f "$EMDAWN/emdawnwebgpu.port.py" ] || { echo "WGPU=1: no emdawnwebgpu at $EMDAWN (run tools/fetch-emdawnwebgpu.sh, or set EMDAWN)" >&2; exit 1; }
-  TOBJ="$OUT/obj/three-wgpu"
+  TOBJ="$OUT/obj/three-wgpu$TBL"
   WGPUF="-DT3_WGPU --use-port=$EMDAWN/emdawnwebgpu.port.py"
 fi
 mkdir -p "$TOBJ" "$OUT/obj/box2d" "$OUT/obj/box3d"
@@ -52,8 +54,8 @@ cc() { # out src flags...
   while [ "$(jobs -r | wc -l)" -ge "$(nproc)" ]; do sleep 0.05; done
 }
 
-SRCS="math core geometry curves animation raycaster loaders gltf renderer backend_gles gen_program gen/programs_gl gen/programs_dfg"
-[ "${WGPU:-0}" = 1 ] && SRCS="$SRCS gen_wgpu gen/programs_wgpu"
+SRCS="math core geometry curves animation raycaster loaders gltf renderer backend_gles gen_program gen/programs${TBL}_gl gen/programs_dfg"
+[ "${WGPU:-0}" = 1 ] && SRCS="$SRCS gen_wgpu gen/programs${TBL}_wgpu"
 for s in $SRCS; do
   cc "$TOBJ/${s//\//_}.o" "$ROOT/src/$s.c" $TFLAGS $WGPUF -std=c99 -DT3_WASMCART \
     -I "$WASMCART/include" -I "$ROOT/include" -I "$ROOT/src"

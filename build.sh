@@ -16,11 +16,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CC="${CC:-cc}"
 CFLAGS="${CFLAGS:--O2}"
-OUT="$ROOT/build/native"
+# T3_TABLE=core: only the programs the renderer draws with itself (a project
+# brings its material programs: t3_register_program_table)
+TBL=""; [ "${T3_TABLE:-full}" = core ] && TBL="_core"
+OUT="$ROOT/build/native$TBL"
 mkdir -p "$OUT/obj"
 
 WARN="-std=c99 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers"
-SRCS="math core geometry curves animation raycaster loaders gltf renderer backend_gles gen_program gen/programs_gl gen/programs_dfg"
+SRCS="math core geometry curves animation raycaster loaders gltf renderer backend_gles gen_program gen/programs${TBL}_gl gen/programs_dfg"
 # WGPU=1: the WebGPU backend too (webgpu.h + libwebgpu_dawn from native-dawn; NATIVE_DAWN=<dist dir>)
 WGPU_FLAGS="" WGPU_LIBS=""
 if [ "${WGPU:-0}" = 1 ]; then
@@ -30,10 +33,10 @@ if [ "${WGPU:-0}" = 1 ]; then
   esac
   ND="${NATIVE_DAWN:-$ROOT/node_modules/native-dawn/dist/$PLAT}"
   [ -f "$ND/include/webgpu/webgpu.h" ] || { echo "WGPU=1: no Dawn at $ND (npm install, or set NATIVE_DAWN)" >&2; exit 1; }
-  SRCS="$SRCS gen_wgpu gen/programs_wgpu"
+  SRCS="$SRCS gen_wgpu gen/programs${TBL}_wgpu"
   WGPU_FLAGS="-DT3_WGPU -I $ND/include"
   WGPU_LIBS="-L $ND/lib -lwebgpu_dawn -Wl,-rpath,$ND/lib"
-  OUT="$ROOT/build/native-wgpu"
+  OUT="$ROOT/build/native-wgpu$TBL"
   mkdir -p "$OUT/obj"
 fi
 objs=()

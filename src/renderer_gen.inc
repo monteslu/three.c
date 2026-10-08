@@ -49,23 +49,31 @@ static void gen_record_missing(const t3_renderer *rc, t3_gen_kind kind, uint64_t
   memcpy(r->gen_missing + old, name, len);
   r->gen_missing[old + len] = '\n';
   r->gen_missing[old + len + 1] = 0;
+#ifndef T3_WASMCART
+  /* T3_MISSING_LOG=<file>: each missing state appended, once per renderer, for
+   * tools/gen-project-table.mjs --missing <file> */
+  const char *log = getenv("T3_MISSING_LOG");
+  FILE *lf = log && *log ? fopen(log, "a") : NULL;
+  if (lf) { fprintf(lf, "%s\n", name); fclose(lf); }
+#endif
 }
 
-/* the table of the renderer's backend */
-static const t3_gen_program *gen_tbl(const t3_renderer *r, unsigned *n) {
+/* the tables of the renderer's backend: the registered project tables, then
+ * three.c's own (t3_gen_tables, gen_program.c) */
+static int gen_tbls(const t3_renderer *r, const t3_gen_table *const **tables) {
 #ifdef T3_WGPU
-  if (r->wgpu) { *n = t3_gen_program_count_wgpu; return t3_gen_programs_wgpu(); }
+  if (r->wgpu) return t3_gen_tables(T3_GEN_WGPU, tables);
 #endif
   (void)r;
-  *n = t3_gen_program_count_gl;
-  return t3_gen_programs_gl();
+  return t3_gen_tables(T3_GEN_GL, tables);
 }
 static const t3_gen_program *gen_by_name(const t3_renderer *r, const char *name) {
-#ifdef T3_WGPU
-  if (r->wgpu) return t3_gen_program_by_name_wgpu(name);
-#endif
-  (void)r;
-  return t3_gen_program_by_name_gl(name);
+  const t3_gen_table *const *tables;
+  int nt = gen_tbls(r, &tables);
+  for (int t = 0; t < nt; t++)
+    for (unsigned i = 0; i < tables[t]->count; i++)
+      if (!strcmp(tables[t]->programs[i].state, name)) return &tables[t]->programs[i];
+  return NULL;
 }
 
 /* WGSLNodeBuilder.isUnfilterable: a texture with both filters Nearest is read
@@ -202,17 +210,18 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
   }
   const t3_gen_program *best = NULL;
   int best_cost = 1 << 30;
-  unsigned n_all;
-  const t3_gen_program *all = gen_tbl(r, &n_all);
-  for (unsigned i = 0; i < n_all; i++) {
-    const t3_gen_program *p = &all[i];
-    if (p->kind != kind || p->features != f || p->extension) continue;
-    if (shadow && memcmp(p->cast, cast, 3)) continue;
-    bool covers = true;
-    int cost = 0;
-    for (int k = 0; k < 4; k++) { if (p->lights[k] < want[k]) covers = false; cost += p->lights[k]; }
-    if (covers && cost < best_cost) { best = p; best_cost = cost; }
-  }
+  const t3_gen_table *const *tables;
+  int nt = gen_tbls(r, &tables);
+  for (int t = 0; t < nt; t++)
+    for (unsigned i = 0; i < tables[t]->count; i++) {
+      const t3_gen_program *p = &tables[t]->programs[i];
+      if (p->kind != kind || p->features != f || p->extension) continue;
+      if (shadow && memcmp(p->cast, cast, 3)) continue;
+      bool covers = true;
+      int cost = 0;
+      for (int k = 0; k < 4; k++) { if (p->lights[k] < want[k]) covers = false; cost += p->lights[k]; }
+      if (covers && cost < best_cost) { best = p; best_cost = cost; }
+    }
   if (!best) {
     *why = "no table state for this feature / light combination";
     gen_record_missing(r, kind, f, want, shadow ? cast : NULL);

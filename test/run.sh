@@ -18,6 +18,26 @@ for t in test_backend_seam test_shared_geometry test_instance_color test_gl_tran
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done
+# a project's own program table with three.c's core table: the same picture as the full table
+if [ -d build/gen-programs ] && ls build/gen-programs/standard+map+nearest.gl.json >/dev/null 2>&1; then
+  T3_TABLE=core ./build.sh >/dev/null 2>&1
+  printf 'standard+map+nearest\n' > build/test/testproj-states.txt
+  node tools/gen-project-table.mjs --name testproj --out build/test/testproj --states build/test/testproj-states.txt --cache build/gen-programs >/dev/null
+  P="-std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_project_table.c"
+  L="-lEGL -lGLESv2 -lz -lm"
+  "$CC" $P -DFULL build/native/libthree.a $L -o build/test/test_project_full
+  "$CC" $P -DPROJECT build/test/testproj/testproj_gl.c build/native_core/libthree.a $L -o build/test/test_project_proj
+  "$CC" $P build/native_core/libthree.a $L -o build/test/test_project_core
+  ok=1
+  EGL_PLATFORM=surfaceless ./build/test/test_project_full full >/dev/null || ok=0
+  EGL_PLATFORM=surfaceless ./build/test/test_project_proj project >/dev/null || ok=0
+  EGL_PLATFORM=surfaceless ./build/test/test_project_core core >/dev/null || ok=0   # the control: must report missing
+  cmp -s build/test/project-full.rgba build/test/project-project.rgba || ok=0
+  cmp -s build/test/project-full.rgba build/test/project-core.rgba && ok=0         # the control must differ
+  if [ $ok = 1 ]; then echo "ok    test_project_table"; else echo "FAIL  test_project_table"; fail=1; fi
+else
+  echo "skip  test_project_table (no captures in build/gen-programs: node tools/gen-programs.mjs)"
+fi
 # WebGPU (after WGPU=1 ./build.sh, with native-dawn): exit 77 = no adapter, skipped
 case "$(uname -s)-$(uname -m)" in
   Linux-x86_64) PLAT=linux-x64 ;; Linux-aarch64) PLAT=linux-arm64 ;; Darwin-arm64) PLAT=darwin-arm64 ;; Darwin-x86_64) PLAT=darwin-x64 ;; *) PLAT=unknown ;;

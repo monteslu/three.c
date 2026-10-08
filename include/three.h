@@ -1018,6 +1018,13 @@ float t3_linear_to_srgb(float c);
  * the driver's rounding of a different program changes a sparkle (specular
  * aliasing at grazing angles). exact: always r186's target and pass. */
 void t3_renderer_set_exact_output(t3_renderer *r, bool on);
+/* A project's own table of r186 programs (tools/gen-project-table.mjs writes
+ * <name>_gl.c and <name>_wgpu.c, each defining `const struct t3_gen_table
+ * <name>_gl` / `_wgpu`): searched before three.c's own for every renderer.
+ * Either may be NULL. Call before the first render. With a project table,
+ * three.c can be built with only its core table (T3_TABLE=core) */
+struct t3_gen_table;
+void t3_register_program_table(const struct t3_gen_table *gl_table, const struct t3_gen_table *wgpu_table);
 /* The renderer draws with the programs three.js r186's node renderer
  * generates (src/gen). A draw whose material state the table lacks is
  * skipped; this names those states, one per line, in the generator's syntax:

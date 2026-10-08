@@ -84,6 +84,36 @@ it. `t3_renderer_generated_missing(r)` returns the names, one per line. Then:
     node tools/emit-programs.mjs
     ./build.sh
 
+## A project's own table
+
+three.c's own table covers its tests and common states. An application that
+draws other combinations, or wants a smaller binary, builds its own:
+
+    node tools/gen-project-table.mjs --name mygame --out gen/ --states mygame-states.txt \
+        [--missing missing.log ...] [--cache build/t3-captures] [--check]
+
+- `mygame-states.txt` lists the states the project draws, one per line. The
+  same list serves both backends.
+- `--missing` merges logs of states a run could not draw into the list. A
+  native build writes that log with `T3_MISSING_LOG=<file>`; a cart can collect
+  `t3_renderer_generated_missing`.
+- Captures are cached, so a rerun only captures new states. Capturing needs
+  Node, three.c's `npm install` and a GPU (webgl-node, webgpu-node); the
+  generated C does not, so it is usually checked in.
+
+The tool writes `gen/mygame_gl.c` and `gen/mygame_wgpu.c`. Compile them with
+three.c's `src/` on the include path and register them before the first
+render:
+
+    extern const struct t3_gen_table mygame_gl, mygame_wgpu;
+    t3_register_program_table(&mygame_gl, &mygame_wgpu);
+
+Registered tables are searched before three.c's own. Built with
+`T3_TABLE=core`, three.c keeps only the programs the renderer draws with
+itself (output pass, backgrounds, PMREM, shadow casters: about 0.35 MB per
+backend instead of the full table's tens of MB), so the project's table is
+the only source of material programs.
+
 ## Drawing with the tables
 
 For each draw the renderer works out the state from the material, the

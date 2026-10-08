@@ -2067,7 +2067,7 @@ static void gen_output_pass(t3_renderer *r) {
     strcat(name, "+"); strcat(name, tm[r->tone_mapping]);
     if (r->output_color_space != T3_SRGB_COLOR_SPACE) strcat(name, "+lin");
   }
-  const t3_gen_program *src = t3_gen_program_by_name_gl(name);
+  const t3_gen_program *src = gen_by_name(r, name);
   t3_gen_gl *gl = src ? gen_program_enc(r, src, false) : NULL;
   if (!gl || !gl->complete) { gen_note(r, "no output pass program"); return; }
   if (!r->out_vao) {
