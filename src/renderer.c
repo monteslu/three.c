@@ -2026,6 +2026,7 @@ static void issue_draw(t3_renderer *r, const render_item *it, t3_object *o, t3_g
 }
 
 #include "renderer_gen.inc"
+static void count_output_pass(t3_renderer *r);
 #include "renderer_wgpu.inc"
 #include "renderer_env.inc"
 
@@ -2107,8 +2108,13 @@ static void gen_output_pass(t3_renderer *r) {
     if (!strcmp(gl->tex[i].layout->source, "output")) tu_bind(i, r->out_tex, true);
   bind_vao(r, r->out_vao);
   glDrawArrays(GL_TRIANGLES, 0, 3);
-  r->info.calls++;
-  r->info.triangles++;
+}
+/* r186 counts its output pass (one triangle) in renderer.info whenever a
+ * render to the screen needs one (needsFrameBufferTarget: an sRGB output or
+ * tone mapping), so three.c does too, also when it encoded in each program
+ * instead */
+static void count_output_pass(t3_renderer *r) {
+  if (r->output_color_space == T3_SRGB_COLOR_SPACE || r->tone_mapping) { r->info.calls++; r->info.triangles++; }
 }
 
 static void draw_item(t3_renderer *r, const render_item *it, const t3_camera *cam) {
@@ -2242,6 +2248,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   for (int i = 0; i < r->transparent.n; i++) draw_item(r, &r->transparent.items[i], cam);
   backpass_side(r, T3_DOUBLE_SIDE);
 
+  if (!r->target) count_output_pass(r);
   if (r->target) {
     rt_finish(r, r->target);
   } else if (r->out_on && r->cur_fbo == r->out_fbo) {

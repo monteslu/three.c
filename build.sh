@@ -18,7 +18,7 @@ CC="${CC:-cc}"
 CFLAGS="${CFLAGS:--O2}"
 # T3_TABLE=core: only the programs the renderer draws with itself (a project
 # brings its material programs: t3_register_program_table)
-TBL=""; [ "${T3_TABLE:-full}" = core ] && TBL="_core"
+TBL="" TBLF=""; [ "${T3_TABLE:-full}" = core ] && TBL="_core" TBLF="-DT3_TABLE_CORE"
 OUT="$ROOT/build/native$TBL"
 mkdir -p "$OUT/obj"
 
@@ -66,7 +66,7 @@ fi
 for s in $SRCS; do
   o="$OUT/obj/${s//\//_}.o"
   W="$WARN"; [ "$s" = gltf ] && W="-std=c99 -w" # cgltf / stb_image compile in this unit
-  "$CC" $CFLAGS $W $WGPU_FLAGS $BLD_FLAGS -D_POSIX_C_SOURCE=200809L -I "$ROOT/include" -I "$ROOT/src" -c "$ROOT/src/$s.c" -o "$o"
+  "$CC" $CFLAGS $W $WGPU_FLAGS $BLD_FLAGS $TBLF -D_POSIX_C_SOURCE=200809L -I "$ROOT/include" -I "$ROOT/src" -c "$ROOT/src/$s.c" -o "$o"
   objs+=("$o")
 done
 ar rcs "$OUT/libthree.a" "${objs[@]}"

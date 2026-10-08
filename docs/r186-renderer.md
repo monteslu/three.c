@@ -118,6 +118,10 @@ itself (output pass, backgrounds, PMREM, shadow casters: about 0.35 MB per
 backend instead of the full table's tens of MB), so the project's table is
 the only source of material programs.
 
+An embedder that compiles every file in `src/` and `src/gen/` itself (rather
+than through `build.sh`) gets the full table; `-DT3_TABLE_CORE` picks the core
+one instead. `src/builder.c` compiles to nothing without `-DT3_BUILDER`.
+
 ## Building states at run time
 
 Built with `T3_BUILDER=1` (`./build.sh` or `wasm/build.sh`), three.c carries
@@ -144,6 +148,13 @@ turned into a program by the same code the emitter uses
   core-table cart grows from 1.1 MB to 5.8 MB of wasm). The thread that renders needs a little over 1 MB of stack for a
   build (QuickJS's own bound); `wasm/build.sh` gives a builder cart 4 MB.
 - Generator extensions (`tools/extensions/`) are offline only.
+
+## renderer.info
+
+`t3_renderer_info` counts what r186's `renderer.info.render` counts, including
+r186's output pass: one draw and one triangle whenever a render to the screen
+has an sRGB output or tone mapping, also when three.c encoded in each program
+and drew no output pass itself.
 
 ## Drawing with the tables
 

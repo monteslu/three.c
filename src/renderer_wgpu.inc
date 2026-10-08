@@ -302,7 +302,6 @@ static void wgpu_output_pass(t3_renderer *r, WGPUTextureView scene_view, WGPUTex
   wgpuRenderPassEncoderSetVertexBuffer(t3_wgpu_pass_encoder(w), 0, vb, 0, WGPU_WHOLE_SIZE);
   wgpuRenderPassEncoderDraw(t3_wgpu_pass_encoder(w), 3, 1, 0, 0);
   t3_wgpu_end_pass(w);
-  r->info.calls++;
 }
 
 /* the attachments a render (or clear) draws into: the render target's, or
@@ -403,6 +402,7 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
   backpass_side(r, T3_DOUBLE_SIDE);
   t3_wgpu_end_pass(w);
   if (!D.direct) wgpu_output_pass(r, D.color, D.out);
+  if (!rt) count_output_pass(r);
   t3_wgpu_end_frame(w);
   if (rt) t3_wgpu_render_target_done(w, r->target);
 }

@@ -18,7 +18,7 @@ OUT="$ROOT/build/wasm"
 # WGPU=1: dual carts (GL and WebGPU through wasmcart's WebGPU tier, emdawnwebgpu)
 EMDAWN="${EMDAWN:-$ROOT/third_party/emdawnwebgpu}"   # tools/fetch-emdawnwebgpu.sh
 # T3_TABLE=core: only the renderer's own programs (a project registers its table)
-TBL=""; [ "${T3_TABLE:-full}" = core ] && TBL="_core"
+TBL="" TBLF=""; [ "${T3_TABLE:-full}" = core ] && TBL="_core" TBLF="-DT3_TABLE_CORE"
 TOBJ="$OUT/obj/three$TBL"
 WGPUF=""
 if [ "${WGPU:-0}" = 1 ]; then
@@ -74,7 +74,7 @@ if [ -n "$BLDF" ]; then
   SRCS="$SRCS builder"
 fi
 for s in $SRCS; do
-  cc "$TOBJ/${s//\//_}.o" "$ROOT/src/$s.c" $TFLAGS $WGPUF $BLDF -std=c99 -DT3_WASMCART \
+  cc "$TOBJ/${s//\//_}.o" "$ROOT/src/$s.c" $TFLAGS $WGPUF $BLDF $TBLF -std=c99 -DT3_WASMCART \
     -I "$WASMCART/include" -I "$ROOT/include" -I "$ROOT/src"
 done
 # Physics single threaded; SIMD unless SIMD=0

@@ -6,6 +6,9 @@
  * three.js authors; see LICENSE.three.js. */
 #include "programs.h"
 #include <string.h>
+/* the core table: T3_TABLE_CORE picks the core one (a build that compiles
+ * every file in src/gen gets exactly one base table) */
+#ifdef T3_TABLE_CORE
 
 /* ── bg2d ── */
 static const char v_bg2d[] =
@@ -10428,3 +10431,4 @@ static const t3_gen_program programs[] = {
   { "pmremggx+z9", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_WGPU, groups_pmremggx_z9, 2, p_pmremggx_z9, 2, a_pmremggx_z9, 2, k_pmremggx_z9, 3, { 0, 0, 0 }, { 0, 0, 0 }, v_pmremggx_z9, f_pmremggx_z9 },
 };
 const t3_gen_table t3_gen_base_wgpu = { programs, 37 };
+#endif

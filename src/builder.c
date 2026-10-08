@@ -9,6 +9,7 @@
  * process, and the numbers end up in the program text. A capture whose
  * uniforms the primary world cannot explain runs again in the probe world
  * (another fresh runtime), exactly as the offline tool does. */
+#ifdef T3_BUILDER   /* (a build that compiles every src/*.c gets nothing here without it) */
 #include "gen_program.h"
 #include "quickjs.h"
 #include <stdio.h>
@@ -301,3 +302,4 @@ done:
   free(probe);
   return kept;
 }
+#endif
