@@ -160,6 +160,10 @@ static bool parse_op(const char *path, uint8_t *op, uint8_t *idx, uint8_t *sub) 
   if (nl > 6 && !strcmp(norm + nl - 6, ".flipY")) {
     if (!strncmp(norm, "dfg_lut", nl - 6) && nl - 6 == 7) { *op = GOP_TEX_FLIPY; *idx = T3_GEN_TEX_COUNT; return true; }
     if (!strncmp(norm, "output", nl - 6) && nl - 6 == 6) { *op = GOP_TEX_FLIPY; *idx = T3_GEN_TEX_COUNT + 1; return true; }   /* a framebuffer texture: flipped */
+    /* transmission's framebuffer copy: flipped too (a capture can name one of its
+     * bicubic taps' flags this way, the BackSide program's last; left at 0, that
+     * tap sampled the copy upside down: a grid on back faces) */
+    if (!strncmp(norm, "viewport", nl - 6) && nl - 6 == 8) { *op = GOP_TEX_FLIPY; *idx = T3_GEN_TEX_COUNT + 1; return true; }
     for (int t = 0; t < T3_GEN_TEX_COUNT; t++)
       if (strlen(t3_gen_tex_names[t]) == nl - 6 && !strncmp(norm, t3_gen_tex_names[t], nl - 6)) { *op = GOP_TEX_FLIPY; *idx = (uint8_t)t; return true; }
   }

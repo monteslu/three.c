@@ -114,7 +114,7 @@ paths produces.
 | Backend | three.js reference | Match | Differ |
 | --- | --- | --- | --- |
 | WebGPU | r186 WebGPURenderer on webgpu-node | 31 | 3, all r186 defects below |
-| GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 25 | 9: 4 r186 defects, 4 notes and 1 open bug below |
+| GLES / WebGL2 | r186 WebGPURenderer (forceWebGL) on webgl-node | 26 | 8: 4 r186 defects and 4 notes below |
 
 The defects are three.js's. `tools/r186-defects/` reproduces each with
 three.js alone (no three.c) in Chromium, next to a control that shows the
@@ -144,11 +144,6 @@ resolve differently. The same three.c frames drawn into a framebuffer
 object match r186 at 0 pixels: through a wasmcart GL cart, or with
 `t3_renderer_set_exact_output`, which takes r186's target and output
 pass.
-
-Open bug: on GLES, the back faces of a BackSide or double-sided transmissive
-Physical material show a grid of about 4 pixels where r186 is smooth (the
-p2-transmission scene's double-sided block). WebGPU matches r186 there, and
-front-sided transmission matches on both backends.
 
 Carts were also checked on every wasmcart host: a dual GL / WebGPU cart
 renders the same frames on wasmcart's Node host and wasmcart-native, and in
