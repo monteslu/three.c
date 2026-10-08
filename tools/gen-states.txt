@@ -702,3 +702,10 @@ physical+instbig+senv+l1301
 physical+senv+cc+l1301
 physical+senv+l1301
 physical+trans+senv+l1301
+# Derby (cartwheel)
+physical+map+rep+nmap+ao+rmap+senv+l1301
+physical+map+vcol+rep+nmap+ao+rmap+shadow+senv+cc+l1301+s100
+physical+map+shadow+senv+atest+l1301+s100
+physical+map+rep+nmap+ao+rmap+shadow+senv+atest+ds+l1301+s100
+physical+instbig+shadow+senv+icol+l1301+s100
+basic+trans+ds
