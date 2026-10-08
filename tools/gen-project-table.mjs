@@ -12,6 +12,10 @@
 //              --states, so the list only grows
 //   --cache    where captures live (default <out>/.t3-captures)
 //   --check    capture each new state twice and fail if anything differs
+//   --minimize rewrite --states without the states another listed state covers
+//              (the renderer's rule: same kind, features and shadow casters,
+//              at least as many lights of each type; the extra lights draw
+//              inert), so adding a bigger light vector folds the smaller ones
 //
 // Then build the two files it writes (<out>/<name>_gl.c, <name>_wgpu.c) with
 // three.c's src/ on the include path, call
@@ -45,8 +49,38 @@ if (added.length) {
   writeFileSync(STATES, text + added.join('\n') + '\n');
   console.log(`${STATES}: +${added.length} from the missing logs`);
 }
-const states = [...new Set([...listed, ...added])];
+let states = [...new Set([...listed, ...added])];
 if (!states.length) throw new Error(`${STATES}: no states`);
+
+// a state name: kind+features+lDPSH+sDPS+z<n>+x<ext> (tools/gen-programs.mjs parseState)
+function parse(st) {
+  const [kind, ...toks] = st.split('+');
+  let lights = null, cast = null;
+  const rest = [];
+  for (const t of toks) {
+    if (/^l\d{4}$/.test(t)) lights = [...t.slice(1)].map(Number);
+    else if (/^s\d{3}$/.test(t)) cast = [...t.slice(1)].map(Number);
+    else rest.push(t);
+  }
+  return { kind, key: rest.sort().join('+'), lights, cast };
+}
+function covers(a, b) {   // does state a's program serve state b's draws?
+  if (a.kind !== b.kind || a.key !== b.key || !a.lights || !b.lights) return false;
+  const shadow = b.key.split('+').includes('shadow');
+  if (shadow && String(a.cast ?? [a.lights[0], a.lights[1], a.lights[2]]) !== String(b.cast ?? [b.lights[0], b.lights[1], b.lights[2]])) return false;
+  return a.lights.every((n, k) => n >= b.lights[k]);
+}
+if (argv.includes('--minimize')) {
+  const ps = states.map((st) => ({ st, p: parse(st) }));
+  const keep = ps.filter(({ st, p }) => !ps.some((o) => o.st !== st && covers(o.p, p) && !(covers(p, o.p) && o.st > st)));
+  const dropped = ps.filter((x) => !keep.includes(x)).map((x) => x.st);
+  if (dropped.length) {
+    const lines = readFileSync(STATES, 'utf8').split('\n').filter((l) => !dropped.includes(l.replace(/#.*/, '').trim()));
+    writeFileSync(STATES, lines.join('\n'));
+    console.log(`${STATES}: -${dropped.length} covered by other states (${dropped.join(' ')})`);
+  }
+  states = keep.map((x) => x.st);
+}
 
 // capture what the cache lacks (both backends, the same three.js as three.c's own tables)
 const have = (s) => existsSync(join(CACHE, `${s}.gl.json`)) && existsSync(join(CACHE, `${s}.wgpu.json`));

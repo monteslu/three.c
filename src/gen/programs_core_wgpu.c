@@ -4,7 +4,7 @@
  * material state (its WebGPU backend), unmodified, with the binding
  * manifest the capture found. three.js is MIT licensed, Copyright 2010-2026
  * three.js authors; see LICENSE.three.js. */
-#include "programs.h"   /* (a project table: three.c's src on the include path) */
+#include "programs.h"
 #include <string.h>
 
 /* ── bg2d ── */
