@@ -709,3 +709,4 @@ physical+map+shadow+senv+atest+l1301+s100
 physical+map+rep+nmap+ao+rmap+shadow+senv+atest+ds+l1301+s100
 physical+instbig+shadow+senv+icol+l1301+s100
 basic+trans+ds
+basic+vcol+trans+ds
