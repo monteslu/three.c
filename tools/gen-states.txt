@@ -691,3 +691,14 @@ physical+shadow+senv+sheen+l1301+s100
 standard+instbig+shadow+senv+icol+l1301+s100
 physical+trans+senv+irid+l1301
 physical+trans+shadow+senv+irid+l1301+s100
+# a stadium game's survey
+physical+vcol+instbig+shadow+senv+icol+sheen+l1301+s100
+physical+map+rep+instbig+nmap+ao+rmap+shadow+senv+l1301+s100
+physical+map+rep+nmap+ao+rmap+shadow+senv+ds+l1301+s100
+physical+instbig+shadow+senv+ds+l1301+s100
+physical+instbig+shadow+senv+cc+irid+l1301+s100
+physical+instbig+senv+cc+l1301
+physical+instbig+senv+l1301
+physical+senv+cc+l1301
+physical+senv+l1301
+physical+trans+senv+l1301
