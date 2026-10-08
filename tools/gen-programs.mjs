@@ -35,6 +35,10 @@ for (let i = 2; i < process.argv.length; i++) {
   else if (a === '--check') opt.check = true;
   else if (a === '--extend') (opt.extend ??= []).push(resolve(v()));
   else if (a === '--single') opt.single = true;   // one capture in this process (the parent spawns one per state and backend)
+  // --record-gpu <file>: keep the real devices' capability answers (tools/mock-gpu.mjs);
+  // --mock-gpu <file>: capture on a mock device answering from such a file (no GPU)
+  else if (a === '--record-gpu') process.env.GEN_GPU = 'record:' + resolve(v());
+  else if (a === '--mock-gpu') process.env.GEN_GPU = 'mock:' + resolve(v());
   else throw new Error(`unknown option ${a}`);
 }
 
@@ -319,14 +323,25 @@ function dataTexture() {
 const fround = (x) => Math.fround(x);
 
 // ── one state on one backend ─────────────────────────────────────────
+const GPU_MODE = (process.env.GEN_GPU || '').split(':')[0] || null, GPU_FILE = (process.env.GEN_GPU || '').slice((GPU_MODE ?? '').length + 1);
+const mockGpu = GPU_MODE ? await import('./mock-gpu.mjs') : null;
 async function capture(stateName, backend) {
   sentinelSeed = WORLD.seed;
   const { kind, features, lights, cast, extension, lod } = parseState(stateName);
   let canvas, renderer, gl = null;
+  if (backend === 'wgpu' && GPU_MODE === 'mock') {
+    const m = mockGpu.mockWGPU(JSON.parse(readFileSync(GPU_FILE, 'utf8')), WORLD.w, WORLD.h, features.includes('cm') ? 'compat' : 'default');
+    mockGpu.installGPUGlobals();
+    globalThis.navigator ??= {};
+    Object.defineProperty(globalThis.navigator, 'gpu', { value: m.gpu, configurable: true });
+    canvas = m.canvas;
+  }
   if (backend === 'wgpu') {
-    const wn = await import(webgpuNodeUrl());
-    wn.installGlobals();
-    canvas = wn.createCanvas(WORLD.w, WORLD.h);
+    if (GPU_MODE !== 'mock') {
+      const wn = await import(webgpuNodeUrl());
+      wn.installGlobals();
+      canvas = wn.createCanvas(WORLD.w, WORLD.h);
+    }
     let device;
     if (features.includes('cm')) {
       const ad = await navigator.gpu.requestAdapter({ featureLevel: 'compatibility', powerPreference: 'high-performance' });
@@ -334,13 +349,20 @@ async function capture(stateName, backend) {
     }
     renderer = new THREE.WebGPURenderer({ canvas, antialias: false, forceWebGL: false, powerPreference: 'high-performance', ...(device ? { device } : {}) });
   } else {
-    const { createWebGL2Context } = await import(webglNodeUrl());
-    const made = createWebGL2Context(WORLD.w, WORLD.h);
-    gl = made.gl; canvas = made.canvas;
+    if (GPU_MODE === 'mock') {
+      gl = mockGpu.mockGL(JSON.parse(readFileSync(GPU_FILE, 'utf8')), WORLD.w, WORLD.h);
+      canvas = gl.canvas;
+    } else {
+      const { createWebGL2Context } = await import(webglNodeUrl());
+      const made = createWebGL2Context(WORLD.w, WORLD.h);
+      gl = made.gl; canvas = made.canvas;
+      if (GPU_MODE === 'record') mockGpu.recordGL(gl);
+    }
     canvas.getContext = (k) => (k === 'webgl2' ? gl : null);
     renderer = new THREE.WebGPURenderer({ canvas, context: gl, antialias: false, forceWebGL: true });
   }
   await renderer.init();
+  if (GPU_MODE === 'record' && backend === 'wgpu') await mockGpu.recordWGPU(renderer.backend.device, features.includes('cm') ? 'compat' : 'default');
   renderer.setViewport(WORLD.vx, WORLD.vy, WORLD.vw, WORLD.vh);
   let exposure = null;
   if (kind === 'output') {
@@ -924,6 +946,7 @@ for (const state of states) for (const be of backends) {
     for (const suffix of ['vert', 'frag', 'json']) if (existsSync(`${base}.${suffix}`)) files[`${base}.${suffix}`] = readFileSync(`${base}.${suffix}`, 'utf8');
   } else {
     const a = await capture(state, be);
+    if (GPU_MODE === 'record') mockGpu.saveRecorded(GPU_FILE);
     for (const [stage, code] of Object.entries(a.stages)) files[`${base}.${stage === 'vertex' ? 'vert' : stage === 'fragment' ? 'frag' : stage}`] = code;
     files[`${base}.json`] = JSON.stringify(a.out, null, 2) + '\n';
     for (const [f, c] of Object.entries(files)) writeFileSync(f, c);
