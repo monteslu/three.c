@@ -12,6 +12,9 @@
 //              --states, so the list only grows
 //   --cache    where captures live (default <out>/.t3-captures)
 //   --check    capture each new state twice and fail if anything differs
+//   --real-gpu capture on webgl-node / webgpu-node devices; by default the
+//              capture runs on the mock GPU (tools/mock-gpu.mjs answering from
+//              tools/gpu-answers.json), which gives the same bytes with no GPU
 //   --minimize rewrite --states without the states another listed state covers
 //              (the renderer's rule: same kind, features and shadow casters,
 //              at least as many lights of each type; the extra lights draw
@@ -32,7 +35,7 @@ const one = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : nu
 const all = (k) => argv.flatMap((a, i) => (a === k ? [argv[i + 1]] : []));
 const NAME = one('--name'), OUT = one('--out') && resolve(one('--out')), STATES = one('--states') && resolve(one('--states'));
 if (!NAME || !OUT || !STATES) {
-  console.error('usage: gen-project-table.mjs --name <c identifier> --out <dir> --states <file> [--missing <log> ...] [--cache <dir>] [--check]');
+  console.error('usage: gen-project-table.mjs --name <c identifier> --out <dir> --states <file> [--missing <log> ...] [--cache <dir>] [--check] [--minimize] [--real-gpu]');
   process.exit(2);
 }
 if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(NAME)) throw new Error(`--name ${NAME}: not a C identifier`);
@@ -89,7 +92,8 @@ const gen = join(ROOT, 'tools', 'gen-programs.mjs');
 if (todo.length) {
   console.log(`capturing ${todo.length} state(s) into ${CACHE}`);
   for (const pass of argv.includes('--check') ? ['', '--check'] : ['']) {
-    const r = spawnSync(process.execPath, [gen, '--states', todo.join(','), '--out', CACHE, ...(pass ? [pass] : [])], { stdio: 'inherit' });
+    const gpu = argv.includes('--real-gpu') ? [] : ['--mock-gpu', join(ROOT, 'tools', 'gpu-answers.json')];
+    const r = spawnSync(process.execPath, [gen, '--states', todo.join(','), '--out', CACHE, ...gpu, ...(pass ? [pass] : [])], { stdio: 'inherit' });
     if (r.status !== 0) process.exit(r.status ?? 1);
   }
 }

@@ -10,8 +10,6 @@
 //         (tools/gen-programs.mjs --record-gpu <file>)
 // mock:   replays a recorded file (tools/gen-programs.mjs --mock-gpu <file>)
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-
 // ── recording ───────────────────────────────────────────────────────────
 const recorded = { gl: { params: {}, extensions: {}, supported: null, precision: {}, attributes: null, constants: {} }, wgpu: {} };
 const key = (...a) => a.map(String).join(',');
@@ -38,7 +36,8 @@ export async function recordWGPU(adapter, name) {
 }
 export function recordedData() { return recorded; }
 // merge this process's answers into the file (each capture runs in its own process)
-export function saveRecorded(file) {
+export async function saveRecorded(file) {
+  const { readFileSync, writeFileSync, existsSync } = await import('node:fs');   /* (lazy: the mock itself runs without Node) */
   let all = { gl: { params: {}, extensions: {}, supported: null, precision: {}, attributes: null, constants: {} }, wgpu: {} };
   if (existsSync(file)) all = JSON.parse(readFileSync(file, 'utf8'));
   const g = recorded.gl;

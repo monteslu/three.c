@@ -18,6 +18,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { programModel, KINDS, FEATURE_NAMES } from './program-model.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -28,15 +29,9 @@ const TABLE = opt('--table');   // a project table's name; null = three.c's own 
 if (TABLE && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(TABLE)) throw new Error(`--table ${TABLE}: not a C identifier`);
 const STATES_ARG = opt('--states');   // a file of state names (one per line, # comments) or a comma list
 
-const KINDS = ['basic', 'lambert', 'phong', 'standard', 'physical', 'depth', 'points', 'psprite', 'line', 'sprite', 'normal', 'output',
-  'bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremblur'];
-// feature bits (64): the order is the C ABI of the table, append only
-const FEATURE_NAMES = ['map', 'vcol', 'fog', 'inst', 'trans', 'flat', 'rep', 'nearest', 'instbig', 'nmap', 'ao', 'emap', 'rmap', 'mmap',
-  'amap', 'bump', 'spec', 'shadow', 'skin', 'morph', 'env', 'senv', 'lmap', 'noatten', 'tmlinear', 'tmreinhard', 'tmcineon', 'tmaces',
-  'tmagx', 'tmneutral', 'lin', 'fog2', 'clip', 'clipi', 'atest', 'tan', 'morphn', 'dmap', 'cenv', 'refr', 'mix', 'add', 'ds', 'bs', 'cm', 'icol', 'cc', 'ccn', 'sheen', 'irid', 'aniso', 'transm'];
 const FEATURE_BITS = Object.fromEntries(FEATURE_NAMES.map((n, i) => [n, 1n << BigInt(i)]));
-const SAMPLE = { float: 'T3_BK_SAMPLE_FLOAT', 'unfilterable-float': 'T3_BK_SAMPLE_UNFILTERABLE_FLOAT', depth: 'T3_BK_SAMPLE_DEPTH', sint: 'T3_BK_SAMPLE_SINT', uint: 'T3_BK_SAMPLE_UINT' };
-const DIM = { '2d': 'T3_BK_DIM_2D', '2d-array': 'T3_BK_DIM_2D_ARRAY', cube: 'T3_BK_DIM_CUBE', '3d': 'T3_BK_DIM_3D' };
+const SAMPLE = ['T3_BK_SAMPLE_FLOAT', 'T3_BK_SAMPLE_UNFILTERABLE_FLOAT', 'T3_BK_SAMPLE_DEPTH', 'T3_BK_SAMPLE_SINT', 'T3_BK_SAMPLE_UINT'];
+const DIM = ['T3_BK_DIM_2D', 'T3_BK_DIM_2D_ARRAY', 'T3_BK_DIM_CUBE', 'T3_BK_DIM_3D'];
 
 const sym = (s) => s.replace(/[^A-Za-z0-9]/g, '_');
 const cq = (s) => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
@@ -67,43 +62,7 @@ function load(state, be) {
   const j = JSON.parse(readFileSync(base + '.json', 'utf8'));
   threeVersion ??= j.three;
   if (j.three !== threeVersion) throw new Error(`${state}.${be}: captured from three ${j.three}, others from ${threeVersion}`);
-  let vert = readFileSync(base + '.vert', 'utf8'), frag = readFileSync(base + '.frag', 'utf8');
-  if (j.stages.includes('compute')) throw new Error(`${state}.${be}: compute stage not supported by the emitter yet`);
-  // r186 names instanced attributes by node id (nodeAttribute<n>): the
-  // instance matrix's four vec4 columns and the instance colour (vec3) share
-  // the scheme, so the colour's number depends on the state. It is renamed
-  // instanceColor; the columns stay nodeAttribute0..3, which is checked.
-  const cols = j.attributes.filter((a) => /^nodeAttribute\d+$/.test(a.name) && a.type === 'vec4');
-  if (cols.length && (cols.length !== 4 || cols.some((a, k) => a.name !== `nodeAttribute${k}`)))
-    throw new Error(`${state}.${be}: instance matrix columns are ${cols.map((a) => a.name)}`);
-  for (const a of j.attributes) {
-    if (!/^nodeAttribute\d+$/.test(a.name) || a.type === 'vec4') continue;
-    if (a.type !== 'vec3' || !a.instanced) throw new Error(`${state}.${be}: unknown instanced attribute ${a.name} ${a.type}`);
-    const re = new RegExp(`\\b${a.name}\\b`, 'g');
-    vert = vert.replace(re, 'instanceColor');
-    frag = frag.replace(re, 'instanceColor');
-    a.name = 'instanceColor';
-  }
-  return { j, vert, frag };
-}
-
-// WGSL declares binding numbers; GLSL binds blocks by name at link time and
-// samplers by location, so there the binding is the position in the group.
-// The capture lists groups in @group order (r186's BindGroup carries no
-// index); on WebGPU the declarations say which group and binding each name
-// has, and the emitter checks the group matches the position.
-function bindingNumbers(be, code, groupIndex) {
-  const out = {};
-  if (be !== 'wgpu') return out;
-  const re = /@binding\(\s*(\d+)\s*\)\s*@group\(\s*(\d+)\s*\)\s*var(?:<[^>]*>)?\s+([A-Za-z_][A-Za-z0-9_]*)/g;
-  let m;
-  while ((m = re.exec(code))) if (+m[2] === groupIndex) out[m[3]] = +m[1];
-  return out;
-}
-function groupOf(be, code, name) {
-  if (be !== 'wgpu') return null;
-  const m = new RegExp(`@binding\\(\\s*\\d+\\s*\\)\\s*@group\\(\\s*(\\d+)\\s*\\)\\s*var<uniform>\\s+${name}\\b`).exec(code);
-  return m ? +m[1] : null;
+  return programModel(state, be, j, readFileSync(base + '.vert', 'utf8'), readFileSync(base + '.frag', 'utf8'));
 }
 
 function emitBackend(be, list, file, tableName) {
@@ -120,97 +79,47 @@ function emitBackend(be, list, file, tableName) {
 `;
   const entries = [];
   for (const state of list) {
-    const f = join(IN, `${state}.${be}.json`);
-    if (!existsSync(f)) continue;
-    const { j, vert, frag } = load(state, be);
+    if (!existsSync(join(IN, `${state}.${be}.json`))) continue;
+    const m = load(state, be);
     const S = sym(state);
-    out += `/* ── ${state} ── */\nstatic const char v_${S}[] =\n${cstr(vert)};\nstatic const char f_${S}[] =\n${cstr(frag)};\n`;
-    // groups
-    const groupNames = [];
-    j.groups.forEach((g, gi) => {
+    out += `/* ── ${state} ── */\nstatic const char v_${S}[] =\n${cstr(m.vertex)};\nstatic const char f_${S}[] =\n${cstr(m.fragment)};\n`;
+    for (const g of m.groups) {
       const G = `${S}_${sym(g.name)}`;
-      groupNames.push(g.name);
-      const code = vert + '\n' + frag;
-      const declared = groupOf(be, code, g.name);
-      if (declared !== null && declared !== gi) throw new Error(`${state}.${be}: group ${g.name} is @group(${declared}) but listed at ${gi}`);
-      g.index = gi;
-      const nums = bindingNumbers(be, code, gi);
-      const uniforms = g.bindings.filter((b) => b.kind === 'uniforms');
-      if (uniforms.length > 1) throw new Error(`${state}.${be}: group ${g.name} has ${uniforms.length} uniform structs`);
-      const textures = g.bindings.filter((b) => b.kind === 'texture');
-      const samplers = g.bindings.filter((b) => b.kind === 'sampler');
-      const buffers = g.bindings.filter((b) => b.kind === 'buffer');
-      const other = g.bindings.filter((b) => !['uniforms', 'texture', 'sampler', 'buffer'].includes(b.kind));
-      if (other.length) throw new Error(`${state}.${be}: group ${g.name} has a binding kind the emitter does not know: ${other.map((b) => b.kind).join(' ')}`);
-      if (textures.length) {
+      if (g.textures.length) {
         out += `static const t3_bk_texture_layout t_${G}[] = {\n`;
-        for (const t of textures) {
-          const sampler = samplers.find((s) => s.name === t.name + '_sampler');
-          const binding = nums[t.name] ?? g.bindings.indexOf(t);
-          const sbinding = sampler ? (nums[sampler.name] ?? g.bindings.indexOf(sampler)) : 0;
-          out += `  { ${cq(t.name)}, ${binding}, ${SAMPLE[t.sample]}, ${DIM[t.dimension]}, ${sampler ? 'true' : 'false'}, ${sampler && sampler.compare ? 'true' : 'false'}, ${t.storage ? 'true' : 'false'}, ${cq(t.source ?? '')}, ${sbinding} },\n`;
-        }
+        for (const t of g.textures)
+          out += `  { ${cq(t.name)}, ${t.binding}, ${SAMPLE[t.sample]}, ${DIM[t.dim]}, ${t.hasSampler}, ${t.compare}, ${t.storage}, ${cq(t.source)}, ${t.samplerBinding} },\n`;
         out += `};\n`;
       }
-      const u = uniforms[0];
-      const ub = u ? (nums[u.name] ?? g.bindings.indexOf(u)) : 0;
-      if (be === 'wgpu' && u && nums[u.name] === undefined) throw new Error(`${state}.${be}: uniform struct ${u.name} of group ${g.name} not declared in the WGSL`);
-      if (buffers.length) {
+      if (g.buffers.length) {
         out += `static const t3_bk_buffer_layout b_${G}[] = {\n`;
-        for (const b of buffers) {
-          const bname = b.shaderName ?? b.name;   // the shader's name (NodeBuffer_<id>), not the binding object's
-          if (be === 'wgpu' && nums[bname] === undefined) throw new Error(`${state}.${be}: buffer ${bname} of group ${g.name} not declared in the WGSL`);
-          out += `  { ${cq(bname)}, ${nums[bname] ?? g.bindings.indexOf(b)}, ${b.byteLength ?? 0}, ${b.storage ? 'true' : 'false'}, ${b.source ? cq(b.source) : 'NULL'} },\n`;
-        }
+        for (const b of g.buffers) out += `  { ${cq(b.name)}, ${b.binding}, ${b.bytes}, ${b.storage}, ${b.source ? cq(b.source) : 'NULL'} },\n`;
         out += `};\n`;
       }
-      out += `static const t3_bk_group_layout g_${G} = { ${cq(g.name)}, ${g.index}, ${u ? u.byteLength : 0}, ${ub}, ${textures.length ? `t_${G}` : 'NULL'}, ${textures.length}, ${buffers.length ? `b_${G}` : 'NULL'}, ${buffers.length} };\n`;
-    });
-    out += `static const t3_bk_group_layout *const groups_${S}[] = { ${j.groups.map((g) => `&g_${S}_${sym(g.name)}`).join(', ')} };\n`;
-    // properties: name -> group index, byte offset, byte length
-    const props = Object.entries(j.properties).filter(([, v]) => v);
-    const missing = Object.entries(j.properties).filter(([, v]) => !v).map(([k]) => k);
-    if (missing.length) throw new Error(`${state}.${be}: properties without a slot: ${missing.join(' ')}`);
-    out += `static const t3_gen_property p_${S}[] = {\n`;
-    for (const [path, v] of props) {
-      const gi = groupNames.indexOf(v.group);
-      if (gi < 0) throw new Error(`${state}.${be}: property ${path} in unknown group ${v.group}`);
-      out += `  { ${cq(path)}, ${gi}, ${v.byteOffset}, ${v.byteLength}, ${v.layout ? 'true' : 'false'} },\n`;
+      out += `static const t3_bk_group_layout g_${G} = { ${cq(g.name)}, ${g.index}, ${g.uniformBytes}, ${g.uniformBinding}, ${g.textures.length ? `t_${G}` : 'NULL'}, ${g.textures.length}, ${g.buffers.length ? `b_${G}` : 'NULL'}, ${g.buffers.length} };\n`;
     }
+    out += `static const t3_bk_group_layout *const groups_${S}[] = { ${m.groups.map((g) => `&g_${S}_${sym(g.name)}`).join(', ')} };\n`;
+    out += `static const t3_gen_property p_${S}[] = {\n`;
+    for (const p of m.properties) out += `  { ${cq(p.path)}, ${p.group}, ${p.offset}, ${p.length}, ${p.mat3} },\n`;
     out += `};\n`;
     // constants: uniforms nothing varies, with the bytes r186 uploaded
-    const consts = j.constants ?? [];
-    if (j.unexplained && j.unexplained.length) throw new Error(`${state}.${be}: ${j.unexplained.length} unexplained uniform(s): ${j.unexplained.map((u) => u.name).join(' ')}`);
-    if (consts.length) {
-      out += `static const uint8_t kb_${S}[] = {`;
+    if (m.constants.length) {
       const rows = [];
-      for (const c of consts) { const bytes = c.bytes.match(/../g).map((h) => '0x' + h); rows.push({ c, at: rows.reduce((n, r) => n + r.bytes.length, 0), bytes }); }
-      out += rows.flatMap((r) => r.bytes).join(', ') + ` };\n`;
+      for (const c of m.constants) rows.push({ c, at: rows.reduce((n, r) => n + r.bytes.length, 0), bytes: c.bytes.match(/../g).map((h) => '0x' + h) });
+      out += `static const uint8_t kb_${S}[] = {` + rows.flatMap((r) => r.bytes).join(', ') + ` };\n`;
       out += `static const t3_gen_constant k_${S}[] = {\n`;
-      for (const r of rows) {
-        const gi = groupNames.indexOf(r.c.group);
-        if (gi < 0) throw new Error(`${state}.${be}: constant in unknown group ${r.c.group}`);
-        out += `  { ${gi}, ${r.c.offset}, ${r.bytes.length}, kb_${S} + ${r.at} },\n`;
-      }
+      for (const r of rows) out += `  { ${r.c.group}, ${r.c.offset}, ${r.bytes.length}, kb_${S} + ${r.at} },\n`;
       out += `};\n`;
     }
-    // attributes
     out += `static const t3_gen_attribute a_${S}[] = {\n`;
-    for (const a of j.attributes) out += `  { ${cq(a.name)}, ${cq(a.type)}, ${a.location}, ${a.instanced ? 'true' : 'false'} },\n`;
+    for (const a of m.attributes) out += `  { ${cq(a.name)}, ${cq(a.type)}, ${a.location}, ${a.instanced} },\n`;
     out += `};\n\n`;
-    const kind = KINDS.indexOf(j.kind);
-    if (kind < 0) throw new Error(`${state}: unknown kind ${j.kind}`);
-    let bits = 0n;
-    for (const ft of j.features) { if (!(ft in FEATURE_BITS)) throw new Error(`${state}: unknown feature ${ft}`); bits |= FEATURE_BITS[ft]; }
-    const lights = j.lights ?? [0, 0, 0, 0];
-    if (lights.length !== 4 || lights.some((n) => !Number.isInteger(n) || n < 0 || n > 15)) throw new Error(`${state}: bad light vector ${JSON.stringify(j.lights)}`);
-    const tpl = j.templates ?? {};
-    entries.push({ state, S, kind, bits, lights, extension: j.extension ?? null, nGroups: j.groups.length, nProps: props.length, nAttrs: j.attributes.length, nConsts: consts.length,
-      tpl: [tpl.bones ?? 0, tpl.morphs ?? 0, tpl.morphWidth ?? 0], cast: j.cast ?? [0, 0, 0] });
+    const bits = m.features.reduce((acc, b) => acc | (1n << BigInt(b)), 0n);
+    entries.push({ m, S, bits });
   }
   const BE = be === 'gl' ? 'T3_GEN_GL' : 'T3_GEN_WGPU';
   out += `static const t3_gen_program programs[] = {\n`;
-  for (const e of entries) out += `  { ${cq(e.state)}, ${KINDS[e.kind].toUpperCase().replace(/^/, 'T3_GEN_')}, ${e.bits}ull, { ${e.lights.join(', ')} }, ${e.extension ? cq(e.extension) : 'NULL'}, ${BE}, groups_${e.S}, ${e.nGroups}, p_${e.S}, ${e.nProps}, a_${e.S}, ${e.nAttrs}, ${e.nConsts ? `k_${e.S}` : 'NULL'}, ${e.nConsts}, { ${e.tpl.join(', ')} }, { ${e.cast.join(', ')} }, v_${e.S}, f_${e.S} },\n`;
+  for (const { m, S, bits } of entries) out += `  { ${cq(m.state)}, T3_GEN_${KINDS[m.kind].toUpperCase()}, ${bits}ull, { ${m.lights.join(', ')} }, ${m.extension ? cq(m.extension) : 'NULL'}, ${BE}, groups_${S}, ${m.groups.length}, p_${S}, ${m.properties.length}, a_${S}, ${m.attributes.length}, ${m.constants.length ? `k_${S}` : 'NULL'}, ${m.constants.length}, { ${m.tpl.join(', ')} }, { ${m.cast.join(', ')} }, v_${S}, f_${S} },\n`;
   out += `};
 const t3_gen_table ${tableName} = { programs, ${entries.length} };
 `;
