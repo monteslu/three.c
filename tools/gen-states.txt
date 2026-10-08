@@ -710,3 +710,24 @@ physical+map+rep+nmap+ao+rmap+shadow+senv+atest+ds+l1301+s100
 physical+instbig+shadow+senv+icol+l1301+s100
 basic+trans+ds
 basic+vcol+trans+ds
+# Derby batch 3 (cartwheel)
+basic+vcol+trans
+physical+instbig+shadow+senv+icol+l1341+s100
+physical+instbig+shadow+senv+icol+sheen+l1341+s100
+physical+instbig+shadow+senv+l1341+s100
+physical+map+rep+instbig+nmap+ao+rmap+shadow+senv+icol+l1341+s100
+physical+map+rep+instbig+nmap+ao+rmap+shadow+senv+l1341+s100
+physical+map+rep+nmap+ao+rmap+senv+l1341
+physical+map+rep+nmap+ao+rmap+shadow+senv+atest+ds+l1341+s100
+physical+map+rep+nmap+ao+rmap+shadow+senv+l1341+s100
+physical+map+trans+shadow+senv+ds+cc+l1341+s100
+physical+map+vcol+rep+instbig+nmap+ao+rmap+shadow+senv+l1341+s100
+physical+map+vcol+rep+nmap+ao+rmap+shadow+senv+cc+l1341+s100
+physical+map+vcol+rep+nmap+ao+rmap+shadow+senv+ds+cc+l1341+s100
+physical+map+vcol+rep+nmap+ao+rmap+shadow+senv+l1341+s100
+physical+map+vcol+shadow+senv+atest+l1341+s100
+physical+senv+l1341
+physical+shadow+senv+cc+l1341+s100
+physical+shadow+senv+l1341+s100
+physical+trans+shadow+senv+l1341+s100
+physical+vcol+shadow+senv+l1341+s100
