@@ -16,11 +16,10 @@
 // value nothing else has, the uniform bytes are searched for it). --check runs
 // everything twice and fails on any difference (the generator must be
 // deterministic).
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const THREE_VERSION = '0.186.1';
@@ -132,6 +131,19 @@ const log = (s) => process.stdout.write(s + '\n');
 // numbers its uniforms per process, so the output must not depend on what
 // was captured before it. The parent only orchestrates.
 const self = fileURLToPath(import.meta.url);
+// the probe world's and --check's second captures: scratch under --out (not
+// the system temp dir), removed at exit. No signal handler: the capture loop
+// is synchronous, so one would only run after the whole run (a SIGTERM would
+// wait for it); a killed run's scratch is removed by the next run instead.
+const scratch = join(opt.out, `.scratch-${process.pid}`);
+process.on('exit', () => rmSync(scratch, { recursive: true, force: true }));
+if (!opt.single) for (const d of existsSync(opt.out) ? readdirSync(opt.out) : []) {
+  const pid = /^\.scratch-(\d+)$/.exec(d)?.[1];
+  if (!pid || +pid === process.pid) continue;
+  let alive = true;
+  try { process.kill(+pid, 0); } catch (e) { alive = e.code === 'EPERM'; }
+  if (!alive) rmSync(join(opt.out, d), { recursive: true, force: true });
+}
 function captureInChild(state, be, out, extraEnv = {}) {
   const r = spawnSync(process.execPath, [self, '--states', state, '--backend', be, '--out', out, '--single'], { encoding: 'utf8', env: { ...process.env, ...extraEnv, GEN_ALLOW_UNCOVERED: '1' }, maxBuffer: 64 << 20 });
   if (r.status !== 0) throw new Error(`capture ${state} ${be} failed: ${(r.stderr || '').slice(-500)}`);
@@ -145,7 +157,7 @@ function captureFull(state, be, out) {
   const j = JSON.parse(readFileSync(jf, 'utf8'));
   let pj = null;
   if (j.uncovered.length) {
-    const tmp = join(tmpdir(), `gen-programs-probe-${process.pid}`);
+    const tmp = join(scratch, 'probe');
     mkdirSync(tmp, { recursive: true });
     captureInChild(state, be, tmp, { GEN_PROBE: '1' });
     pj = JSON.parse(readFileSync(join(tmp, `${state}.${be}.json`), 'utf8'));
@@ -177,7 +189,7 @@ for (const state of states) for (const be of backends) {
   if (opt.check) {
     // a second capture in a FRESH process (the node renderer numbers its
     // uniforms per process, so two captures in one process differ by design)
-    const tmp = join(tmpdir(), `gen-programs-check-${process.pid}`);
+    const tmp = join(scratch, 'check');
     mkdirSync(tmp, { recursive: true });
     captureFull(state, be, tmp);
     for (const f of Object.keys(files)) {
