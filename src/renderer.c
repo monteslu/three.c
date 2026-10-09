@@ -176,6 +176,11 @@ struct t3_renderer {
   /* the framebuffer "the screen" means (t3_renderer_set_framebuffer): 0, or
    * an embedder's own target such as a 2D engine's canvas */
   GLuint screen_fbo;
+  /* the colour type of screen_fbo's attachment as transmission's copy reads it
+   * (two glGetFramebufferAttachmentParameteriv: in a browser each is a round
+   * trip to the GPU process that waits for every queued command): asked once
+   * per framebuffer; 0 = not asked */
+  int screen_fbo_type;
   GLuint resolve_fbo, resolve_rb;
   t3_mat3 view_normal;
   float *inst;
@@ -266,6 +271,14 @@ struct t3_renderer {
    * offset alignment, uploaded once per frame (glBindBufferRange per draw) */
   uint8_t *gen_stage; size_t gen_stage_n, gen_stage_cap;
   GLuint gen_ubo; size_t gen_ubo_size;
+  /* the buffer streamed draws bind their block from (gen_ubo, or cast_ubo
+   * while a caster pass draws) */
+  GLuint gen_stream_ubo;
+  /* a caster pass (gen_casters) collects its draws, then uploads their
+   * per-draw blocks with one call, as gen_prepare does for render's lists */
+  struct cast_item { render_item it; struct t3_gen_gl *gl; } *cast; int cast_n, cast_cap;
+  uint8_t *cast_stage; size_t cast_stage_n, cast_stage_cap;
+  GLuint cast_ubo; size_t cast_ubo_size;
   GLint gen_align;
   GLuint gen_bound_buf[T3_GEN_MAX_GROUPS]; int gen_bound_off[T3_GEN_MAX_GROUPS];
   int gen_n, gen_cap;
@@ -385,6 +398,9 @@ void t3_renderer_destroy(t3_renderer *r) {
   if (r->out_vao) { glDeleteVertexArrays(1, &r->out_vao); glDeleteBuffers(1, &r->out_vbo); }
   if (r->dfg_tex) glDeleteTextures(1, &r->dfg_tex);
   if (r->gen_ubo) glDeleteBuffers(1, &r->gen_ubo);
+  if (r->cast_ubo) glDeleteBuffers(1, &r->cast_ubo);
+  free(r->cast);
+  free(r->cast_stage);
   for (int i = 0; i < r->gen_sh_n; i++) { glDeleteTextures(1, &r->gen_sh[i].tex); glDeleteFramebuffers(1, &r->gen_sh[i].fbo); }
   free(r->gen_missing);
   free(r->gen_stage);
@@ -437,6 +453,7 @@ void t3_renderer_set_framebuffer(t3_renderer *r, unsigned fbo) {
   r->has_ext_target = false; /* the GL-era call: a plain fbo, the renderer's own clear rules */
   if (fbo == r->screen_fbo) return;
   r->screen_fbo = fbo;
+  r->screen_fbo_type = 0;
   r->fb0_samples = -1;
   r->fb_known = false;
 }

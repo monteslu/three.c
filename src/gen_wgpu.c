@@ -53,7 +53,26 @@ struct t3_wgpu {
   bool defer;
   WGPUCommandEncoder ext;
   size_t written;
+  /* what the embedder hooks cost (t3__wgpu_counters, test_wgpu_external):
+   * bind groups made, pass state set and set calls skipped */
+  unsigned n_bg_made, n_sets, n_sets_skipped;
   uint32_t serial;    /* the open frame's number: a vertex buffer written in it is renamed, not overwritten */
+  /* what the open pass has bound (t3_wgpu_set_*): a draw re-sets only what
+   * changed. Each setter is a call through the WebGPU API (in a browser a
+   * JS call and a command for the GPU process). Each object here holds a
+   * reference until the pass ends or it is replaced: a released one could
+   * otherwise be freed mid-pass and a new one made at its address (a bind
+   * group evicted from a program's ring, a renamed vertex buffer), which
+   * would compare equal and skip the set */
+  struct {
+    WGPURenderPipeline pipe;
+    WGPUBindGroup bg[T3_GEN_MAX_GROUPS];
+    uint32_t nd[T3_GEN_MAX_GROUPS], offs[T3_GEN_MAX_GROUPS][8];
+    WGPUBuffer vb[16];
+    uint64_t voff[16];
+    WGPUBuffer ib;
+    uint32_t ifmt;
+  } bound;
   struct sampler_entry samplers[64];
   int n_samplers;
   /* r186's mipmap generator (WebGPUTexturePassUtils): one pipeline per format */
@@ -359,6 +378,7 @@ WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextur
       e[n++] = (WGPUBindGroupEntry){ .binding = g->buf[bi].ubo, .buffer = w->stream, .offset = 0, .size = g->buf[bi].bytes };
   WGPUBindGroupDescriptor d = { .layout = wg->bgl[group], .entryCount = (size_t)n, .entries = e };
   WGPUBindGroup bg = wgpuDeviceCreateBindGroup(w->dev, &d);
+  w->n_bg_made++;
   int slot;
   if (wg->n_bgs[group] < MAX_BG) slot = wg->n_bgs[group]++;
   else { slot = wg->next_bg[group]; wg->next_bg[group] = (slot + 1) % MAX_BG; wgpuBindGroupRelease(wg->bgs[group][slot].g); }
@@ -385,6 +405,12 @@ void t3_wgpu_flush(t3_wgpu *w) {
   }
   w->enc = NULL;
 }
+/* the embedder submitted its encoder: the stream's data has been read by
+ * every command recorded so far, so the next render may overwrite it */
+void t3_wgpu_submitted(t3_wgpu *w) {
+  t3_wgpu_flush(w);
+  w->stream_ext = false;
+}
 void t3_wgpu_set_defer(t3_wgpu *w, bool on) { if (!on) t3_wgpu_flush(w); w->defer = on; }
 void t3_wgpu_set_encoder(t3_wgpu *w, WGPUCommandEncoder enc) { t3_wgpu_flush(w); w->ext = enc; }
 void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
@@ -394,16 +420,29 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
     if (w->stage_n + estimate + 256 <= w->stream_size) return;
     t3_wgpu_flush(w);
   }
-  w->stage_n = 0;
-  w->written = 0;
   /* commands recorded on an embedder's encoder read this buffer when the
-   * embedder submits, after any queue write made now: so the next frame gets
-   * a new buffer instead of overwriting it (the commands keep the old alive) */
-  if (w->stream_ext && w->stream) { wgpuBufferRelease(w->stream); w->stream = NULL; }
-  w->stream_ext = w->ext != NULL;
+   * embedder submits, after any queue write made now. Until the embedder
+   * says it submitted (t3_wgpu_submitted), a render appends after the data
+   * those commands read instead of overwriting it; once it has, the buffer
+   * is reused from the start (queue writes made after a submit are ordered
+   * after it). Only a buffer too small for the append is replaced (the
+   * commands keep the old one alive). Keeping the buffer keeps its bind
+   * groups: a new buffer is a new generation of them. */
+  bool append = w->stream_ext && w->stream;
+  size_t want = estimate < 65536 ? 65536 : estimate;
+  if (append && ((w->stage_n + 255) & ~(size_t)255) + estimate + 256 > w->stream_size) {
+    wgpuBufferRelease(w->stream);
+    w->stream = NULL;
+    append = false;
+    if (want < w->stream_size) want = w->stream_size;
+  }
+  if (!append) {
+    w->stage_n = 0;
+    w->written = 0;
+  }
+  w->stream_ext = append || w->ext != NULL;
   /* the stream buffer must exist (and be big enough) before bind groups refer
    * to it: a new buffer is a new generation of bind groups */
-  size_t want = estimate < 65536 ? 65536 : estimate;
   if (!w->stream || w->stream_size < want) {
     if (w->stream) wgpuBufferRelease(w->stream);
     w->stream_size = want * 2;
@@ -444,10 +483,66 @@ void t3_wgpu_begin_pass(t3_wgpu *w, const t3_wgpu_pass *p) {
   if (p->scissor) wgpuRenderPassEncoderSetScissorRect(w->pass, (uint32_t)p->sx, (uint32_t)p->sy, (uint32_t)p->sw, (uint32_t)p->sh);
 }
 WGPURenderPassEncoder t3_wgpu_pass_encoder(t3_wgpu *w) { return w->pass; }
+void t3_wgpu_counters(const t3_wgpu *w, unsigned out[3]) { out[0] = w->n_bg_made; out[1] = w->n_sets; out[2] = w->n_sets_skipped; }
+void t3_wgpu_set_pipeline(t3_wgpu *w, WGPURenderPipeline p) {
+  if (w->bound.pipe == p) { w->n_sets_skipped++; return; }
+  w->n_sets++;
+  wgpuRenderPipelineAddRef(p);
+  if (w->bound.pipe) wgpuRenderPipelineRelease(w->bound.pipe);
+  w->bound.pipe = p;
+  wgpuRenderPassEncoderSetPipeline(w->pass, p);
+}
+void t3_wgpu_set_bind_group(t3_wgpu *w, int group, WGPUBindGroup bg, int nd, const uint32_t *offs) {
+  if (group < 0 || group >= T3_GEN_MAX_GROUPS || nd > 8) {   /* untracked: the slot is unknown after it */
+    if (group >= 0 && group < T3_GEN_MAX_GROUPS && w->bound.bg[group]) { wgpuBindGroupRelease(w->bound.bg[group]); w->bound.bg[group] = NULL; }
+    wgpuRenderPassEncoderSetBindGroup(w->pass, (uint32_t)group, bg, (size_t)nd, offs);
+    return;
+  }
+  if (w->bound.bg[group] == bg && w->bound.nd[group] == (uint32_t)nd && !memcmp(w->bound.offs[group], offs, sizeof(uint32_t) * (size_t)nd)) { w->n_sets_skipped++; return; }
+  w->n_sets++;
+  if (w->bound.bg[group] != bg) {
+    wgpuBindGroupAddRef(bg);
+    if (w->bound.bg[group]) wgpuBindGroupRelease(w->bound.bg[group]);
+    w->bound.bg[group] = bg;
+  }
+  w->bound.nd[group] = (uint32_t)nd;
+  memcpy(w->bound.offs[group], offs, sizeof(uint32_t) * (size_t)nd);
+  wgpuRenderPassEncoderSetBindGroup(w->pass, (uint32_t)group, bg, (size_t)nd, offs);
+}
+void t3_wgpu_set_vertex_buffer(t3_wgpu *w, int slot, WGPUBuffer b, uint64_t off) {
+  if (slot >= 0 && slot < 16) {
+    if (w->bound.vb[slot] == b && w->bound.voff[slot] == off) { w->n_sets_skipped++; return; }
+    if (w->bound.vb[slot] != b) {
+      wgpuBufferAddRef(b);
+      if (w->bound.vb[slot]) wgpuBufferRelease(w->bound.vb[slot]);
+      w->bound.vb[slot] = b;
+    }
+    w->bound.voff[slot] = off;
+  }
+  w->n_sets++;
+  wgpuRenderPassEncoderSetVertexBuffer(w->pass, (uint32_t)slot, b, off, WGPU_WHOLE_SIZE);
+}
+void t3_wgpu_set_index_buffer(t3_wgpu *w, WGPUBuffer b, uint32_t fmt) {
+  if (w->bound.ib == b && w->bound.ifmt == fmt) { w->n_sets_skipped++; return; }
+  w->n_sets++;
+  if (w->bound.ib != b) {
+    wgpuBufferAddRef(b);
+    if (w->bound.ib) wgpuBufferRelease(w->bound.ib);
+    w->bound.ib = b;
+  }
+  w->bound.ifmt = fmt;
+  wgpuRenderPassEncoderSetIndexBuffer(w->pass, b, (WGPUIndexFormat)fmt, 0, WGPU_WHOLE_SIZE);
+}
 void t3_wgpu_end_pass(t3_wgpu *w) {
   wgpuRenderPassEncoderEnd(w->pass);
   wgpuRenderPassEncoderRelease(w->pass);
   w->pass = NULL;
+  /* the next pass begins with nothing bound */
+  if (w->bound.pipe) wgpuRenderPipelineRelease(w->bound.pipe);
+  for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) if (w->bound.bg[i]) wgpuBindGroupRelease(w->bound.bg[i]);
+  for (int i = 0; i < 16; i++) if (w->bound.vb[i]) wgpuBufferRelease(w->bound.vb[i]);
+  if (w->bound.ib) wgpuBufferRelease(w->bound.ib);
+  memset(&w->bound, 0, sizeof w->bound);
 }
 void t3_wgpu_end_frame(t3_wgpu *w) {
   /* this render's part of the stream (queue writes land before the submit) */

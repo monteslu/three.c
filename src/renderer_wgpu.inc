@@ -34,7 +34,6 @@ static t3_texture *vp_sampler(t3_renderer *r) {
 static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, const t3_object *o, const t3_geometry *g,
                              WGPUTextureView output_view) {
   t3_wgpu *w = r->wgpu;
-  WGPURenderPassEncoder pass = t3_wgpu_pass_encoder(w);
   for (int gi = 0; gi < gl->n_groups; gi++) {
     const t3_bk_group_layout *L = gl->src->groups[gi];
     struct dynoff { uint32_t binding, off; } dyn[8];
@@ -107,7 +106,7 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
     WGPUBindGroup bg = t3_wgpu_bind_group(w, gl, gi, views, samplers);
     uint32_t offs[8];
     for (int k = 0; k < nd; k++) offs[k] = dyn[k].off;
-    wgpuRenderPassEncoderSetBindGroup(pass, (uint32_t)gi, bg, (size_t)nd, offs);
+    t3_wgpu_set_bind_group(w, gi, bg, nd, offs);
   }
   return true;
 }
@@ -185,9 +184,9 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   st.flip_y = r->wg_flip;
   WGPURenderPipeline p = t3_wgpu_pipeline(w, gl, &st);
   if (!p) { gen_note(r, "flip_y: a vertex program without the r186 clip-position epilogue"); return; }
-  wgpuRenderPassEncoderSetPipeline(pass, p);
+  t3_wgpu_set_pipeline(w, p);
   if (!wgpu_bind_groups(r, gl, m, o, g, NULL)) return;
-  for (int k = 0; k < nvb; k++) wgpuRenderPassEncoderSetVertexBuffer(pass, (uint32_t)k, vbs[k], voffs[k], WGPU_WHOLE_SIZE);
+  for (int k = 0; k < nvb; k++) t3_wgpu_set_vertex_buffer(w, k, vbs[k], voffs[k]);
   /* draw range x group range, as issue_draw */
   int total = g->index ? g->index->count : g->attributes[T3_ATTR_POSITION]->count;
   int start = g->draw_start, end = g->draw_count < 0 ? total : g->draw_start + g->draw_count;
@@ -203,7 +202,7 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   if (g->index) {
     uint32_t fmt;
     WGPUBuffer ib = t3_wgpu_attribute(w, g->index, true, &fmt);
-    wgpuRenderPassEncoderSetIndexBuffer(pass, ib, (WGPUIndexFormat)fmt, 0, WGPU_WHOLE_SIZE);
+    t3_wgpu_set_index_buffer(w, ib, fmt);
     wgpuRenderPassEncoderDrawIndexed(pass, (uint32_t)count, (uint32_t)instances, (uint32_t)start, 0, 0);
   } else {
     wgpuRenderPassEncoderDraw(pass, (uint32_t)count, (uint32_t)instances, (uint32_t)start, 0);
@@ -295,11 +294,11 @@ static void wgpu_output_pass(t3_renderer *r, WGPUTextureView scene_view, WGPUTex
   st.color_write = 1;
   st.strides[0] = 3;
   WGPURenderPipeline p = t3_wgpu_pipeline(w, gl, &st);
-  wgpuRenderPassEncoderSetPipeline(t3_wgpu_pass_encoder(w), p);
+  t3_wgpu_set_pipeline(w, p);
   wgpu_bind_groups(r, gl, NULL, NULL, NULL, scene_view);
   static const float tri[9] = { -1, 3, 0, -1, -1, 0, 3, -1, 0 };   /* QuadMesh's triangle */
   WGPUBuffer vb = t3_wgpu_floats(w, &r->wg_quad, tri, 9);
-  wgpuRenderPassEncoderSetVertexBuffer(t3_wgpu_pass_encoder(w), 0, vb, 0, WGPU_WHOLE_SIZE);
+  t3_wgpu_set_vertex_buffer(w, 0, vb, 0);
   wgpuRenderPassEncoderDraw(t3_wgpu_pass_encoder(w), 3, 1, 0, 0);
   t3_wgpu_end_pass(w);
 }
@@ -467,7 +466,10 @@ bool t3_renderer_wgpu_read(t3_renderer *r, uint8_t *rgba) {
   return r->wgpu && !r->wg_ext_out && t3_wgpu_read_rgba8(r->wgpu, r->wg_out, r->width, r->height, rgba);
 }
 void t3_renderer_wgpu_defer(t3_renderer *r, bool on) { if (r->wgpu) t3_wgpu_set_defer(r->wgpu, on); }
-void t3_renderer_wgpu_submit(t3_renderer *r) { if (r->wgpu) t3_wgpu_flush(r->wgpu); }
+/* (tests) the WebGPU work counters: bind groups made, pass state set, sets skipped */
+void t3__wgpu_counters(t3_renderer *r, unsigned out[3]);
+void t3__wgpu_counters(t3_renderer *r, unsigned out[3]) { if (r->wgpu) t3_wgpu_counters(r->wgpu, out); else out[0] = out[1] = out[2] = 0; }
+void t3_renderer_wgpu_submit(t3_renderer *r) { if (r->wgpu) t3_wgpu_submitted(r->wgpu); }
 void t3_renderer_wgpu_set_encoder(t3_renderer *r, void *encoder) { if (r->wgpu) t3_wgpu_set_encoder(r->wgpu, (WGPUCommandEncoder)encoder); }
 void t3_renderer_wgpu_set_output(t3_renderer *r, void *view, int format) {
   r->wg_ext_out = view;

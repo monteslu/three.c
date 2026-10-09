@@ -58,7 +58,14 @@ WGPUBuffer t3_wgpu_stream_buffer(t3_wgpu *w);
 WGPURenderPassEncoder t3_wgpu_pass_encoder(t3_wgpu *w);
 void t3_wgpu_end_pass(t3_wgpu *w);
 void t3_wgpu_end_frame(t3_wgpu *w);    /* uploads the stream, submits (unless deferred / external) */
+/* the open pass's state, set only when it changes (a pass begins with none) */
+void t3_wgpu_set_pipeline(t3_wgpu *w, WGPURenderPipeline p);
+void t3_wgpu_set_bind_group(t3_wgpu *w, int group, WGPUBindGroup bg, int nd, const uint32_t *offs);
+void t3_wgpu_set_vertex_buffer(t3_wgpu *w, int slot, WGPUBuffer b, uint64_t off);
+void t3_wgpu_set_index_buffer(t3_wgpu *w, WGPUBuffer b, uint32_t fmt);
 void t3_wgpu_flush(t3_wgpu *w);        /* submits an open deferred frame */
+void t3_wgpu_submitted(t3_wgpu *w);
+void t3_wgpu_counters(const t3_wgpu *w, unsigned out[3]);   /* bind groups made, pass sets, sets skipped */    /* the embedder submitted its encoder (t3_renderer_wgpu_submit) */
 void t3_wgpu_set_defer(t3_wgpu *w, bool on);
 void t3_wgpu_set_encoder(t3_wgpu *w, WGPUCommandEncoder enc);   /* NULL: back to our own */
 

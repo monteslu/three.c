@@ -173,6 +173,7 @@ static void glass_frame(t3_renderer *r, const t3_external_target *et, WGPUTextur
   t3_release(glass); t3_release(g); t3_release(m); t3_release(bar); t3_release(sun); t3_release(cam); t3_release(s);
 }
 
+void t3__wgpu_counters(t3_renderer *r, unsigned out[3]);   /* (renderer_wgpu.inc) */
 static int fails;
 static void check(bool ok, const char *what) { printf("%s  %s\n", ok ? "ok  " : "FAIL", what); if (!ok) fails++; }
 
@@ -346,6 +347,62 @@ int main(void) {
     check(ng <= 4, "PMREM recorded on the embedder's encoder lights the scene as when it submits itself");
     t3_release(ball); t3_release(g); t3_release(m); t3_release(cam); t3_release(env);
     t3_pmrem_generator_destroy(pg); t3_release(sc); t3_release(cube);
+  }
+
+  /* E: an embedder's frame loop (its encoder each frame, its submit, then
+   * t3_renderer_wgpu_submit): after the first frame the per-draw uniform
+   * stream keeps its buffer, so no bind group is made, and a draw re-sets
+   * only the pass state that changed. The control: a material given a new
+   * texture must make one, or the count proves nothing. */
+  {
+    t3_scene *sc = t3_scene_new();
+    t3_geometry *bg = t3_box_geometry_new(0.6f, 0.6f, 0.6f, 1, 1, 1);
+    uint8_t px[4 * 4 * 4];
+    for (int i = 0; i < 16; i++) { px[i * 4] = (uint8_t)(i * 16); px[i * 4 + 1] = 200; px[i * 4 + 2] = (uint8_t)(255 - i * 16); px[i * 4 + 3] = 255; }
+    t3_texture *t1 = t3_texture_new(4, 4, px), *t2 = t3_texture_new(4, 4, px);
+    t3_material *tm = t3_mesh_basic_material_new(0xffffff);
+    t3_material_set_map(tm, t1);
+    for (int i = 0; i < 6; i++) {   /* six boxes, two programs, one geometry: state a draw can keep */
+      t3_material *mm = i % 2 ? t3_mesh_normal_material_new() : tm;
+      t3_mesh *b = t3_mesh_new(bg, mm);
+      t3_object_set_position(b, -1.2f + (float)(i % 3) * 1.2f, i < 3 ? 0.7f : -0.7f, 0);
+      t3_object_add(&sc->base, b);
+      t3_release(b);
+      if (i % 2) t3_release(mm);
+    }
+    t3_camera *ec = t3_perspective_camera_new(50, 1, 0.1f, 20);
+    t3_object_set_position(ec, 0, 0, 4);
+    et.flip_y = false; et.load_color = et.load_depth = false;
+    et.x = 0; et.y = 0; et.w = S; et.h = S;
+    static uint8_t e0[S * S * 4], e1[S * S * 4];
+    t3_renderer_set_auto_instancing(r, false);   /* six draws, not batches */
+    unsigned c[7][3];
+    for (int fr = 0; fr < 6; fr++) {
+      if (fr == 4) t3_material_set_map(tm, t2);   /* the control frame */
+      WGPUCommandEncoder fe = wgpuDeviceCreateCommandEncoder(dev, NULL);
+      t3_renderer_set_external_encoder(r, (uintptr_t)fe);
+      t3_renderer_set_external_target(r, &et);
+      t3_renderer_render(r, sc, ec);
+      t3_renderer_set_external_encoder(r, 0);
+      WGPUCommandBuffer fb = wgpuCommandEncoderFinish(fe, NULL);
+      wgpuQueueSubmit(queue, 1, &fb);
+      wgpuCommandBufferRelease(fb);
+      wgpuCommandEncoderRelease(fe);
+      t3_renderer_wgpu_submit(r);
+      t3__wgpu_counters(r, c[fr]);
+      if (fr == 0) read_back(ct, false, e0);
+      if (fr == 3) read_back(ct, false, e1);
+    }
+    unsigned made = c[3][0] - c[0][0], sets = c[3][1] - c[0][1], skipped = c[3][2] - c[0][2];
+    printf("      frames 2-4 on the embedder's encoder: %u bind groups made, %u pass sets, %u skipped; the new-texture frame made %u\n",
+           made, sets, skipped, c[4][0] - c[3][0]);
+    check(made == 0, "an embedder's frames after the first make no bind groups");
+    check(c[4][0] - c[3][0] > 0, "control: a new texture makes a bind group (the count sees one)");
+    check(skipped > 0, "a draw keeps the pass state it shares with the one before");
+    t3_renderer_set_auto_instancing(r, true);
+    check(!memcmp(e0, e1, sizeof e0), "the fourth frame matches the first");
+    check(distinct(e0) >= 4, "the frame holds the scene");
+    t3_release(ec); t3_release(tm); t3_release(t1); t3_release(t2); t3_release(bg); t3_release(sc);
   }
 
   const char *err = t3_renderer_last_error(r);

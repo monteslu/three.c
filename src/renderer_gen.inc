@@ -660,7 +660,74 @@ static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t
   t3_gen_gl *gl = gen_program_p(r, src, false, prm);
   return gl && gl->complete ? gl : NULL;
 }
+static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *sc);
+/* the caster draws: on GLES collected, their per-draw blocks packed and
+ * uploaded with one call, then drawn (one upload a shadow map, not one a
+ * draw); WebGPU draws as it walks (its blocks go to the frame stream) */
 static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
+#ifdef T3_WGPU
+  if (r->wgpu) { gen_collect_casters(r, o, sc); return; }
+#endif
+  r->cast_n = 0;
+  gen_collect_casters(r, o, sc);
+  if (!r->cast_n) return;
+  if (!r->gen_align) {
+    glGetIntegerv(0x8A34 /* GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT */, &r->gen_align);
+    if (r->gen_align <= 0) r->gen_align = 256;
+  }
+  r->cast_stage_n = 0;
+  t3_gen_gl *prev_gl = NULL;
+  int prev_off = -1;
+  for (int i = 0; i < r->cast_n; i++) {
+    struct cast_item *c = &r->cast[i];
+    t3_gen_gl *gl = c->gl;
+    c->it.gen_gl = gl;
+    c->it.gen_off = -1;
+    if (gl->draw_group < 0) continue;
+    gen_set_aux(r, c->it.material);
+    gen_fill_draw(r, gl, c->it.material, c->it.object, false);
+    uint32_t n = gl->bytes[gl->draw_group];
+    const uint8_t *blk = gl->mirror[gl->draw_group];
+    if (gl == prev_gl && prev_off >= 0 && !memcmp(r->cast_stage + prev_off, blk, n)) { c->it.gen_off = prev_off; continue; }
+    size_t off = (r->cast_stage_n + (size_t)r->gen_align - 1) / (size_t)r->gen_align * (size_t)r->gen_align;
+    if (off + n > r->cast_stage_cap) {
+      r->cast_stage_cap = (off + n) * 2 + 4096;
+      r->cast_stage = realloc(r->cast_stage, r->cast_stage_cap);
+      T3_CHECK_ALLOC(r->cast_stage);
+    }
+    memcpy(r->cast_stage + off, blk, n);
+    r->cast_stage_n = off + n;
+    c->it.gen_off = (int)off;
+    prev_gl = gl;
+    prev_off = (int)off;
+  }
+  if (r->cast_stage_n) {
+    if (!r->cast_ubo) glGenBuffers(1, &r->cast_ubo);
+    glBindBuffer(GL_UNIFORM_BUFFER, r->cast_ubo);
+    if (r->cast_stage_n > r->cast_ubo_size) r->cast_ubo_size = r->cast_stage_n * 2;
+    /* orphaned each time: the GPU may still read the last pass's blocks */
+    glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)r->cast_ubo_size, NULL, GL_STREAM_DRAW);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)r->cast_stage_n, r->cast_stage);
+  }
+  GLuint keep = r->gen_stream_ubo;
+  r->gen_stream_ubo = r->cast_ubo;
+  for (int i = 0; i < r->cast_n; i++) {
+    struct cast_item *c = &r->cast[i];
+    const t3_material *src = c->it.material;
+    static const t3_side flip[3] = { T3_BACK_SIDE, T3_FRONT_SIDE, T3_DOUBLE_SIDE };
+    t3_material state = *src;
+    state.side = src->shadow_side >= 0 ? (t3_side)src->shadow_side : flip[src->side];
+    state.transparent = false;
+    state.blending = T3_NO_BLENDING;
+    state.depth_test = state.depth_write = true;
+    state.color_write = true;
+    gen_draw_gl(r, &c->it, sc, c->gl, &state);
+  }
+  r->gen_stream_ubo = keep;
+  /* the main lists bind gen_ubo again (the slots now hold cast_ubo ranges) */
+  for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) if (r->gen_bound_buf[i] == r->cast_ubo) r->gen_bound_buf[i] = 0;
+}
+static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
   if (!o->visible) return;
   if ((o->type == T3_MESH || o->type == T3_INSTANCED_MESH || o->type == T3_SKINNED_MESH) && o->cast_shadow) {
     t3_mesh *mesh = (t3_mesh *)o;
@@ -685,11 +752,16 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
 #ifdef T3_WGPU
         if (r->wgpu) { wgpu_draw_prog(r, &it, sc, gl, &state); continue; }
 #endif
-        gen_draw_gl(r, &it, sc, gl, &state);
+        if (r->cast_n == r->cast_cap) {
+          r->cast_cap = r->cast_cap ? r->cast_cap * 2 : 64;
+          r->cast = realloc(r->cast, sizeof *r->cast * (size_t)r->cast_cap);
+          T3_CHECK_ALLOC(r->cast);
+        }
+        r->cast[r->cast_n++] = (struct cast_item){ it, gl };
       }
     }
   }
-  for (int i = 0; i < o->child_count; i++) gen_casters(r, o->children[i], sc);
+  for (int i = 0; i < o->child_count; i++) gen_collect_casters(r, o->children[i], sc);
 }
 static void gen_render_shadow_maps(t3_renderer *r, t3_scene *scene) {
   if (!r->shadow_map_enabled || !r->caster_count) return;
@@ -832,6 +904,7 @@ static void gen_prepare(t3_renderer *r, const t3_camera *cam) {
   for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) r->gen_bound_buf[i] = 0;
   if (!r->gen_stage_n) return;
   if (!r->gen_ubo) glGenBuffers(1, &r->gen_ubo);
+  r->gen_stream_ubo = r->gen_ubo;
   glBindBuffer(GL_UNIFORM_BUFFER, r->gen_ubo);
   if (r->gen_stage_n > r->gen_ubo_size) {
     r->gen_ubo_size = r->gen_stage_n * 2;
@@ -859,10 +932,14 @@ static void gl_viewport_copy(t3_renderer *r, int which) {
    * external target) by what its colour attachment holds) */
   t3_texture_type type = r->target ? r->target->texture->type : T3_UNSIGNED_BYTE_TYPE;
   if (!r->target && r->cur_fbo) {
-    GLint ct = 0, bits = 0;
-    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE, &ct);
-    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE, &bits);
-    if (ct == GL_FLOAT) type = bits > 16 ? T3_FLOAT_TYPE : T3_HALF_FLOAT_TYPE;
+    if (r->cur_fbo == r->screen_fbo && r->screen_fbo_type) type = (t3_texture_type)r->screen_fbo_type;
+    else {
+      GLint ct = 0, bits = 0;
+      glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE, &ct);
+      glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE, &bits);
+      if (ct == GL_FLOAT) type = bits > 16 ? T3_FLOAT_TYPE : T3_HALF_FLOAT_TYPE;
+      if (r->cur_fbo == r->screen_fbo) r->screen_fbo_type = (int)type;
+    }
   }
   t3_render_target *v = r->vp_rt[which];
   if (!v || v->width != w || v->height != h || v->texture->type != type) {
@@ -925,9 +1002,9 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
   }
   if (streamed) {
     int dg = gl->draw_group;
-    if (r->gen_bound_buf[dg] != r->gen_ubo || r->gen_bound_off[dg] != it->gen_off) {
-      glBindBufferRange(GL_UNIFORM_BUFFER, (GLuint)dg, r->gen_ubo, it->gen_off, (GLsizeiptr)gl->bytes[dg]);
-      r->gen_bound_buf[dg] = r->gen_ubo;
+    if (r->gen_bound_buf[dg] != r->gen_stream_ubo || r->gen_bound_off[dg] != it->gen_off) {
+      glBindBufferRange(GL_UNIFORM_BUFFER, (GLuint)dg, r->gen_stream_ubo, it->gen_off, (GLsizeiptr)gl->bytes[dg]);
+      r->gen_bound_buf[dg] = r->gen_stream_ubo;
       r->gen_bound_off[dg] = it->gen_off;
     }
   } else if (gl->draw_group >= 0) {
