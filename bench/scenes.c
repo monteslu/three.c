@@ -1050,6 +1050,7 @@ static void clear_setup(void) {
 static void clear_frame(void) { t3_renderer_render(R, clear_scene, clear_cam); }
 
 #include "features.c"
+#include "perf.c"
 
 const bench_scene bench_scenes[] = {
   { "00-empty", empty_setup, empty_frame },
@@ -1111,6 +1112,11 @@ const bench_scene bench_scenes[] = {
   { "s1-stress", stress_setup, stress_frame, stress_probe },
   { "physics3d", p3_setup, physics3d_frame },
   { "physics2d", p2_setup, physics2d_frame },
+  { "c1-material-churn", c1_setup, c1_frame, c1_probe },
+  { "c2-compile-zoo", c2_setup, cubes_frame, c1_probe },
+  { "d1-unique-materials", d1_setup, cubes_frame },
+  { "d2-unique-textures", d2_setup, cubes_frame },
+  { "d3-program-mix", d3_setup, cubes_frame },
   { NULL, NULL, NULL },
 };
 

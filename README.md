@@ -152,6 +152,10 @@ Chromium it matches r186's WebGPURenderer on the same adapter
 
 ## Performance
 
+First-use (compile) stalls, frame hitches and per-draw CPU cost on both
+backends have their own suite with a baseline and a regression check:
+[docs/perf.md](docs/perf.md) (`node bench/perf.mjs`).
+
 Milliseconds per frame at 1280x720 on an AMD Radeon RX 7600 (Linux, Mesa),
 median of two rounds of three timed runs (`bench/matrix.mjs` in three.lua):
 

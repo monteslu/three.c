@@ -18,5 +18,7 @@ char *bench_read_asset(const char *name, size_t *len);
 /* Host-provided: the mouse in 1280x720 pixels (top-left origin), if the host
  * has one (the cart: wasmcart pointer 0; native: none). */
 bool bench_pointer(int *x, int *y);
+/* set by a scene frame that introduced a material state (bench/perf.c) */
+extern int bench_frame_tag;
 
 #endif

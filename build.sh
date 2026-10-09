@@ -85,7 +85,7 @@ for lib in box2d box3d; do
   fi
 done
 
-"$CC" $CFLAGS -std=c11 -Wall $WGPU_FLAGS -I "$ROOT/include" -I "$ROOT/bench" -I "$BOX2D/include" -I "$BOX3D/include" \
+"$CC" $CFLAGS -std=c11 -Wall $WGPU_FLAGS -I "$ROOT/include" -I "$ROOT/src" -I "$ROOT/bench" -I "$BOX2D/include" -I "$BOX3D/include" \
   "$ROOT/bench/native_main.c" "$ROOT/bench/scenes.c" "$ROOT/examples/physics.c" "$OUT/libthree.a" \
   "$DEPS/box3d/src/libbox3d.a" "$DEPS/box2d/src/libbox2d.a" \
   -lEGL -lGLESv2 -lz -lm -lpthread $WGPU_LIBS ${BLD_FLAGS:+-ldl} -o "$OUT/bench-native"

@@ -8,6 +8,14 @@
  *                                                    before each (glFinish, untimed); median
  *   bench-native <scene> --mode gpu   [--frames N]   that, plus the frame's GPU time (timer query,
  *                                                    GL_EXT_disjoint_timer_query); medians
+ *   bench-native <scene> --mode firstuse            a fresh process: setup, the first and second
+ *                                                    frames (each to GPU idle), then the steady median:
+ *                                                    the first-use cost (program builds, uploads)
+ *   bench-native <scene> --mode hitch [--frames N]   every frame to GPU idle: median, p99, max, frames
+ *                                                    over 16.7 / 33.3 ms, and the frames the scene
+ *                                                    tagged (bench_frame_tag: a new material state)
+ *   bench-native - --mode inflate                    the packed program table's first source (the
+ *                                                    whole table inflates) and a second, per backend
  *   --msaa N   a multisampled surface, as a browser canvas made with antialias: true
  *              (three.c then draws straight into it; the resolve is outside the frame)
  *
@@ -58,6 +66,25 @@ static double now_ms(void) {
 }
 
 static int msaa_samples;
+#include "gen/programs.h"
+int t3_gen_tables(t3_gen_backend backend, const t3_gen_table *const **out);
+
+static int cmp_d(const void *a, const void *b) { double x = *(const double *)a, y = *(const double *)b; return x < y ? -1 : x > y; }
+/* the first program of a backend's base table (the last table searched) */
+static void time_inflate(t3_gen_backend be, const char *key) {
+  const t3_gen_table *const *t;
+  int n = t3_gen_tables(be, &t);
+  if (n < 1) return;
+  const t3_gen_program *p = t[n - 1]->programs;
+  char err[256];
+  double a = now_ms();
+  char *s1 = t3_gen_source(p, true, err, sizeof err);
+  double b = now_ms();
+  char *s2 = t3_gen_source(p + 1, true, err, sizeof err);
+  double c = now_ms();
+  printf(",\"%sFirstMs\":%.3f,\"%sNextMs\":%.4f,\"%sOk\":%s", key, b - a, key, c - b, key, s1 && s2 ? "true" : "false");
+  free(s1); free(s2);
+}
 #ifdef T3_WGPU
 /* --wgpu: render with three.c's WebGPU backend on Dawn (native-dawn) */
 #include <webgpu/webgpu.h>
@@ -71,6 +98,7 @@ static void wg_device_cb(WGPURequestDeviceStatus st, WGPUDevice d, WGPUStringVie
   *(WGPUDevice *)u1 = st == WGPURequestDeviceStatus_Success ? d : NULL; *(int *)u2 = 1;
 }
 static int wg_errors;
+static char wg_adapter[256];
 static void wg_error_cb(WGPUDevice const *d, WGPUErrorType t, WGPUStringView m, void *u1, void *u2) {
   (void)d; (void)u1; (void)u2;
   if (wg_errors++ < 8) fprintf(stderr, "webgpu error %d: %.*s\n", (int)t, (int)m.length, m.data);
@@ -83,6 +111,10 @@ static int wgpu_up(void) {
   wgpuInstanceRequestAdapter(wg_inst, &ao, ac);
   while (!done) wgpuInstanceProcessEvents(wg_inst);
   if (!ad) { fprintf(stderr, "no WebGPU adapter\n"); return 0; }
+  WGPUAdapterInfo info = WGPU_ADAPTER_INFO_INIT;
+  if (wgpuAdapterGetInfo(ad, &info) == WGPUStatus_Success)
+    snprintf(wg_adapter, sizeof wg_adapter, "%.*s (%.*s)", (int)info.device.length, info.device.data,
+             (int)info.description.length, info.description.data);
   /* r186 asks for every feature the adapter has; the generated programs
    * assume float32-filterable (a float render target read as a map) */
   WGPUFeatureName feats[] = { WGPUFeatureName_Float32Filterable };
@@ -116,7 +148,11 @@ static void bench_finish(void) {
   glFinish();
 }
 /* one frame: the scene's renders, then (WebGPU, deferred) one submit */
+/* $BENCH_SLOW_US: spin that long each frame (bench/perf.mjs --selftest: a
+ * slowdown the comparison must catch) */
+static double slow_ms;
 static void bench_frame(const bench_scene *sc) {
+  if (slow_ms > 0) { double t = now_ms(); while (now_ms() - t < slow_ms) {} }
   sc->frame();
   if (use_wgpu) t3_renderer_wgpu_submit(bench_renderer());
 }
@@ -226,6 +262,16 @@ int main(int argc, char **argv) {
 #endif
     else if (argv[i][0] != '-') name = argv[i];
   }
+  if (getenv("BENCH_SLOW_US")) slow_ms = atof(getenv("BENCH_SLOW_US")) / 1000;
+  if (!strcmp(mode, "inflate")) {
+    printf("BENCH_RESULT {\"lane\":\"native\",\"side\":\"three.c\",\"scene\":\"inflate\"");
+    time_inflate(T3_GEN_GL, "gl");
+#ifdef T3_WGPU
+    time_inflate(T3_GEN_WGPU, "wgpu");
+#endif
+    printf("}\n");
+    return 0;
+  }
   const bench_scene *sc = NULL;
   for (const bench_scene *s = bench_scenes; name && s->name; s++)
     if (!strncmp(s->name, name, strlen(name))) { sc = s; break; }
@@ -241,7 +287,9 @@ int main(int argc, char **argv) {
 #ifdef T3_WGPU
   if (use_wgpu && !wgpu_up()) return 1;
 #endif
+  double setup_t0 = now_ms();
   sc->setup();
+  double setup_ms = now_ms() - setup_t0;
 
   printf("BENCH_RESULT {\"lane\":\"native\",\"side\":\"three.c\",\"scene\":");
   json_str(stdout, sc->name);
@@ -268,7 +316,50 @@ int main(int argc, char **argv) {
     nanosleep(&hold, NULL);
     return 0;
   }
-  if (!strcmp(mode, "gpu")) {
+  printf(",\"backend\":\"%s\"", use_wgpu ? "wgpu" : "gl");
+#ifdef T3_WGPU
+  if (use_wgpu) { printf(",\"adapter\":"); json_str(stdout, wg_adapter); }
+#endif
+  if (!strcmp(mode, "firstuse")) {
+    double t[4];
+    t[0] = now_ms(); bench_frame(sc); bench_finish();
+    t[1] = now_ms(); bench_frame(sc); bench_finish();
+    t[2] = now_ms();
+    int n = frames > 0 ? frames : 60;
+    double *st = malloc(sizeof *st * (size_t)n);
+    for (int i = 0; i < n; i++) { double a = now_ms(); bench_frame(sc); bench_finish(); st[i] = now_ms() - a; }
+    qsort(st, (size_t)n, sizeof *st, cmp_d);
+    (void)t[3];
+    printf(",\"setupMs\":%.3f,\"firstFrameMs\":%.3f,\"secondFrameMs\":%.3f,\"steadyMs\":%.4f",
+           setup_ms, t[1] - t[0], t[2] - t[1], st[n / 2]);
+    free(st);
+  } else if (!strcmp(mode, "hitch")) {
+    int n = frames > 0 ? frames : 600;
+    double *all = malloc(sizeof *all * (size_t)n), *tag = malloc(sizeof *tag * (size_t)n), *rest = malloc(sizeof *rest * (size_t)n);
+    int nt = 0, nr = 0, over16 = 0, over33 = 0;
+    bench_finish();
+    for (int i = 0; i < n; i++) {
+      bench_frame_tag = 0;
+      double a = now_ms();
+      bench_frame(sc);
+      bench_finish();
+      double d = now_ms() - a;
+      all[i] = d;
+      if (bench_frame_tag) tag[nt++] = d; else rest[nr++] = d;
+      over16 += d > 16.667; over33 += d > 33.333;
+    }
+    qsort(all, (size_t)n, sizeof *all, cmp_d);
+    qsort(tag, (size_t)nt, sizeof *tag, cmp_d);
+    qsort(rest, (size_t)(nr ? nr : 1), sizeof *rest, cmp_d);
+    double tsum = 0;
+    for (int i = 0; i < nt; i++) tsum += tag[i];
+    printf(",\"setupMs\":%.3f,\"frames\":%d,\"medianMs\":%.4f,\"p99Ms\":%.3f,\"maxMs\":%.3f,\"over16\":%d,\"over33\":%d",
+           setup_ms, n, all[n / 2], all[n * 99 / 100], all[n - 1], over16, over33);
+    printf(",\"taggedFrames\":%d", nt);
+    if (nt) printf(",\"taggedMedianMs\":%.3f,\"taggedMaxMs\":%.3f,\"taggedTotalMs\":%.3f", tag[nt / 2], tag[nt - 1], tsum);
+    if (nr) printf(",\"untaggedMedianMs\":%.4f,\"untaggedMaxMs\":%.3f", rest[nr / 2], rest[nr - 1]);
+    free(all); free(tag); free(rest);
+  } else if (!strcmp(mode, "gpu")) {
     typedef void (*get_u64_fn)(GLuint, GLenum, GLuint64 *);
     get_u64_fn get_u64 = (get_u64_fn)eglGetProcAddress("glGetQueryObjectui64vEXT");
     if (!get_u64) { fprintf(stderr, "no GL_EXT_disjoint_timer_query\n"); return 1; }
