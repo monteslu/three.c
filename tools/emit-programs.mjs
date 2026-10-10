@@ -73,8 +73,13 @@ function cbytes(buf) {
 
 const captured = [...new Set(readdirSync(IN).filter((f) => f.endsWith('.json') && f !== 'dfg_lut.json').map((f) => f.replace(/\.(gl|wgpu)\.json$/, '')))].sort();
 let states = captured;
-if (STATES_ARG) {
-  const list = existsSync(STATES_ARG) ? readFileSync(STATES_ARG, 'utf8').split('\n').map((l) => l.replace(/#.*/, '').trim()).filter(Boolean) : STATES_ARG.split(',');
+// three.c's own tables: the base table and tools/gen-states.txt, not whatever
+// else the capture directory holds (a project's states captured there, or a
+// state since removed from the list)
+const listOf = (f) => readFileSync(f, 'utf8').split('\n').map((l) => l.replace(/#.*/, '').trim()).filter(Boolean);
+const ownStates = async () => [...(await import('./capture-core.mjs')).allStates(), ...listOf(join(ROOT, 'tools', 'gen-states.txt'))];
+if (STATES_ARG || !TABLE) {
+  const list = !STATES_ARG ? await ownStates() : existsSync(STATES_ARG) ? listOf(STATES_ARG) : STATES_ARG.split(',');
   const missing = list.filter((st) => !captured.includes(st));
   if (missing.length) throw new Error(`not captured in ${IN}: ${missing.join(' ')}`);
   states = [...new Set(list)].sort();

@@ -47,13 +47,12 @@ anything differs.
 table (`src/gen/programs_dfg.c`). The tables are checked in, so building
 three.c needs neither Node nor three.js.
 
-The ~1,900 shaders of a backend's full table are about 30 MB of text, but
-they differ by a few lines per feature, so a table stores its distinct lines
-once and each shader as the list of its lines, deflated together (about
-0.75 MB per backend). The first program built from a table inflates its text
-(about 5 MB, kept for the table's other programs) with stb_image's inflater,
-which three.c already carries for PNG. A full-table wasm cart is about 2.5 MB
-(0.9 MB with the core table).
+A backend's shaders differ by a few lines per feature, so a table stores its
+distinct lines once and each shader as the list of its lines, deflated
+together (about 0.2 MB per backend for the full table's 321 states). The
+first program built from a table inflates its text (kept for the table's
+other programs) with stb_image's inflater, which three.c already carries for
+PNG. A full-table wasm cart is about 1.25 MB (0.9 MB with the core table).
 
 ## State names
 
@@ -80,7 +79,8 @@ with `+`:
   adds TSL nodes and uniforms of its own before the capture.
 
 `allStates()` in `tools/gen-programs.mjs` is the base table.
-`tools/gen-states.txt` adds the states a project's scenes need.
+`tools/gen-states.txt` adds the states three.c's own scenes and tests draw;
+`tools/emit-programs.mjs` emits exactly those two lists.
 
 ## Adding a state
 
@@ -123,7 +123,7 @@ render:
 Registered tables are searched before three.c's own. Built with
 `T3_TABLE=core`, three.c keeps only the programs the renderer draws with
 itself (output pass, backgrounds, PMREM, shadow casters: about 0.1 MB per
-backend instead of the full table's 1.5 MB), so the project's table is
+backend instead of the full table's 0.5 MB), so the project's table is
 the only source of material programs.
 
 An embedder that compiles every file in `src/` and `src/gen/` itself (rather
@@ -153,8 +153,8 @@ turned into a program by the same code the emitter uses
   feeding that list to `tools/gen-project-table.mjs` moves them into the
   project's table, where they cost nothing.
 - QuickJS and three.js's 3.7 MB of JS add about 4.7 MB to the binary (a
-  core-table cart grows from 0.9 MB to 5.6 MB of wasm, more than the 2.5 MB of
-  a full-table cart). The thread that renders needs a little over 1 MB of stack for a
+  core-table cart grows from 0.9 MB to 5.6 MB of wasm, more than the 1.25 MB
+  of a full-table cart). The thread that renders needs a little over 1 MB of stack for a
   build (QuickJS's own bound); `wasm/build.sh` gives a builder cart 4 MB.
 - Generator extensions (`tools/extensions/`) are offline only.
 
