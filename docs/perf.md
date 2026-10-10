@@ -10,10 +10,13 @@ on a regression.
     node bench/perf.mjs                  # compare with bench/perf-baseline.json
     node bench/perf.mjs --save-baseline  # after an intended change
     node bench/perf.mjs --selftest       # the comparison must catch a slowdown
-    node bench/perf.mjs --gpu 890m       # the integrated GPU instead of the RX 7600
+    node bench/perf.mjs --baseline igpu  # a second GPU keeps its own baseline
 
-Runs are headless (EGL surfaceless, Dawn on Vulkan) and take the shared GPU
-lock (`$XDG_RUNTIME_DIR/cartwheel-gpu-suite.lock`). A full run takes about a
+Runs are headless (EGL surfaceless, Dawn on Vulkan). The environment picks
+the GPU: `BENCH_EGL_DEVICE` (a DRM render node such as `renderD128`) for GL
+and, on Mesa, `MESA_VK_DEVICE_SELECT` (`vendor:device!`) for WebGPU; set both
+to the same card. The suite takes no lock, so where other GPU work shares the
+card, run it under whatever keeps them apart. A full run takes about a
 minute. The suite is not in CI: llvmpipe's numbers say nothing about a GPU.
 
 ## What it measures

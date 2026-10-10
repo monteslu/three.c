@@ -1,7 +1,7 @@
 {
-  "7600": {
+  "default": {
     "date": "2026-10-09T02:37:40.413Z",
-    "gpu": "7600",
+    "baseline": "default",
     "head": "80195dc",
     "metrics": {
       "inflate.gl": {

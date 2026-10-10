@@ -5,14 +5,15 @@
 //   node bench/perf.mjs                      run, print, compare with bench/perf-baseline.json
 //   node bench/perf.mjs --save-baseline      run and write the baseline
 //   node bench/perf.mjs --selftest           prove the comparison catches a slowdown
-//   --gpu 7600|890m   the GPU (default 7600: renderD128 / 1002:7480)
+//   --baseline <name> the saved baseline to use (default "default"), one per GPU
 //   --only <substr>   metrics whose key contains it
 //   --reps N          processes per metric (default 3; the median is kept)
 //
 // Needs ./build.sh and WGPU=1 ./build.sh. Runs headless (EGL surfaceless,
-// Dawn on Vulkan) and under the shared GPU lock, so it never contends with a
-// suite another session is running on the same card. Results go to
-// build/perf/latest.json.
+// Dawn on Vulkan) on the GPU the environment picks: BENCH_EGL_DEVICE (a DRM
+// render node, e.g. renderD128) for GL, MESA_VK_DEVICE_SELECT for WebGPU on
+// Mesa. It takes no lock: where other GPU suites share the card, run it under
+// whatever keeps them apart. Results go to build/perf/latest.json.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -22,17 +23,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const GL = join(ROOT, 'build/native/bench-native');
 const WGPU = join(ROOT, 'build/native-wgpu/bench-native');
 const BASELINE = join(ROOT, 'bench/perf-baseline.json');
-const LOCK = join(process.env.XDG_RUNTIME_DIR || join(ROOT, 'build'), 'cartwheel-gpu-suite.lock');
-
-const GPUS = {
-  '7600': { egl: 'renderD128', vk: '1002:7480!' },
-  '890m': { egl: 'renderD129', vk: '1002:150e!' },
-};
 
 const args = process.argv.slice(2);
 const opt = (name, dflt) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : dflt; };
-const gpu = GPUS[opt('--gpu', '7600')];
-if (!gpu) throw new Error(`--gpu: one of ${Object.keys(GPUS).join(', ')}`);
+const baseline = opt('--baseline', 'default');
 const reps = Number(opt('--reps', '3'));
 const only = opt('--only', '');
 
@@ -59,13 +53,13 @@ function metrics() {
 }
 
 function runOnce(m, extraEnv = {}) {
-  const env = { ...process.env, EGL_PLATFORM: 'surfaceless', BENCH_EGL_DEVICE: gpu.egl, MESA_VK_DEVICE_SELECT: gpu.vk, ...extraEnv };
+  const env = { ...process.env, EGL_PLATFORM: 'surfaceless', ...extraEnv };
   // cold: no driver shader cache (a player's first run); warm: the cache as it is
   if (m.cache === 'cold') env.MESA_SHADER_CACHE_DISABLE = 'true';
   else delete env.MESA_SHADER_CACHE_DISABLE;
   const exe = m.be === 'wgpu' ? WGPU : GL;
   const a = [...m.run, ...(m.be === 'wgpu' && m.run[0] !== '-' ? ['--wgpu'] : [])];
-  const out = execFileSync('flock', [LOCK, exe, ...a], { env, cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300000 });
+  const out = execFileSync(exe, a, { env, cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 300000 });
   const line = out.split('\n').find(l => l.startsWith('BENCH_RESULT '));
   if (!line) throw new Error(`${m.key}: no BENCH_RESULT`);
   const j = JSON.parse(line.slice(13));
@@ -131,20 +125,20 @@ if (args.includes('--selftest')) {
 }
 
 const cur = measure(metrics());
-const doc = { date: new Date().toISOString(), gpu: opt('--gpu', '7600'), head: execFileSync('git', ['-C', ROOT, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), metrics: cur };
+const doc = { date: new Date().toISOString(), baseline, head: execFileSync('git', ['-C', ROOT, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(), metrics: cur };
 writeFileSync(join(ROOT, 'build/perf/latest.json'), JSON.stringify(doc, null, 2) + '\n');
 if (args.includes('--save-baseline')) {
   const all = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : {};
-  all[doc.gpu] = doc;
+  all[doc.baseline] = doc;
   writeFileSync(BASELINE, JSON.stringify(all, null, 2) + '\n');
-  console.log(`baseline for ${doc.gpu} saved (${Object.keys(cur).length} metrics)`);
+  console.log(`baseline for ${doc.baseline} saved (${Object.keys(cur).length} metrics)`);
 } else {
   const all = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : {};
-  const base = all[doc.gpu]?.metrics;
-  if (!base) { console.log(`no baseline for ${doc.gpu}: --save-baseline`); process.exit(0); }
+  const base = all[doc.baseline]?.metrics;
+  if (!base) { console.log(`no baseline for ${doc.baseline}: --save-baseline`); process.exit(0); }
   const rows = compare(base, cur);
   print(rows);
   const bad = rows.filter(r => r.status === 'SLOWER').length;
-  console.log(bad ? `${bad} metric(s) slower than the baseline (${all[doc.gpu].head})` : `no regressions against ${all[doc.gpu].head}`);
+  console.log(bad ? `${bad} metric(s) slower than the baseline (${all[doc.baseline].head})` : `no regressions against ${all[doc.baseline].head}`);
   process.exit(bad ? 1 : 0);
 }
