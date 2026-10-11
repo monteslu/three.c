@@ -605,6 +605,7 @@ typedef struct t3_instanced_mesh {
   uint32_t _isph_ver, _isph_bounds;
   int _isph_count;
   const void *_isph_geometry;
+  bool _isph_fixed; /* set by t3_instanced_mesh_set_bounding_sphere */
 } t3_instanced_mesh;
 
 typedef struct t3_camera {
@@ -698,6 +699,11 @@ t3_object *t3_object_get_by_name(t3_object *root, const char *name);
 void t3_instanced_mesh_set_matrix_at(t3_instanced_mesh *im, int i, const t3_mat4 *m);
 void t3_instanced_mesh_get_matrix_at(t3_instanced_mesh *im, int i, t3_mat4 *m);
 void t3_instanced_mesh_set_color_at(t3_instanced_mesh *im, int i, t3_color c);
+/* r186 InstancedMesh.boundingSphere, set by the caller (mesh space): culling
+ * tests it instead of computing one from the instance matrices, so it must
+ * cover every instance however they move (a chunk of swaying grass: its
+ * region, raised by the sway). NULL returns to the computed sphere. */
+void t3_instanced_mesh_set_bounding_sphere(t3_instanced_mesh *im, const t3_sphere *s);
 t3_camera *t3_perspective_camera_new(float fov, float aspect, float near, float far);
 t3_camera *t3_orthographic_camera_new(float left, float right, float top, float bottom, float near, float far);
 void t3_camera_update_projection_matrix(t3_camera *c);

@@ -665,6 +665,13 @@ t3_instanced_mesh *t3_instanced_mesh_new(t3_geometry *g, t3_material *mat, int c
   return im;
 }
 
+void t3_instanced_mesh_set_bounding_sphere(t3_instanced_mesh *im, const t3_sphere *s) {
+  im->_isph_fixed = s != NULL;
+  if (s) { im->_isph[0] = s->center.x; im->_isph[1] = s->center.y; im->_isph[2] = s->center.z; im->_isph[3] = s->radius; }
+  else im->_isph_count = -1; /* computed again at the next use */
+  im->mesh.base._ws_world = im->mesh.base._world_version - 1; /* the cached world sphere is stale */
+}
+
 void t3_instanced_mesh_set_matrix_at(t3_instanced_mesh *im, int i, const t3_mat4 *m) {
   memcpy((float *)im->instance_matrix->array + i * 16, m->e, sizeof m->e);
 }
@@ -1088,6 +1095,7 @@ static void sphere_expand(float s[4], float x, float y, float z) {
 /* r186 InstancedMesh.computeBoundingSphere: Sphere.union of the geometry's
  * sphere through each instance matrix (an empty sphere has radius -1) */
 static bool instanced_sphere_valid(const t3_instanced_mesh *im, const t3_geometry *g) {
+  if (im->_isph_fixed) return true;
   return im->_isph_ver == im->instance_matrix->version && im->_isph_count == im->count && im->_isph_geometry == g &&
          im->_isph_bounds == t3__bounds_epoch;
 }
