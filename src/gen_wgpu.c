@@ -50,6 +50,8 @@ struct t3_wgpu {
   size_t stream_short; /* what the stream lacked since the last begin_frame (draws that got no room): the next one grows by it */
   uint8_t *stage;
   size_t stage_n, stage_cap;
+  uint32_t stage_epoch;   /* bumped when the stage starts over: a cached offset of an older epoch is gone */
+  unsigned n_stream_reused; /* blocks a draw found already streamed (t3_wgpu_stream_cached) */
   WGPUCommandEncoder enc;
   WGPURenderPassEncoder pass;
   /* submits: one per render (r186's), or deferred until t3_wgpu_flush, or
@@ -93,6 +95,7 @@ bool t3_wgpu_compat(t3_wgpu *w) { return !wgpuDeviceHasFeature(w->dev, WGPUFeatu
 
 t3_wgpu *t3_wgpu_new(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat out_format) {
   t3_wgpu *w = calloc(1, sizeof *w);
+  w->stage_epoch = 1;
   T3_CHECK_ALLOC(w);
   w->dev = device;
   w->q = queue;
@@ -452,6 +455,7 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
   if (!append) {
     w->stage_n = 0;
     w->written = 0;
+    w->stage_epoch++;
   }
   w->stream_ext = append || w->ext != NULL;
   /* the stream buffer must exist (and be big enough) before bind groups refer
@@ -462,6 +466,7 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
     WGPUBufferDescriptor d = { .usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, .size = w->stream_size };
     w->stream = wgpuDeviceCreateBuffer(w->dev, &d);
     w->stream_gen++;
+    w->stage_epoch++;
   }
   if (w->stage_cap < w->stream_size) {
     w->stage_cap = w->stream_size;
@@ -480,6 +485,21 @@ uint32_t t3_wgpu_stream(t3_wgpu *w, const void *data, uint32_t n) {
   memcpy(w->stage + off, data, n);
   w->stage_n = off + n;
   return (uint32_t)off;
+}
+/* t3_wgpu_stream, unless the same bytes are already in this frame's stream
+ * at the offset the cache remembers (a program's frame block, the same for
+ * every draw with it): then that offset, and a draw whose bind group and
+ * offsets are unchanged skips its setBindGroup */
+uint32_t t3_wgpu_stream_cached(t3_wgpu *w, t3_wgpu_stream_cache *c, const void *data, uint32_t n) {
+  if (n && c->epoch == w->stage_epoch && c->n == n && !memcmp(w->stage + c->off, data, n)) {
+    w->n_stream_reused++;
+    return c->off;
+  }
+  size_t short0 = w->stream_short;
+  uint32_t off = t3_wgpu_stream(w, data, n);
+  if (w->stream_short == short0) *c = (t3_wgpu_stream_cache){ w->stage_epoch, off, n };
+  else c->epoch = 0; /* no room: drawn with stale data, never reused */
+  return off;
 }
 WGPUBuffer t3_wgpu_stream_buffer(t3_wgpu *w) { return w->stream; }
 void t3_wgpu_begin_pass(t3_wgpu *w, const t3_wgpu_pass *p) {

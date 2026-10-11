@@ -93,6 +93,9 @@ typedef struct { uint16_t bones, morphs, morph_width; } t3_gen_params;
 
 #define T3_GEN_MAX_BUFFERS 4
 
+/* where a block was last streamed this frame (WebGPU, t3_wgpu_stream_cached) */
+typedef struct t3_wgpu_stream_cache { uint32_t epoch, off, n; } t3_wgpu_stream_cache;
+
 typedef struct t3_gen_gl {
   const t3_gen_program *src;
   t3_gen_params params;
@@ -119,6 +122,7 @@ typedef struct t3_gen_gl {
   struct { GLint loc; const t3_bk_texture_layout *layout; } tex[16];
   unsigned render_stamp;   /* the render the frame ops were last run for */
   struct gen_wgpu_prog *wg;   /* the WebGPU half (gen_wgpu.c), NULL on GLES */
+  t3_wgpu_stream_cache wg_stream[T3_GEN_MAX_GROUPS], wg_stream_buf[T3_GEN_MAX_BUFFERS];
 } t3_gen_gl;
 
 /* NULL with err set when the driver rejects the program or a name is unknown */

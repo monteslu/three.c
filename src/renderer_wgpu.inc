@@ -38,7 +38,7 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
     const t3_bk_group_layout *L = gl->src->groups[gi];
     struct dynoff { uint32_t binding, off; } dyn[8];
     int nd = 0;
-    if (gl->bytes[gi]) dyn[nd++] = (struct dynoff){ L->uniform_binding, t3_wgpu_stream(w, gl->mirror[gi], gl->bytes[gi]) };
+    if (gl->bytes[gi]) dyn[nd++] = (struct dynoff){ L->uniform_binding, t3_wgpu_stream_cached(w, &gl->wg_stream[gi], gl->mirror[gi], gl->bytes[gi]) };
     for (int bi = 0; bi < gl->n_buffers; bi++) {
       if ((int)gl->buf[bi].point != gi) continue;
       float tmp[4 * 256];
@@ -50,7 +50,7 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
         const t3_mesh *mesh = (const t3_mesh *)o;
         for (int k = 0; k < g->morph_count && k < 256; k++) tmp[k * 4] = mesh->morph_influences ? mesh->morph_influences[k] : 0;
       }
-      dyn[nd++] = (struct dynoff){ gl->buf[bi].ubo, t3_wgpu_stream(w, data, gl->buf[bi].bytes) };
+      dyn[nd++] = (struct dynoff){ gl->buf[bi].ubo, t3_wgpu_stream_cached(w, &gl->wg_stream_buf[bi], data, gl->buf[bi].bytes) };
     }
     for (int a = 1; a < nd; a++) for (int b = a; b > 0 && dyn[b - 1].binding > dyn[b].binding; b--) { struct dynoff t = dyn[b]; dyn[b] = dyn[b - 1]; dyn[b - 1] = t; }
     WGPUTextureView views[8] = { 0 };
