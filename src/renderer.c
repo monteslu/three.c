@@ -1658,6 +1658,7 @@ typedef struct {
   uint32_t world_epoch, bounds_epoch, graph_epoch;
   t3_object **obj; int *end, *sph; const t3_geometry **geo; int n, cap;
   float *cx, *cy, *cz, *rad; uint8_t *vis; uint32_t *wv; int ns, scap;
+  int *inst, ninst, instcap; /* the entries that are instanced meshes: their spheres follow the instances */
   bool spheres_valid; /* the arrays match the current world */
 } scene_flat;
 
@@ -1705,16 +1706,39 @@ static void flat_add(scene_flat *f, t3_object *o) {
     f->cx[k] = ws[0]; f->cy[k] = ws[1]; f->cz[k] = ws[2]; f->rad[k] = ws[3];
     f->wv[k] = o->_world_version;
     f->sph[i] = k;
+    if (o->type == T3_INSTANCED_MESH) {
+      if (f->ninst == f->instcap) {
+        f->instcap = f->instcap ? f->instcap * 2 : 16;
+        f->inst = realloc(f->inst, (size_t)f->instcap * sizeof *f->inst);
+        T3_CHECK_ALLOC(f->inst);
+      }
+      f->inst[f->ninst++] = i;
+    }
     f->geo[i] = g;
   }
   for (int c = 0; c < o->child_count; c++) flat_add(f, o->children[c]);
   f->end[i] = f->n;
 }
 
+/* an instanced mesh's sphere moves with its instances, not only its world matrix */
+static void flat_instances(scene_flat *f) {
+  for (int q = 0; q < f->ninst; q++) {
+    int i = f->inst[q], k = f->sph[i];
+    t3_object *o = f->obj[i];
+    t3_geometry *g = ((t3_mesh *)o)->geometry;
+    if (g != f->geo[i] || !g || !g->attributes[T3_ATTR_POSITION]) continue; /* tested the scalar way */
+    const float *ws = t3__world_sphere(o, g);
+    f->cx[k] = ws[0]; f->cy[k] = ws[1]; f->cz[k] = ws[2]; f->rad[k] = ws[3];
+  }
+}
+
 static scene_flat *flatten_scene(t3_object *root) {
   scene_flat *f = &g_flat;
   bool same_world = f->world_epoch == t3__world_epoch && f->bounds_epoch == t3__bounds_epoch;
-  if (f->root == root && same_world && f->obj && f->spheres_valid) return f;
+  if (f->root == root && same_world && f->obj && f->spheres_valid) {
+    flat_instances(f);
+    return f;
+  }
   if (f->root == root && f->graph_epoch == t3__graph_epoch && f->obj) {
     /* things moved or bounds changed: refresh the spheres of the entries whose
      * world matrix changed since they were copied (every entry when bounds did) */
@@ -1734,9 +1758,10 @@ static scene_flat *flatten_scene(t3_object *root) {
       f->geo[i] = g;
     }
     f->spheres_valid = true;
+    flat_instances(f);
     return f;
   }
-  f->n = f->ns = 0;
+  f->n = f->ns = f->ninst = 0;
   flat_add(f, root);
   f->root = root;
   f->graph_epoch = t3__graph_epoch;
@@ -2010,10 +2035,9 @@ static void shadow_update_matrices(t3_renderer *r, t3_light *l) {
 }
 
 static bool in_shadow_frustum(t3_renderer *r, t3_object *o, t3_geometry *g) {
-  if (!g->has_bounding_sphere) t3_geometry_compute_bounding_sphere(g);
-  t3_sphere s = g->bounding_sphere;
-  s.center = t3_vec3_apply_mat4(s.center, &o->matrix_world);
-  s.radius *= t3_mat4_max_scale_on_axis(&o->matrix_world);
+  /* the cached world sphere (an instanced mesh's covers its instances) */
+  const float *ws = t3__world_sphere(o, g);
+  t3_sphere s = { t3_v3(ws[0], ws[1], ws[2]), ws[3] };
   return t3_frustum_intersects_sphere(&r->shadow_frustum, s);
 }
 

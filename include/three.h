@@ -595,6 +595,16 @@ typedef struct t3_instanced_mesh {
   t3_attribute *instance_color;   /* NULL until a color is set */
   void *_gl;
   void *_cull;                    /* renderer-private: culled, sorted instances */
+  /* internal: the instances' bounding sphere in the mesh's space (r186
+   * InstancedMesh.computeBoundingSphere: the geometry's sphere through every
+   * instance matrix, united), recomputed when instance_matrix's version, the
+   * count, the geometry or bounds change. Culling tests it: an instanced mesh
+   * is frustum culled as a whole, so chunk instances spatially (one mesh a
+   * region) to cull the regions out of view. */
+  float _isph[4];
+  uint32_t _isph_ver, _isph_bounds;
+  int _isph_count;
+  const void *_isph_geometry;
 } t3_instanced_mesh;
 
 typedef struct t3_camera {

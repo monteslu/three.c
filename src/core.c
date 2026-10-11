@@ -659,10 +659,9 @@ t3_instanced_mesh *t3_instanced_mesh_new(t3_geometry *g, t3_material *mat, int c
   t3_mat4 id;
   t3_mat4_identity(&id);
   for (int i = 0; i < count; i++) memcpy((float *)im->instance_matrix->array + i * 16, id.e, sizeof id.e);
-  /* three.js InstancedMesh: frustumCulled stays true but is tested
-   * against the geometry's sphere, which hides instances placed elsewhere;
-   * matching that is a footgun nobody wants, so instanced meshes skip it. */
-  im->mesh.base.frustum_culled = false;
+  /* frustumCulled stays true (r186): culling tests the instances' bounding
+   * sphere (t3__world_sphere), not the geometry's */
+  im->_isph_count = -1;
   return im;
 }
 
@@ -1075,16 +1074,61 @@ uint32_t t3__world_epoch = 1, t3__bounds_epoch = 1, t3__graph_epoch = 1;
 uint32_t t3__world_recomputes = 0;
 uint32_t t3_world_recompute_count(void) { return t3__world_recomputes; }
 
+/* Sphere.expandByPoint */
+static void sphere_expand(float s[4], float x, float y, float z) {
+  if (s[3] < 0) { s[0] = x; s[1] = y; s[2] = z; s[3] = 0; return; }
+  float dx = x - s[0], dy = y - s[1], dz = z - s[2], l2 = dx * dx + dy * dy + dz * dz;
+  if (l2 > s[3] * s[3]) {
+    float l = sqrtf(l2), d = (l - s[3]) * 0.5f;
+    s[0] += dx * (d / l); s[1] += dy * (d / l); s[2] += dz * (d / l);
+    s[3] += d;
+  }
+}
+
+/* r186 InstancedMesh.computeBoundingSphere: Sphere.union of the geometry's
+ * sphere through each instance matrix (an empty sphere has radius -1) */
+static bool instanced_sphere_valid(const t3_instanced_mesh *im, const t3_geometry *g) {
+  return im->_isph_ver == im->instance_matrix->version && im->_isph_count == im->count && im->_isph_geometry == g &&
+         im->_isph_bounds == t3__bounds_epoch;
+}
+static void instanced_sphere(t3_instanced_mesh *im, const t3_geometry *g) {
+  float *s = im->_isph;
+  s[0] = s[1] = s[2] = 0; s[3] = -1;
+  const t3_vec3 c = g->bounding_sphere.center;
+  const float *e = (const float *)im->instance_matrix->array;
+  for (int i = 0; i < im->count && i < im->instance_matrix->count; i++, e += 16) {
+    if (g->bounding_sphere.radius < 0) break;
+    float x = e[0] * c.x + e[4] * c.y + e[8] * c.z + e[12];
+    float y = e[1] * c.x + e[5] * c.y + e[9] * c.z + e[13];
+    float z = e[2] * c.x + e[6] * c.y + e[10] * c.z + e[14];
+    float r = g->bounding_sphere.radius * t3_mat4_max_scale_on_axis((const t3_mat4 *)e);
+    if (s[3] < 0) { s[0] = x; s[1] = y; s[2] = z; s[3] = r; continue; }
+    if (s[0] == x && s[1] == y && s[2] == z) { if (r > s[3]) s[3] = r; continue; }
+    /* Sphere.union: the far points of the other sphere along the centre line */
+    float dx = x - s[0], dy = y - s[1], dz = z - s[2], l = sqrtf(dx * dx + dy * dy + dz * dz), k = r / l;
+    sphere_expand(s, x + dx * k, y + dy * k, z + dz * k);
+    sphere_expand(s, x - dx * k, y - dy * k, z - dz * k);
+  }
+  im->_isph_ver = im->instance_matrix->version;
+  im->_isph_count = im->count;
+  im->_isph_geometry = g;
+  im->_isph_bounds = t3__bounds_epoch;
+}
+
 const float *t3__world_sphere(t3_object *o, t3_geometry *g) {
   if (!g->has_bounding_sphere) t3_geometry_compute_bounding_sphere(g);
-  if (o->_ws_world == o->_world_version && o->_ws_geometry == g && o->_ws_bounds == t3__bounds_epoch && o->_world_version)
+  t3_instanced_mesh *im = o->type == T3_INSTANCED_MESH ? (t3_instanced_mesh *)o : NULL;
+  bool inst_ok = !im || instanced_sphere_valid(im, g);
+  if (inst_ok && o->_ws_world == o->_world_version && o->_ws_geometry == g && o->_ws_bounds == t3__bounds_epoch && o->_world_version)
     return o->_ws;
+  if (!inst_ok) instanced_sphere(im, g);
   const float *e = o->matrix_world.e;
-  const t3_vec3 c = g->bounding_sphere.center;
+  const t3_vec3 c = im ? t3_v3(im->_isph[0], im->_isph[1], im->_isph[2]) : g->bounding_sphere.center;
+  const float rad = im ? im->_isph[3] : g->bounding_sphere.radius;
   o->_ws[0] = e[0] * c.x + e[4] * c.y + e[8] * c.z + e[12];
   o->_ws[1] = e[1] * c.x + e[5] * c.y + e[9] * c.z + e[13];
   o->_ws[2] = e[2] * c.x + e[6] * c.y + e[10] * c.z + e[14];
-  o->_ws[3] = g->bounding_sphere.radius * t3_mat4_max_scale_on_axis(&o->matrix_world);
+  o->_ws[3] = rad < 0 ? rad : rad * t3_mat4_max_scale_on_axis(&o->matrix_world);
   o->_ws_world = o->_world_version;
   o->_ws_geometry = g;
   o->_ws_bounds = t3__bounds_epoch;
