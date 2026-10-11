@@ -717,16 +717,23 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
   }
   GLuint keep = r->gen_stream_ubo;
   r->gen_stream_ubo = r->cast_ubo;
+  /* the caster's state: the material with r186's shadow overrides, copied
+   * once for a run of casters sharing a material */
+  t3_material state;
+  const t3_material *state_of = NULL;
   for (int i = 0; i < r->cast_n; i++) {
     struct cast_item *c = &r->cast[i];
     const t3_material *src = c->it.material;
-    static const t3_side flip[3] = { T3_BACK_SIDE, T3_FRONT_SIDE, T3_DOUBLE_SIDE };
-    t3_material state = *src;
-    state.side = src->shadow_side >= 0 ? (t3_side)src->shadow_side : flip[src->side];
-    state.transparent = false;
-    state.blending = T3_NO_BLENDING;
-    state.depth_test = state.depth_write = true;
-    state.color_write = true;
+    if (src != state_of) {
+      static const t3_side flip[3] = { T3_BACK_SIDE, T3_FRONT_SIDE, T3_DOUBLE_SIDE };
+      state = *src;
+      state.side = src->shadow_side >= 0 ? (t3_side)src->shadow_side : flip[src->side];
+      state.transparent = false;
+      state.blending = T3_NO_BLENDING;
+      state.depth_test = state.depth_write = true;
+      state.color_write = true;
+      state_of = src;
+    }
     gen_draw_gl(r, &c->it, sc, c->gl, &state);
   }
   r->gen_stream_ubo = keep;
@@ -745,18 +752,21 @@ static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *s
         int mi = grp ? grp->material_index : 0;
         if (mi < 0 || mi >= mesh->material_count || !mesh->materials[mi]->visible) continue;
         const t3_material *src = mesh->materials[mi];
-        /* overrideMaterial.side = material.shadowSide ?? shadowSide[material.side] */
-        static const t3_side flip[3] = { T3_BACK_SIDE, T3_FRONT_SIDE, T3_DOUBLE_SIDE };
-        t3_material state = *src;
-        state.side = src->shadow_side >= 0 ? (t3_side)src->shadow_side : flip[src->side];
-        state.transparent = false;
-        state.blending = T3_NO_BLENDING;
-        state.depth_test = state.depth_write = true;
-        state.color_write = true;
         render_item it = { o, g, (t3_material *)src, grp, 0, 0, 0, 0 };
         it.gen_off = -1;
 #ifdef T3_WGPU
-        if (r->wgpu) { wgpu_draw_prog(r, &it, sc, gl, &state); continue; }
+        if (r->wgpu) {
+          /* overrideMaterial.side = material.shadowSide ?? shadowSide[material.side] */
+          static const t3_side flip[3] = { T3_BACK_SIDE, T3_FRONT_SIDE, T3_DOUBLE_SIDE };
+          t3_material state = *src;
+          state.side = src->shadow_side >= 0 ? (t3_side)src->shadow_side : flip[src->side];
+          state.transparent = false;
+          state.blending = T3_NO_BLENDING;
+          state.depth_test = state.depth_write = true;
+          state.color_write = true;
+          wgpu_draw_prog(r, &it, sc, gl, &state);
+          continue;
+        }
 #endif
         if (r->cast_n == r->cast_cap) {
           r->cast_cap = r->cast_cap ? r->cast_cap * 2 : 64;
