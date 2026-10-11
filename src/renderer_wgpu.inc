@@ -352,7 +352,12 @@ static void wgpu_destination(t3_renderer *r, wgpu_dest *d) {
 static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
   t3_wgpu *w = r->wgpu;
   int items = r->opaque.n + r->transparent.n + 4;
-  t3_wgpu_begin_frame(w, (size_t)items * 2048);
+  /* each shadow pass (a light, or a point light's face) draws its casters
+   * too, from the same stream */
+  int passes = 1;
+  if (r->shadow_map_enabled)
+    for (int i = 0; i < r->caster_count; i++) passes += r->casters[i]->base.type == T3_POINT_LIGHT ? 6 : 1;
+  t3_wgpu_begin_frame(w, (size_t)items * passes * 2048);
   if (r->inst_n) t3_wgpu_floats(w, &r->wg_inst, r->inst, (size_t)r->inst_n * INST_FLOATS);
   wgpu_shadow_maps(r, scene);
   wgpu_dest D;

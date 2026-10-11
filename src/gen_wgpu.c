@@ -43,6 +43,7 @@ struct t3_wgpu {
   size_t stream_size;
   uint32_t stream_gen;
   bool stream_ext;   /* the stream holds data for commands on an embedder's encoder (not yet known to be submitted) */
+  size_t stream_short; /* what the stream lacked since the last begin_frame (draws that got no room): the next one grows by it */
   uint8_t *stage;
   size_t stage_n, stage_cap;
   WGPUCommandEncoder enc;
@@ -414,6 +415,14 @@ void t3_wgpu_submitted(t3_wgpu *w) {
 void t3_wgpu_set_defer(t3_wgpu *w, bool on) { if (!on) t3_wgpu_flush(w); w->defer = on; }
 void t3_wgpu_set_encoder(t3_wgpu *w, WGPUCommandEncoder enc) { t3_wgpu_flush(w); w->ext = enc; }
 void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
+  /* a render that ran out of stream drew with another draw's data: the
+   * buffer grows by what it lacked (the estimate does not see every draw:
+   * shadow casters are walked during the render), and stays grown */
+  if (w->stream_short) {
+    size_t need = w->stream_size + w->stream_short;
+    if (estimate < need) estimate = need;
+    w->stream_short = 0;
+  }
   if (w->enc) {
     /* a frame is open (deferred or the embedder's encoder): keep streaming
      * into it while the rest of the buffer holds this render */
@@ -460,7 +469,10 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
 }
 uint32_t t3_wgpu_stream(t3_wgpu *w, const void *data, uint32_t n) {
   size_t off = (w->stage_n + 255) & ~(size_t)255;
-  if (off + n > w->stream_size) return 0;   /* (the estimate was too small: drawn with stale data; begin_frame grows it next frame) */
+  if (off + n > w->stream_size) {   /* (the estimate was too small: drawn with stale data; begin_frame grows it next frame) */
+    w->stream_short += (n + 255) & ~(size_t)255;
+    return 0;
+  }
   memcpy(w->stage + off, data, n);
   w->stage_n = off + n;
   return (uint32_t)off;
