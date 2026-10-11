@@ -780,6 +780,8 @@ static void gen_render_shadow_maps(t3_renderer *r, t3_scene *scene) {
     struct gen_shadow *s = gen_shadow_of(r, l, true);
     if (!s) continue;
     bool point = l->base.type == T3_POINT_LIGHT;
+    if (shadow_keep(r, s, sh->map_width, sh->map_height, point)) continue;
+    s->rendered = true;
     gen_shadow_storage(r, s, sh->map_width, sh->map_height, point);
     gl_fbo(r, s->fbo);
     tu_forget(s->tex);

@@ -233,6 +233,8 @@ static void wgpu_shadow_maps(t3_renderer *r, t3_scene *scene) {
     if (!s) continue;
     bool point = l->base.type == T3_POINT_LIGHT;
     int mw = sh->map_width, mh = point ? sh->map_width : sh->map_height;
+    if (shadow_keep(r, s, mw, mh, point)) continue;
+    s->rendered = true;
     WGPUTextureView faces[6];
     t3_wgpu_depth_map(w, &s->wg, mw, mh, point, faces);
     s->w = mw; s->h = mh; s->cube = point;

@@ -118,6 +118,8 @@ struct t3_renderer {
   t3_color clear_color;
   float clear_alpha;
   bool shadow_map_enabled;
+  /* r186 shadowMap.autoUpdate (false: shadow_manual) */
+  bool shadow_manual;
   t3_shadow_map_type shadow_map_type;
   t3_color_space output_color_space;
   t3_tone_mapping tone_mapping;
@@ -265,7 +267,7 @@ struct t3_renderer {
     const struct t3_texture *pm_src;   /* a PMREM pass's source */
     float pm_rough, pm_mip, pm_sigma;
   } aux;
-  struct gen_shadow { const t3_light *l; GLuint fbo, tex; int w, h; bool cube; void *wg; } gen_sh[16];
+  struct gen_shadow { const t3_light *l; GLuint fbo, tex; int w, h; bool cube; bool rendered; void *wg; } gen_sh[16];
   int gen_sh_n;
   char *gen_missing;      /* table states the scenes asked for and the table lacks, one per line */
   /* every draw's per-draw block of the frame, packed at the uniform-buffer
@@ -710,6 +712,18 @@ void t3_renderer_set_clear_color(t3_renderer *r, uint32_t hex, float alpha) {
 void t3_renderer_set_shadow_map(t3_renderer *r, bool enabled, t3_shadow_map_type type) {
   r->shadow_map_enabled = enabled;
   r->shadow_map_type = type;
+}
+
+void t3_renderer_set_shadow_auto_update(t3_renderer *r, bool auto_update) { r->shadow_manual = !auto_update; }
+/* shadowMap.needsUpdate, per light: every map is drawn again by the next render that uses it */
+void t3_renderer_shadow_needs_update(t3_renderer *r) {
+  for (int i = 0; i < r->gen_sh_n; i++) r->gen_sh[i].rendered = false;
+}
+
+/* shadowMap.autoUpdate off: a light keeps the map it drew since the last
+ * needsUpdate (one it has not drawn, or drew at another size, is drawn) */
+static bool shadow_keep(const t3_renderer *r, const struct gen_shadow *s, int w, int h, bool cube) {
+  return r->shadow_manual && s->rendered && s->w == w && s->h == h && s->cube == cube;
 }
 
 void t3_renderer_set_output_color_space(t3_renderer *r, t3_color_space e) { r->output_color_space = e; }

@@ -941,6 +941,12 @@ void t3_renderer_set_framebuffer(t3_renderer *r, unsigned fbo);
 void t3_renderer_clear(t3_renderer *r, bool color, bool depth, bool stencil);
 void t3_renderer_set_clear_color(t3_renderer *r, uint32_t hex, float alpha);
 void t3_renderer_set_shadow_map(t3_renderer *r, bool enabled, t3_shadow_map_type type);
+/* r186 shadowMap.autoUpdate (default true): off, a light's shadow map is
+ * drawn once after each t3_renderer_shadow_needs_update (shadowMap.needsUpdate)
+ * by the first render that uses it, so several renders of one scene in a
+ * frame (a depth prepass, then the scene) draw it once */
+void t3_renderer_set_shadow_auto_update(t3_renderer *r, bool auto_update);
+void t3_renderer_shadow_needs_update(t3_renderer *r);
 /* renderer.outputColorSpace (SRGBColorSpace) */
 void t3_renderer_set_output_color_space(t3_renderer *r, t3_color_space cs);
 /* renderer.toneMapping and renderer.toneMappingExposure (1), applied in the
