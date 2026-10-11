@@ -660,6 +660,12 @@ static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t
   t3_gen_gl *gl = gen_program_p(r, src, false, prm);
   return gl && gl->complete ? gl : NULL;
 }
+/* T3_GEN_DUMP (debug: every draw block on stderr), read once rather than per item and per draw */
+static bool gen_dump(void) {
+  static int on = -1;
+  if (on < 0) on = getenv("T3_GEN_DUMP") != NULL;
+  return on;
+}
 static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *sc);
 /* the caster draws: on GLES collected, their per-draw blocks packed and
  * uploaded with one call, then drawn (one upload a shadow map, not one a
@@ -867,7 +873,7 @@ static void gen_prepare_list(t3_renderer *r, render_list *l, const t3_camera *ca
     gen_set_aux(r, it->material);
     gen_fill_draw(r, gl, it->material, it->object, it->batch_count > 0);
     uint32_t n = gl->bytes[gl->draw_group];
-    if (getenv("T3_GEN_DUMP")) {
+    if (gen_dump()) {
       fprintf(stderr, "[gen] %s draw block:", gl->src->state);
       for (uint32_t q = 0; q < n / 4; q++) fprintf(stderr, " %g", ((float *)gl->mirror[gl->draw_group])[q]);
       fprintf(stderr, "\n");
@@ -984,7 +990,7 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
   gen_set_aux(r, m);
   bool streamed = it->gen_gl && gl->draw_group >= 0 && it->gen_off >= 0;
   if (!streamed) gen_fill_draw(r, gl, m, o, it->batch_count > 0);
-  if (getenv("T3_GEN_DUMP")) {
+  if (gen_dump()) {
     for (int gi = 0; gi < gl->n_groups; gi++) if (gl->mirror[gi]) {
       fprintf(stderr, "[gen] group %d (%s, %u B):", gi, gl->src->groups[gi]->name, gl->bytes[gi]);
       for (uint32_t q = 0; q < gl->bytes[gi] / 4; q++) fprintf(stderr, " %g", ((float *)gl->mirror[gi])[q]);
