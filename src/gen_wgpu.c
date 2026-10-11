@@ -667,6 +667,15 @@ static WGPUBuffer attribute_buf(t3_wgpu *w, t3_attribute *a, bool index, uint32_
   size_t padded = (bytes + 3) & ~(size_t)3;
   if (index_format) *index_format = a->type == T3_UINT16 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32;
   if (v && v->version == a->version && v->size >= padded && v->uint == as_uint) return v->b;
+  /* only the update range: a plain float vertex buffer that already holds the rest and no open frame reads */
+  if (v && a->update_count > 0 && !index && !as_uint && a->type == T3_FLOAT32 && v->b && v->size == padded && v->uint == as_uint &&
+      !(w->enc && v->serial == w->serial)) {
+    size_t item = (size_t)a->item_size * 4;
+    wgpuQueueWriteBuffer(w->q, v->b, a->update_start * item, (const uint8_t *)a->array + a->update_start * item, a->update_count * item);
+    a->update_start = a->update_count = 0;
+    v->version = a->version;
+    return v->b;
+  }
   if (!v) { v = calloc(1, sizeof *v); T3_CHECK_ALLOC(v); a->_wgpu = v; }
   if (v->b && w->enc && v->serial == w->serial) { wgpuBufferRelease(v->b); v->b = NULL; }   /* (in use by the open frame: renamed) */
   if (!v->b || v->size < padded) {
@@ -699,6 +708,7 @@ static WGPUBuffer attribute_buf(t3_wgpu *w, t3_attribute *a, bool index, uint32_
   free(tmp);
   v->version = a->version;
   v->uint = as_uint;
+  a->update_start = a->update_count = 0;
   return v->b;
 }
 WGPUBuffer t3_wgpu_floats(t3_wgpu *w, void **slot, const float *data, size_t n) {

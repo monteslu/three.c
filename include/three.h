@@ -280,12 +280,21 @@ typedef struct t3_attribute {
   bool normalized;
   t3_usage usage;
   uint32_t version;
+  int update_start, update_count; /* items the next upload sends (BufferAttribute.updateRanges, merged
+                                     into one): count 0 = the whole array; cleared by the upload */
   void *_gl;
   void *_wgpu;              /* renderer-private: the WebGPU buffer */
 } t3_attribute;
 
 t3_attribute *t3_attribute_new(t3_attr_type type, const void *data, int count, int item_size);
 static inline float *t3_attribute_f32(t3_attribute *a) { return (float *)a->array; }
+/* BufferAttribute.addUpdateRange, in items (three.js counts components): the
+ * next upload after a version bump sends only these items (ranges added
+ * before it are merged into the one span that covers them all) when the GPU
+ * buffer already holds the rest; otherwise, or with no range, all of it. */
+void t3_attribute_add_update_range(t3_attribute *a, int start, int count);
+/* BufferAttribute.clearUpdateRanges: the next upload sends the whole array. */
+static inline void t3_attribute_clear_update_ranges(t3_attribute *a) { a->update_start = a->update_count = 0; }
 
 typedef enum {
   T3_ATTR_POSITION, T3_ATTR_NORMAL, T3_ATTR_UV, T3_ATTR_COLOR, T3_ATTR_TANGENT, T3_ATTR_UV1,

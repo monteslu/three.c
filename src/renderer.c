@@ -791,8 +791,13 @@ static GLuint attribute_buffer(t3_attribute *a, GLenum target) {
   }
   if (ag->version != a->version || !ag->size) {
     glBindBuffer(target, ag->buffer);
-    if (ag->size == size) glBufferSubData(target, 0, size, a->array);
+    size_t item = (size_t)a->item_size * (a->type == T3_UINT16 ? 2 : 4);
+    /* only the update range when the buffer already holds the rest */
+    if (ag->size == size && a->update_count > 0)
+      glBufferSubData(target, (GLintptr)(a->update_start * item), (GLsizeiptr)(a->update_count * item), (const uint8_t *)a->array + a->update_start * item);
+    else if (ag->size == size) glBufferSubData(target, 0, size, a->array);
     else glBufferData(target, size, a->array, a->usage);
+    a->update_start = a->update_count = 0;
     ag->size = size;
     ag->version = a->version;
     ag->items_valid = a->count;

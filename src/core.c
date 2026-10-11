@@ -139,6 +139,19 @@ t3_attribute *t3_attribute_new(t3_attr_type type, const void *data, int count, i
   return a;
 }
 
+void t3_attribute_add_update_range(t3_attribute *a, int start, int count) {
+  if (start < 0) count += start, start = 0;
+  if (start + count > a->count) count = a->count - start;
+  if (count <= 0) return;
+  if (a->update_count > 0) {
+    int end = a->update_start + a->update_count > start + count ? a->update_start + a->update_count : start + count;
+    if (a->update_start < start) start = a->update_start;
+    count = end - start;
+  }
+  a->update_start = start;
+  a->update_count = count;
+}
+
 /* ── textures ────────────────────────────────────────────────────── */
 t3_texture *t3_texture_new(int w, int h, const uint8_t *rgba) {
   t3_texture *t = t3__alloc(sizeof *t, T3_KIND_TEXTURE);
