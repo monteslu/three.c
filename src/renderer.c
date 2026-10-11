@@ -90,6 +90,7 @@ typedef struct {
   GLuint buffer;
   uint32_t version;
   GLsizeiptr size;
+  int items_valid; /* an instance attribute: the leading items uploaded at this version */
 } attribute_gl;
 
 typedef struct {
@@ -794,8 +795,28 @@ static GLuint attribute_buffer(t3_attribute *a, GLenum target) {
     else glBufferData(target, size, a->array, a->usage);
     ag->size = size;
     ag->version = a->version;
+    ag->items_valid = a->count;
   }
   return ag->buffer;
+}
+
+/* An instanced mesh's per-instance attribute, refreshed for the instances
+ * drawn: the first n items. A mesh that draws fewer instances than it has
+ * room for (count below the capacity) re-uploads only those when its data
+ * changes, not the whole buffer; items past n are sent once they are drawn. */
+static void instance_buffer(t3_attribute *a, int n) {
+  attribute_gl *ag = a->_gl;
+  GLsizeiptr full = (GLsizeiptr)a->count * a->item_size * 4;
+  if (n > a->count) n = a->count;
+  if (n < 0) n = 0;
+  if (!ag || !ag->size || ag->size != full) { attribute_buffer(a, GL_ARRAY_BUFFER); return; }
+  if (ag->version == a->version && n <= ag->items_valid) return;
+  int from = ag->version == a->version ? ag->items_valid : 0;
+  size_t item = (size_t)a->item_size * 4;
+  glBindBuffer(GL_ARRAY_BUFFER, ag->buffer);
+  glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)(from * item), (GLsizeiptr)((size_t)(n - from) * item), (const uint8_t *)a->array + from * item);
+  ag->version = a->version;
+  ag->items_valid = n;
 }
 
 static void bind_float_attr(t3_attribute *a, GLuint index) {
@@ -899,10 +920,8 @@ static void use_geometry_bind(t3_renderer *r, t3_object *o, t3_geometry *g, bool
     }
     bind_vao(r, gg->vao);
     refresh_attributes(g);
-    attribute_gl *mg = im->instance_matrix->_gl;
-    if (mg->version != im->instance_matrix->version) attribute_buffer(im->instance_matrix, GL_ARRAY_BUFFER);
-    if (im->instance_color && ((attribute_gl *)im->instance_color->_gl)->version != im->instance_color->version)
-      attribute_buffer(im->instance_color, GL_ARRAY_BUFFER);
+    instance_buffer(im->instance_matrix, im->count);
+    if (im->instance_color) instance_buffer(im->instance_color, im->count);
   }
 }
 
