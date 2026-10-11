@@ -13,8 +13,12 @@
 
 struct pipe { t3_wgpu_state st; WGPURenderPipeline p; };
 struct bg { WGPUTextureView views[8]; WGPUSampler samplers[8]; uint32_t gen, epoch; WGPUBindGroup g; };
-/* bumped when three.c releases a view: a cached bind group keyed by a view
- * pointer must not match a new view that reuses the address */
+/* bumped when three.c releases a view it may have named in a cached bind
+ * group: a cached bind group keyed by a view pointer must not match a new
+ * view that reuses the address (a cart's WebGPU handles are its own heap
+ * allocations, so a view made right after one is released usually gets the
+ * same address). Every path that releases such a view bumps it, the ones
+ * that remake a texture at a new size included. */
 static uint32_t view_epoch;
 
 struct gen_wgpu_prog {
@@ -766,7 +770,7 @@ WGPUTextureView t3_wgpu_texture(t3_wgpu *w, t3_texture *t) {
   if (t->is_cube && (flt || half)) levels = 1;
   if (!x || x->w != t->width || x->h != t->height || x->fmt != fmt || x->levels != levels) {
     if (!x) { x = calloc(1, sizeof *x); T3_CHECK_ALLOC(x); t->_wgpu = x; }
-    else { wgpuTextureViewRelease(x->v); wgpuTextureRelease(x->t); }
+    else { wgpuTextureViewRelease(x->v); wgpuTextureRelease(x->t); view_epoch++; }
     /* (compatibility mode: a texture is bound with one view dimension, named at creation) */
     WGPUTextureBindingViewDimension bvd = { .chain = { .sType = WGPUSType_TextureBindingViewDimension },
                                             .textureBindingViewDimension = WGPUTextureViewDimension_Cube };
@@ -875,7 +879,6 @@ void t3_wgpu_release(uint32_t kind, void *thing) {
   }
   case T3_KIND_RENDER_TARGET:
     t3_wgpu_render_target_free(thing);   /* (its texture goes with the texture) */
-    view_epoch++;
     break;
   case T3_KIND_GEOMETRY: {
     t3_geometry *g = thing;
@@ -903,6 +906,7 @@ void t3_wgpu_render_target_free(t3_render_target *rt) {
   if (x->depth) wgpuTextureRelease(x->depth);
   free(x);
   rt->_wgpu = NULL;
+  view_epoch++;
 }
 void t3_wgpu_render_target(t3_wgpu *w, t3_render_target *rt, t3_wgpu_rt *out) {
   t3_texture *t = rt->texture;
@@ -968,6 +972,7 @@ WGPUTextureView t3_wgpu_depth_map(t3_wgpu *w, void **slot, int width, int height
       wgpuTextureViewRelease(x->sample);
       for (int f = 0; f < (x->cube ? 6 : 1); f++) wgpuTextureViewRelease(x->faces[f]);
       wgpuTextureRelease(x->t);
+      view_epoch++;   /* (a shadow map at a new size: its new view may reuse the old one's address) */
     } else { x = calloc(1, sizeof *x); T3_CHECK_ALLOC(x); *slot = x; }
     WGPUTextureBindingViewDimension bvd = { .chain = { .sType = WGPUSType_TextureBindingViewDimension },
                                             .textureBindingViewDimension = WGPUTextureViewDimension_Cube };
@@ -1006,7 +1011,7 @@ WGPUTextureView t3_wgpu_array_current(void *slot, uint32_t version) {
 WGPUTextureView t3_wgpu_array_texture(t3_wgpu *w, void **slot, uint32_t version, int width, int height, int layers, const float *data) {
   struct dmap *x = *slot;
   if (x && x->version == version && x->w == width && x->h == height) return x->sample;
-  if (x) { wgpuTextureViewRelease(x->sample); wgpuTextureRelease(x->t); }
+  if (x) { wgpuTextureViewRelease(x->sample); wgpuTextureRelease(x->t); view_epoch++; }
   else { x = calloc(1, sizeof *x); T3_CHECK_ALLOC(x); *slot = x; }
   WGPUTextureDescriptor d = { .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst, .dimension = WGPUTextureDimension_2D,
     .size = { (uint32_t)width, (uint32_t)height, (uint32_t)layers }, .format = WGPUTextureFormat_RGBA32Float, .mipLevelCount = 1, .sampleCount = 1 };
@@ -1098,7 +1103,7 @@ WGPUTextureView t3_wgpu_target(t3_wgpu *w, void **slot, int width, int height, W
   struct target *x = *slot;
   if (x && x->w == width && x->h == height && x->fmt == fmt) return x->view;
   if (!x) { x = calloc(1, sizeof *x); T3_CHECK_ALLOC(x); *slot = x; }
-  else { wgpuTextureViewRelease(x->view); wgpuTextureRelease(x->tex); }
+  else { wgpuTextureViewRelease(x->view); wgpuTextureRelease(x->tex); view_epoch++; }
   WGPUTextureDescriptor d = { .usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_CopySrc | (sampled ? WGPUTextureUsage_TextureBinding : 0),
     .dimension = WGPUTextureDimension_2D, .size = { (uint32_t)width, (uint32_t)height, 1 }, .format = fmt, .mipLevelCount = 1, .sampleCount = 1 };
   x->tex = wgpuDeviceCreateTexture(w->dev, &d);
