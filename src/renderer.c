@@ -1647,8 +1647,9 @@ T3_HOT static void project_one(t3_renderer *r, t3_object *o, int in_frustum) {
  * The scene graph in traversal order, each entry with the index past its
  * subtree (an invisible object skips its children), and the world bounding
  * spheres of the entries that are meshes or lines, as arrays. Rebuilt only
- * when the scene graph or a world matrix / bounds changed (the world
- * epochs), so a still scene keeps it; the frustum test then runs over the
+ * when the scene graph changed; when world matrices changed only the
+ * spheres of the entries that moved (their world version) are refreshed,
+ * all of them when bounds changed. The frustum test then runs over the
  * arrays 4 spheres at a time. visible, frustumCulled and materials are read
  * live each frame; an entry whose geometry was swapped since the build is
  * tested the scalar way. */
@@ -1656,7 +1657,7 @@ typedef struct {
   t3_object *root;
   uint32_t world_epoch, bounds_epoch, graph_epoch;
   t3_object **obj; int *end, *sph; const t3_geometry **geo; int n, cap;
-  float *cx, *cy, *cz, *rad; uint8_t *vis; int ns, scap;
+  float *cx, *cy, *cz, *rad; uint8_t *vis; uint32_t *wv; int ns, scap;
   bool spheres_valid; /* the arrays match the current world */
 } scene_flat;
 
@@ -1694,12 +1695,15 @@ static void flat_add(scene_flat *f, t3_object *o) {
       f->cz = realloc(f->cz, (size_t)f->scap * sizeof(float));
       f->rad = realloc(f->rad, (size_t)f->scap * sizeof(float));
       f->vis = realloc(f->vis, (size_t)f->scap);
+      f->wv = realloc(f->wv, (size_t)f->scap * sizeof(uint32_t));
       T3_CHECK_ALLOC(f->cx); T3_CHECK_ALLOC(f->cy); T3_CHECK_ALLOC(f->cz); T3_CHECK_ALLOC(f->rad); T3_CHECK_ALLOC(f->vis);
+      T3_CHECK_ALLOC(f->wv);
     }
     t3_geometry *g = ((t3_mesh *)o)->geometry;
     const float *ws = t3__world_sphere(o, g);
     int k = f->ns++;
     f->cx[k] = ws[0]; f->cy[k] = ws[1]; f->cz[k] = ws[2]; f->rad[k] = ws[3];
+    f->wv[k] = o->_world_version;
     f->sph[i] = k;
     f->geo[i] = g;
   }
@@ -1712,20 +1716,21 @@ static scene_flat *flatten_scene(t3_object *root) {
   bool same_world = f->world_epoch == t3__world_epoch && f->bounds_epoch == t3__bounds_epoch;
   if (f->root == root && same_world && f->obj && f->spheres_valid) return f;
   if (f->root == root && f->graph_epoch == t3__graph_epoch && f->obj) {
+    /* things moved or bounds changed: refresh the spheres of the entries whose
+     * world matrix changed since they were copied (every entry when bounds did) */
+    bool all = f->bounds_epoch != t3__bounds_epoch || !f->spheres_valid;
     f->world_epoch = t3__world_epoch;
     f->bounds_epoch = t3__bounds_epoch;
-    /* Things moved since the last frame: refreshing every sphere costs more
-     * than culling each object as it comes (on its cached sphere), so the
-     * arrays wait until the scene holds still for a frame. */
-    if (!same_world) { f->spheres_valid = false; return f; }
     for (int i = 0; i < f->n; i++) {
       int k = f->sph[i];
       if (k < 0) continue;
       t3_object *o = f->obj[i];
       t3_geometry *g = ((t3_mesh *)o)->geometry;
+      if (!all && o->_world_version == f->wv[k] && g == f->geo[i]) continue;
       if (!g || !g->attributes[T3_ATTR_POSITION]) { f->geo[i] = NULL; continue; }
       const float *ws = t3__world_sphere(o, g);
       f->cx[k] = ws[0]; f->cy[k] = ws[1]; f->cz[k] = ws[2]; f->rad[k] = ws[3];
+      f->wv[k] = o->_world_version;
       f->geo[i] = g;
     }
     f->spheres_valid = true;
