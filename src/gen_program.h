@@ -93,6 +93,20 @@ typedef struct { uint16_t bones, morphs, morph_width; } t3_gen_params;
 
 #define T3_GEN_MAX_BUFFERS 4
 
+/* What a manifest texture or buffer reads, resolved from its source name
+ * once when the program is built (t3_gen_source_kind), so a draw binds by
+ * kind instead of comparing names. T3_SRC_MAT's arg is the T3_GEN_TEX_*
+ * slot; a shadow's is the light index. */
+enum {
+  T3_SRC_NONE, T3_SRC_MAT, T3_SRC_DFG, T3_SRC_VIEWPORT, T3_SRC_OUTPUT, T3_SRC_MORPH,
+  T3_SRC_ENV, T3_SRC_BG, T3_SRC_PMREM,
+  T3_SRC_SHADOW_DIR, T3_SRC_SHADOW_SPOT, T3_SRC_SHADOW_POINT, T3_SRC_SHADOW_NONE,
+  T3_SRC_BONES, T3_SRC_MORPH_INFLUENCES
+};
+uint8_t t3_gen_source_kind(const char *source, uint8_t *arg);
+/* a WebGPU vertex input that is not a geometry slot (t3_gen_gl.attr_slot) */
+enum { T3_ATTR_IN_UNKNOWN = -1, T3_ATTR_IN_INSTANCE = -2, T3_ATTR_IN_INSTANCE_DONE = -3, T3_ATTR_IN_INSTANCE_COLOR = -4 };
+
 typedef struct t3_gen_gl {
   const t3_gen_program *src;
   t3_gen_params params;
@@ -113,10 +127,16 @@ typedef struct t3_gen_gl {
   /* the groups' extra buffers (bone matrices, morph influences): their own
    * blocks at binding points T3_GEN_MAX_GROUPS + i, uploaded per draw */
   int n_buffers;
-  struct { GLuint ubo; uint32_t bytes; const char *source; GLuint point; } buf[T3_GEN_MAX_BUFFERS];
+  struct { GLuint ubo; uint32_t bytes; const char *source; GLuint point; uint8_t kind; } buf[T3_GEN_MAX_BUFFERS];
   /* sampler uniforms by manifest texture, set to units 0.. at build */
   int n_textures;
-  struct { GLint loc; const t3_bk_texture_layout *layout; } tex[16];
+  struct { GLint loc; const t3_bk_texture_layout *layout; uint8_t kind, arg; } tex[16];
+  /* the groups the frame ops and the draw ops write (bit per group) */
+  uint8_t frame_groups, draw_groups;
+  /* WebGPU: each group's textures (manifest order, at most 8) by kind, and
+   * each vertex input's geometry slot or T3_ATTR_IN_* (manifest order) */
+  uint8_t wtex_kind[T3_GEN_MAX_GROUPS][8], wtex_arg[T3_GEN_MAX_GROUPS][8];
+  int8_t attr_slot[16];
   unsigned render_stamp;   /* the render the frame ops were last run for */
   struct gen_wgpu_prog *wg;   /* the WebGPU half (gen_wgpu.c), NULL on GLES */
 } t3_gen_gl;
@@ -131,12 +151,15 @@ void t3_gen_common(t3_gen_gl *g);
 /* the program text with the object's template values (gen_program.c) */
 char *t3_gen_apply_templates(const char *text, const t3_gen_program *src, t3_gen_params p, char *err, size_t errcap);
 /* an op's bytes in its group mirror (marks the group dirty) */
-uint8_t *t3_gen_gl_op(t3_gen_gl *g, const struct t3_gen_op *op);
-/* bind and upload what changed: the frame groups (and the draw group too when
- * draw_group < 0) */
-void t3_gen_gl_flush(t3_gen_gl *g);
+static inline uint8_t *t3_gen_gl_op(t3_gen_gl *g, const struct t3_gen_op *op) {
+  g->dirty[op->group] = true;
+  return g->mirror[op->group] + op->off;
+}
 /* bumped whenever the program tables change (a table registered, a program
  * built at runtime): a renderer's cached lookups are stale then */
 unsigned t3_gen_tables_serial(void);
+/* bind and upload what changed: the frame groups (and the draw group too when
+ * draw_group < 0) */
+void t3_gen_gl_flush(t3_gen_gl *g);
 
 #endif

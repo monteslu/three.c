@@ -5,18 +5,6 @@
  * RGBA16F target, and r186's own output pass writes the output texture. */
 #ifdef T3_WGPU
 
-static int wgpu_attr_slot(const char *name) {
-  if (!strcmp(name, "position")) return T3_ATTR_POSITION;
-  if (!strcmp(name, "normal") || !strcmp(name, "outputDirection")) return T3_ATTR_NORMAL;
-  if (!strcmp(name, "uv")) return T3_ATTR_UV;
-  if (!strcmp(name, "uv1")) return T3_ATTR_UV1;
-  if (!strcmp(name, "color")) return T3_ATTR_COLOR;
-  if (!strcmp(name, "tangent")) return T3_ATTR_TANGENT;
-  if (!strcmp(name, "skinIndex")) return T3_ATTR_SKIN_INDEX;
-  if (!strcmp(name, "skinWeight")) return T3_ATTR_SKIN_WEIGHT;
-  return -1;
-}
-
 static WGPUTextureView wgpu_dfg(t3_renderer *r) {
   return t3_wgpu_data_texture(r->wgpu, &r->wg_dfg, T3_GEN_DFG_LUT_SIZE, T3_GEN_DFG_LUT_SIZE, WGPUTextureFormat_RG16Float, t3_gen_dfg_lut, T3_GEN_DFG_LUT_SIZE * 4);
 }
@@ -41,14 +29,18 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
     if (gl->bytes[gi]) dyn[nd++] = (struct dynoff){ L->uniform_binding, t3_wgpu_stream(w, gl->mirror[gi], gl->bytes[gi]) };
     for (int bi = 0; bi < gl->n_buffers; bi++) {
       if ((int)gl->buf[bi].point != gi) continue;
+      const void *data = NULL;
       float tmp[4 * 256];
-      const void *data = tmp;
-      memset(tmp, 0, sizeof tmp);
-      const char *srcn = gl->buf[bi].source;
-      if (srcn && !strcmp(srcn, "boneMatrices") && o && o->type == T3_SKINNED_MESH) data = ((const t3_skinned_mesh *)o)->skeleton->bone_matrices;
-      else if (srcn && !strcmp(srcn, "morphInfluences") && o) {
-        const t3_mesh *mesh = (const t3_mesh *)o;
-        for (int k = 0; k < g->morph_count && k < 256; k++) tmp[k * 4] = mesh->morph_influences ? mesh->morph_influences[k] : 0;
+      if (gl->buf[bi].kind == T3_SRC_BONES && o && o->type == T3_SKINNED_MESH) data = ((const t3_skinned_mesh *)o)->skeleton->bone_matrices;
+      else {
+        /* (morph influences, or zeros for a buffer with no source here) */
+        uint32_t bytes = gl->buf[bi].bytes < sizeof tmp ? gl->buf[bi].bytes : (uint32_t)sizeof tmp;
+        memset(tmp, 0, bytes);
+        if (gl->buf[bi].kind == T3_SRC_MORPH_INFLUENCES && o) {
+          const t3_mesh *mesh = (const t3_mesh *)o;
+          for (int k = 0; k < g->morph_count && k < 256; k++) tmp[k * 4] = mesh->morph_influences ? mesh->morph_influences[k] : 0;
+        }
+        data = tmp;
       }
       dyn[nd++] = (struct dynoff){ gl->buf[bi].ubo, t3_wgpu_stream(w, data, gl->buf[bi].bytes) };
     }
@@ -57,32 +49,32 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
     WGPUSampler samplers[8] = { 0 };
     int nt = 0;
     for (uint32_t t = 0; t < L->n_textures && t < 8; t++) {
-      const char *src = L->textures[t].source;
-      if (!strcmp(src, "dfg_lut")) { views[nt] = wgpu_dfg(r); samplers[nt] = t3_wgpu_sampler(w, NULL, false); }
-      else if (!strcmp(src, "output")) { views[nt] = output_view; samplers[nt] = t3_wgpu_sampler(w, NULL, false); }
-      else if (!strncmp(src, "shadow:", 7)) {
-        /* "directional[0]" -> that light's shadow map */
-        const light_state *ls = &r->ls;
-        const char *name = src + 7, *br = strchr(name, '[');
-        int idx = br ? atoi(br + 1) : 0;
-        const t3_light *l = !strncmp(name, "directional", 11) ? (idx < ls->num_dir ? ls->dir[idx] : NULL)
-                          : !strncmp(name, "spot", 4) ? (idx < ls->num_spot ? ls->spot[idx] : NULL)
-                          : !strncmp(name, "point", 5) ? (idx < ls->num_point ? ls->point[idx] : NULL) : NULL;
+      uint8_t kind = gl->wtex_kind[gi][t], arg = gl->wtex_arg[gi][t];
+      switch (kind) {
+      case T3_SRC_DFG: views[nt] = wgpu_dfg(r); samplers[nt] = t3_wgpu_sampler(w, NULL, false); break;
+      case T3_SRC_OUTPUT: views[nt] = output_view; samplers[nt] = t3_wgpu_sampler(w, NULL, false); break;
+      case T3_SRC_SHADOW_DIR: case T3_SRC_SHADOW_SPOT: case T3_SRC_SHADOW_POINT: case T3_SRC_SHADOW_NONE: {
+        const t3_light *l = gen_shadow_light(r, kind, arg);
         struct gen_shadow *sh = l ? gen_shadow_of(r, l, false) : NULL;
         if (!sh || !sh->wg) return false;
         views[nt] = t3_wgpu_depth_map(w, &sh->wg, sh->w, sh->h, sh->cube, NULL);
         samplers[nt] = t3_wgpu_compare_sampler(w, r->shadow_map_type != T3_BASIC_SHADOW_MAP);
-      } else if (!strcmp(src, "envMap") || !strcmp(src, "environment") || !strcmp(src, "background") || !strcmp(src, "pmrem.source")) {
-        const t3_texture *tx = src[0] == 'b' ? r->aux.bg : src[0] == 'p' ? r->aux.pm_src : r->aux.env;
+        break;
+      }
+      case T3_SRC_ENV: case T3_SRC_BG: case T3_SRC_PMREM: {
+        const t3_texture *tx = kind == T3_SRC_BG ? r->aux.bg : kind == T3_SRC_PMREM ? r->aux.pm_src : r->aux.env;
         if (!tx) return false;
         views[nt] = t3_wgpu_texture(w, (t3_texture *)tx);
         samplers[nt] = t3_wgpu_sampler(w, tx, false);
         if (!views[nt]) return false;
-      } else if (!strcmp(src, "viewport")) {   /* transmission's framebuffer copy, this side's */
+        break;
+      }
+      case T3_SRC_VIEWPORT:   /* transmission's framebuffer copy, this side's */
         views[nt] = (WGPUTextureView)r->wg_vp_view[m && m->side == T3_BACK_SIDE];
         samplers[nt] = t3_wgpu_sampler(w, vp_sampler(r), false);
         if (!views[nt]) return false;
-      } else if (!strcmp(src, "morphTexture")) {
+        break;
+      case T3_SRC_MORPH: {
         if (!g || !g->morph_count) return false;
         void **slot = &((t3_geometry *)g)->_wgpu;
         views[nt] = t3_wgpu_array_current(*slot, g->version);
@@ -93,13 +85,17 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
           free(data);
         }
         samplers[nt] = NULL;
-      } else {
-        const t3_texture *tx = NULL;
-        for (int k = 0; k < T3_GEN_TEX_COUNT; k++) if (!strcmp(src, t3_gen_tex_names[k])) tx = gen_tex(m, k);
+        break;
+      }
+      case T3_SRC_MAT: {
+        const t3_texture *tx = m ? gen_tex(m, arg) : NULL;
         if (!tx) return false;
         views[nt] = t3_wgpu_texture(w, (t3_texture *)tx);
         samplers[nt] = t3_wgpu_sampler(w, tx, false);
         if (!views[nt]) return false;
+        break;
+      }
+      default: return false;
       }
       nt++;
     }
@@ -157,24 +153,22 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   /* vertex buffers in the manifest's attribute order */
   WGPUBuffer vbs[16]; uint64_t voffs[16];
   int nvb = 0, ns = 0;
-  bool inst_done = false;
-  for (int a = 0; a < gl->src->n_attributes; a++) {
+  for (int a = 0; a < gl->src->n_attributes && a < 16; a++) {
     const t3_gen_attribute *A = &gl->src->attributes[a];
-    if (!strncmp(A->name, "nodeAttribute", 13)) {
-      if (inst_done) continue;
-      inst_done = true;
+    int slot = gl->attr_slot[a];
+    if (slot == T3_ATTR_IN_INSTANCE_DONE) continue;
+    if (slot == T3_ATTR_IN_INSTANCE) {
       if (batched) { vbs[nvb] = t3_wgpu_floats(w, &r->wg_inst, NULL, 0); voffs[nvb++] = (uint64_t)it->batch_offset * INST_FLOATS * 4; }
       else if (o->type == T3_INSTANCED_MESH) { vbs[nvb] = t3_wgpu_attribute(w, ((t3_instanced_mesh *)o)->instance_matrix, false, NULL); voffs[nvb++] = 0; }
       else return;
       continue;
     }
-    if (!strcmp(A->name, "instanceColor")) {
+    if (slot == T3_ATTR_IN_INSTANCE_COLOR) {
       if (o->type != T3_INSTANCED_MESH || !((t3_instanced_mesh *)o)->instance_color) return;
       vbs[nvb] = t3_wgpu_attribute(w, ((t3_instanced_mesh *)o)->instance_color, false, NULL);
       voffs[nvb++] = 0;
       continue;
     }
-    int slot = wgpu_attr_slot(A->name);
     t3_attribute *ga = slot >= 0 ? g->attributes[slot] : NULL;
     if (!ga) return;   /* r186 would warn and draw garbage; three.c skips */
     if (ns < 12) st.strides[ns++] = (uint8_t)ga->item_size;

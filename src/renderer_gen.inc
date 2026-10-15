@@ -456,9 +456,10 @@ static void putf(uint8_t *b, float x) { memcpy(b, &x, 4); }
 /* the camera, lights and fog; extra lights of a covering vector get inert values */
 static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) {
   const light_state *ls = &r->ls;
+  for (int i = 0; i < gl->n_groups; i++) if (gl->frame_groups >> i & 1) gl->dirty[i] = true;
   for (int k = 0; k < gl->n_frame_ops; k++) {
     const struct t3_gen_op *op = &gl->ops[k];
-    uint8_t *b = t3_gen_gl_op(gl, op);
+    uint8_t *b = gl->mirror[op->group] + op->off;
     int i = op->idx;
     switch (op->op) {
     case GOP_CAM_PROJ:
@@ -546,12 +547,12 @@ static void rotation_t(t3_euler e, float out[16]) {
 }
 static void gen_fill_draw(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, const t3_object *o, bool batched) {
   /* a batch draws many meshes: their world matrices ride in the instance attribute */
-  t3_mat4 id;
-  t3_mat4_identity(&id);
+  static const t3_mat4 id = { { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 } };
   const t3_mat4 *world = batched ? &id : &o->matrix_world;
+  for (int i = 0; i < gl->n_groups; i++) if (gl->draw_groups >> i & 1) gl->dirty[i] = true;
   for (int k = gl->n_frame_ops; k < gl->n_ops; k++) {
     const struct t3_gen_op *op = &gl->ops[k];
-    uint8_t *b = t3_gen_gl_op(gl, op);
+    uint8_t *b = gl->mirror[op->group] + op->off;
     switch (op->op) {
     case GOP_MODEL: memcpy(b, world->e, 64); break;
     case GOP_OBJ_POS: putv3(b, t3_mat4_get_position(world)); break;
@@ -714,15 +715,16 @@ static void gen_shadow_storage(t3_renderer *r, struct gen_shadow *s, int w, int 
   r->cur_fbo = s->fbo;
   s->w = w; s->h = h;
 }
-/* "directional[0]" -> that light's shadow texture on unit */
-static void gen_bind_shadow(t3_renderer *r, const char *name, int unit) {
+/* the light a shadow texture source names (T3_SRC_SHADOW_*, its index), or NULL */
+static const t3_light *gen_shadow_light(const t3_renderer *r, uint8_t kind, int idx) {
   const light_state *ls = &r->ls;
-  int idx = 0;
-  const char *br = strchr(name, '[');
-  if (br) idx = atoi(br + 1);
-  const t3_light *l = !strncmp(name, "directional", 11) ? (idx < ls->num_dir ? ls->dir[idx] : NULL)
-                    : !strncmp(name, "spot", 4) ? (idx < ls->num_spot ? ls->spot[idx] : NULL)
-                    : !strncmp(name, "point", 5) ? (idx < ls->num_point ? ls->point[idx] : NULL) : NULL;
+  return kind == T3_SRC_SHADOW_DIR ? (idx < ls->num_dir ? ls->dir[idx] : NULL)
+       : kind == T3_SRC_SHADOW_SPOT ? (idx < ls->num_spot ? ls->spot[idx] : NULL)
+       : kind == T3_SRC_SHADOW_POINT ? (idx < ls->num_point ? ls->point[idx] : NULL) : NULL;
+}
+/* "directional[0]" -> that light's shadow texture on unit */
+static void gen_bind_shadow(t3_renderer *r, uint8_t kind, int idx, int unit) {
+  const t3_light *l = gen_shadow_light(r, kind, idx);
   struct gen_shadow *s = l ? gen_shadow_of(r, l, false) : NULL;
   if (s && s->tex) { if (s->cube) tu_bind_cube(unit, s->tex, true); else tu_bind(unit, s->tex, true); }
 }
@@ -917,36 +919,38 @@ static void gen_render_shadow_maps(t3_renderer *r, t3_scene *scene) {
 static void gen_bind_textures_g(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, t3_geometry *cur_geometry);
 static void gen_bind_textures_g(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, t3_geometry *cur_geometry) {
   for (int i = 0; i < gl->n_textures; i++) {
-    const char *src = gl->tex[i].layout->source;
-    if (!strcmp(src, "dfg_lut")) { tu_bind(i, gen_dfg_texture(r), true); continue; }
-    if (!strcmp(src, "viewport")) {   /* transmission's framebuffer copy, this side's */
+    uint8_t arg = gl->tex[i].arg;
+    switch (gl->tex[i].kind) {
+    case T3_SRC_MAT: {
+      const t3_texture *tx = gen_tex(m, arg);
+      if (tx) bind_texture((t3_texture *)tx, i);
+      break;
+    }
+    case T3_SRC_DFG: tu_bind(i, gen_dfg_texture(r), true); break;
+    case T3_SRC_VIEWPORT: {   /* transmission's framebuffer copy, this side's */
       t3_render_target *v = r->vp_rt[m && m->side == T3_BACK_SIDE];
       if (v) {
         tu_bind(i, ((texture_gl *)v->texture->_gl)->tex, true);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
       }
-      continue;
+      break;
     }
-    if (!strncmp(src, "shadow:", 7)) { gen_bind_shadow(r, src + 7, i); continue; }
-    {
-      const t3_texture *aux = !strcmp(src, "envMap") || !strcmp(src, "environment") ? r->aux.env
-                            : !strcmp(src, "background") ? r->aux.bg : !strcmp(src, "pmrem.source") ? r->aux.pm_src : NULL;
-      if (aux) { if (aux->is_cube) bind_cube_texture((t3_texture *)aux, i); else bind_texture((t3_texture *)aux, i); continue; }
+    case T3_SRC_SHADOW_DIR: case T3_SRC_SHADOW_SPOT: case T3_SRC_SHADOW_POINT: gen_bind_shadow(r, gl->tex[i].kind, arg, i); break;
+    case T3_SRC_ENV: case T3_SRC_BG: case T3_SRC_PMREM: {
+      const t3_texture *aux = gl->tex[i].kind == T3_SRC_ENV ? r->aux.env : gl->tex[i].kind == T3_SRC_BG ? r->aux.bg : r->aux.pm_src;
+      if (aux) { if (aux->is_cube) bind_cube_texture((t3_texture *)aux, i); else bind_texture((t3_texture *)aux, i); }
+      break;
     }
-    if (!strcmp(src, "morphTexture")) {
+    case T3_SRC_MORPH: {
       GLuint mt = cur_geometry ? gen_morph_texture(r, cur_geometry) : 0;
       glActiveTexture(GL_TEXTURE0 + (GLenum)i);
       tu_forget_active();
       glBindTexture(0x8C1A, mt);
-      continue;
+      break;
     }
-    for (int t = 0; t < T3_GEN_TEX_COUNT; t++)
-      if (!strcmp(src, t3_gen_tex_names[t])) {
-        const t3_texture *tx = gen_tex(m, t);
-        if (tx) bind_texture((t3_texture *)tx, i);
-        break;
-      }
+    default: break;
+    }
   }
 }
 
@@ -1120,8 +1124,7 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
   }
   /* the extra buffers: bone matrices (morph influences: later), per draw */
   for (int i = 0; i < gl->n_buffers; i++) {
-    const char *srcn = gl->buf[i].source;
-    if (srcn && !strcmp(srcn, "morphInfluences")) {
+    if (gl->buf[i].kind == T3_SRC_MORPH_INFLUENCES) {
       const t3_mesh *mesh = (const t3_mesh *)o;
       float v[4 * 64] = { 0 };
       int nm = g->morph_count < 64 ? g->morph_count : 64;
@@ -1129,7 +1132,7 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
       glBindBuffer(GL_UNIFORM_BUFFER, gl->buf[i].ubo);
       glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)gl->buf[i].bytes, v);
     }
-    if (srcn && !strcmp(srcn, "boneMatrices") && o->type == T3_SKINNED_MESH) {
+    if (gl->buf[i].kind == T3_SRC_BONES && o->type == T3_SKINNED_MESH) {
       const t3_skeleton *sk = ((const t3_skinned_mesh *)o)->skeleton;
       glBindBuffer(GL_UNIFORM_BUFFER, gl->buf[i].ubo);
       glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)gl->buf[i].bytes, sk->bone_matrices);

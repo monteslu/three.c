@@ -439,6 +439,7 @@ t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params
         glUniform1i(loc, g->n_textures);
         g->tex[g->n_textures].loc = loc;
         g->tex[g->n_textures].layout = &L->textures[t];
+        g->tex[g->n_textures].kind = t3_gen_source_kind(L->textures[t].source, &g->tex[g->n_textures].arg);
         g->n_textures++;
       }
     }
@@ -480,6 +481,32 @@ void t3_gen_common(t3_gen_gl *g) {
   for (int k = 0; k < g->n_frame_ops && g->draw_group >= 0; k++)
     if (g->ops[k].group == g->draw_group) g->draw_group = -2;
   if (g->draw_group < 0) g->draw_group = -1;
+  for (int k = 0; k < g->n_ops; k++) {
+    if (k < g->n_frame_ops) g->frame_groups |= (uint8_t)(1u << g->ops[k].group);
+    else g->draw_groups |= (uint8_t)(1u << g->ops[k].group);
+  }
+  /* the sources bound per draw, by kind */
+  for (int i = 0; i < g->n_buffers; i++) { uint8_t a; g->buf[i].kind = t3_gen_source_kind(g->buf[i].source, &a); }
+  for (int i = 0; i < src->n_groups && i < T3_GEN_MAX_GROUPS; i++) {
+    const t3_bk_group_layout *L = src->groups[i];
+    for (uint32_t t = 0; t < L->n_textures && t < 8; t++) g->wtex_kind[i][t] = t3_gen_source_kind(L->textures[t].source, &g->wtex_arg[i][t]);
+  }
+  bool inst = false;
+  for (int a = 0; a < src->n_attributes && a < 16; a++) {
+    const char *n = src->attributes[a].name;
+    int8_t slot = T3_ATTR_IN_UNKNOWN;
+    if (!strncmp(n, "nodeAttribute", 13)) { slot = inst ? T3_ATTR_IN_INSTANCE_DONE : T3_ATTR_IN_INSTANCE; inst = true; }
+    else if (!strcmp(n, "instanceColor")) slot = T3_ATTR_IN_INSTANCE_COLOR;
+    else if (!strcmp(n, "position")) slot = T3_ATTR_POSITION;
+    else if (!strcmp(n, "normal") || !strcmp(n, "outputDirection")) slot = T3_ATTR_NORMAL;
+    else if (!strcmp(n, "uv")) slot = T3_ATTR_UV;
+    else if (!strcmp(n, "uv1")) slot = T3_ATTR_UV1;
+    else if (!strcmp(n, "color")) slot = T3_ATTR_COLOR;
+    else if (!strcmp(n, "tangent")) slot = T3_ATTR_TANGENT;
+    else if (!strcmp(n, "skinIndex")) slot = T3_ATTR_SKIN_INDEX;
+    else if (!strcmp(n, "skinWeight")) slot = T3_ATTR_SKIN_WEIGHT;
+    g->attr_slot[a] = slot;
+  }
   /* constants: the bytes r186 uploaded for uniforms nothing varies */
   for (int k = 0; k < src->n_constants; k++) {
     const t3_gen_constant *c = &src->constants[k];
@@ -503,9 +530,29 @@ void t3_gen_gl_free(t3_gen_gl *g) {
   free(g);
 }
 
-uint8_t *t3_gen_gl_op(t3_gen_gl *g, const struct t3_gen_op *op) {
-  g->dirty[op->group] = true;
-  return g->mirror[op->group] + op->off;
+uint8_t t3_gen_source_kind(const char *s, uint8_t *arg) {
+  *arg = 0;
+  if (!s) return T3_SRC_NONE;
+  if (!strcmp(s, "dfg_lut")) return T3_SRC_DFG;
+  if (!strcmp(s, "viewport")) return T3_SRC_VIEWPORT;
+  if (!strcmp(s, "output")) return T3_SRC_OUTPUT;
+  if (!strcmp(s, "morphTexture")) return T3_SRC_MORPH;
+  if (!strcmp(s, "envMap") || !strcmp(s, "environment")) return T3_SRC_ENV;
+  if (!strcmp(s, "background")) return T3_SRC_BG;
+  if (!strcmp(s, "pmrem.source")) return T3_SRC_PMREM;
+  if (!strcmp(s, "boneMatrices")) return T3_SRC_BONES;
+  if (!strcmp(s, "morphInfluences")) return T3_SRC_MORPH_INFLUENCES;
+  if (!strncmp(s, "shadow:", 7)) {
+    /* "directional[0]": that light's shadow map */
+    const char *name = s + 7, *br = strchr(name, '[');
+    int idx = br ? atoi(br + 1) : 0;
+    *arg = (uint8_t)(idx < 0 ? 255 : idx > 255 ? 255 : idx);
+    return !strncmp(name, "directional", 11) ? T3_SRC_SHADOW_DIR : !strncmp(name, "spot", 4) ? T3_SRC_SHADOW_SPOT
+         : !strncmp(name, "point", 5) ? T3_SRC_SHADOW_POINT : T3_SRC_SHADOW_NONE;
+  }
+  for (int t = 0; t < T3_GEN_TEX_COUNT; t++)
+    if (!strcmp(s, t3_gen_tex_names[t])) { *arg = (uint8_t)t; return T3_SRC_MAT; }
+  return T3_SRC_NONE;
 }
 
 void t3_gen_gl_flush(t3_gen_gl *g) {
