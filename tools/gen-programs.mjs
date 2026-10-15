@@ -145,7 +145,7 @@ if (!opt.single) for (const d of existsSync(opt.out) ? readdirSync(opt.out) : []
   if (!alive) rmSync(join(opt.out, d), { recursive: true, force: true });
 }
 function captureInChild(state, be, out, extraEnv = {}) {
-  const r = spawnSync(process.execPath, [self, '--states', state, '--backend', be, '--out', out, '--single'], { encoding: 'utf8', env: { ...process.env, ...extraEnv, GEN_ALLOW_UNCOVERED: '1' }, maxBuffer: 64 << 20 });
+  const r = spawnSync(process.execPath, [self, '--states', state, '--backend', be, '--out', out, '--single', ...(opt.extend || []).flatMap((f) => ['--extend', f])], { encoding: 'utf8', env: { ...process.env, ...extraEnv, GEN_ALLOW_UNCOVERED: '1' }, maxBuffer: 64 << 20 });
   if (r.status !== 0) throw new Error(`capture ${state} ${be} failed: ${(r.stderr || '').slice(-500)}`);
   return (r.stdout || '').split('\n').filter((l) => l.startsWith(state + ' ')).join('\n');
 }

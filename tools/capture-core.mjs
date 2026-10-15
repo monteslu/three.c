@@ -657,6 +657,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     for (const k of ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'specularMap', 'envMap', 'lightMap', 'bumpMap', 'displacementMap', 'clearcoatNormalMap']) if (mat[k] === t) return k;
     if (scene.environment && t === scene.environment) return 'environment';   /* (the material's own is 'envMap') */
     if (t.name === 'DFG_LUT') return 'dfg_lut';
+    if (extension && typeof t.name === 'string' && t.name.startsWith('ext.')) return t.name;   // an extension's own texture, filled at run time by that name
     if (kind === 'output') return 'output';   // the framebuffer target the scene was drawn into
     if (AUX.has(kind)) return kind.startsWith('bg') ? 'background' : 'pmrem.source';
     if (t.isFramebufferTexture) return 'viewport';   // ViewportTextureNode: a mipmapped copy of the framebuffer (transmission)
