@@ -26,7 +26,12 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
     const t3_bk_group_layout *L = gl->src->groups[gi];
     struct dynoff { uint32_t binding, off; } dyn[8];
     int nd = 0;
-    if (gl->bytes[gi]) dyn[nd++] = (struct dynoff){ L->uniform_binding, t3_wgpu_stream(w, gl->mirror[gi], gl->bytes[gi]) };
+    if (gl->bytes[gi]) {
+      /* a block no op wrote since it was streamed (the frame's camera and
+       * lights, between draws) keeps its offset: the bind group set is skipped */
+      dyn[nd++] = (struct dynoff){ L->uniform_binding, t3_wgpu_stream_keep(w, &gl->wtok[gi], &gl->woff[gi], gl->mirror[gi], gl->bytes[gi], gl->dirty[gi]) };
+      gl->dirty[gi] = false;
+    }
     for (int bi = 0; bi < gl->n_buffers; bi++) {
       if ((int)gl->buf[bi].point != gi) continue;
       const void *data = NULL;

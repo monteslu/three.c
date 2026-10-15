@@ -137,6 +137,8 @@ typedef struct t3_gen_gl {
    * each vertex input's geometry slot or T3_ATTR_IN_* (manifest order) */
   uint8_t wtex_kind[T3_GEN_MAX_GROUPS][8], wtex_arg[T3_GEN_MAX_GROUPS][8];
   int8_t attr_slot[16];
+  /* WebGPU: where each group's block was last streamed (t3_wgpu_stream_keep) */
+  uint32_t wtok[T3_GEN_MAX_GROUPS], woff[T3_GEN_MAX_GROUPS];
   unsigned render_stamp;   /* the render the frame ops were last run for */
   struct gen_wgpu_prog *wg;   /* the WebGPU half (gen_wgpu.c), NULL on GLES */
 } t3_gen_gl;

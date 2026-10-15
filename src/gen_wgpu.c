@@ -30,6 +30,7 @@ struct gen_wgpu_prog {
   WGPUPipelineLayout layout;
   struct pipe pipes[MAX_PIPES]; int n_pipes;
   struct bg bgs[T3_GEN_MAX_GROUPS][MAX_BG]; int n_bgs[T3_GEN_MAX_GROUPS], next_bg[T3_GEN_MAX_GROUPS];
+  int last_bg[T3_GEN_MAX_GROUPS];   /* the entry the group's last lookup returned (consecutive draws mostly repeat it) */
   /* per group: its textures (manifest order) and extra buffers */
   int n_tex[T3_GEN_MAX_GROUPS];
   const t3_bk_texture_layout *tex[T3_GEN_MAX_GROUPS][8];
@@ -46,6 +47,7 @@ struct t3_wgpu {
   WGPUBuffer stream;
   size_t stream_size;
   uint32_t stream_gen;
+  uint32_t stage_serial;   /* bumped when the stage starts over or the stream buffer is replaced: earlier offsets are stale */
   bool stream_ext;   /* the stream holds data for commands on an embedder's encoder (not yet known to be submitted) */
   size_t stream_short; /* what the stream lacked since the last begin_frame (draws that got no room): the next one grows by it */
   uint8_t *stage;
@@ -362,11 +364,15 @@ WGPURenderPipeline t3_wgpu_pipeline(t3_wgpu *w, t3_gen_gl *g, const t3_wgpu_stat
 WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextureView const *views, WGPUSampler const *samplers) {
   struct gen_wgpu_prog *wg = g->wg;
   int nt = wg->n_tex[group];
-  for (int k = 0; k < wg->n_bgs[group]; k++) {
+  for (int i = -1; i < wg->n_bgs[group]; i++) {
+    int k = i < 0 ? wg->last_bg[group] : i;
+    if (k >= wg->n_bgs[group]) continue;
     struct bg *b = &wg->bgs[group][k];
     if (b->gen == w->stream_gen && b->epoch == view_epoch && !memcmp(b->views, views, sizeof(WGPUTextureView) * (size_t)nt) &&
-        !memcmp(b->samplers, samplers, sizeof(WGPUSampler) * (size_t)nt))
+        !memcmp(b->samplers, samplers, sizeof(WGPUSampler) * (size_t)nt)) {
+      wg->last_bg[group] = k;
       return b->g;
+    }
   }
   const t3_bk_group_layout *L = g->src->groups[group];
   WGPUBindGroupEntry e[24];
@@ -394,6 +400,7 @@ WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextur
   b->gen = w->stream_gen;
   b->epoch = view_epoch;
   b->g = bg;
+  wg->last_bg[group] = slot;
   return bg;
 }
 
@@ -452,6 +459,7 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
   if (!append) {
     w->stage_n = 0;
     w->written = 0;
+    w->stage_serial++;
   }
   w->stream_ext = append || w->ext != NULL;
   /* the stream buffer must exist (and be big enough) before bind groups refer
@@ -462,6 +470,7 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
     WGPUBufferDescriptor d = { .usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst, .size = w->stream_size };
     w->stream = wgpuDeviceCreateBuffer(w->dev, &d);
     w->stream_gen++;
+    w->stage_serial++;
   }
   if (w->stage_cap < w->stream_size) {
     w->stage_cap = w->stream_size;
@@ -480,6 +489,14 @@ uint32_t t3_wgpu_stream(t3_wgpu *w, const void *data, uint32_t n) {
   memcpy(w->stage + off, data, n);
   w->stage_n = off + n;
   return (uint32_t)off;
+}
+uint32_t t3_wgpu_stream_keep(t3_wgpu *w, uint32_t *tok, uint32_t *off, const void *data, uint32_t n, bool changed) {
+  if (!changed && *tok && *tok == w->stage_serial) return *off;
+  size_t short_before = w->stream_short;
+  uint32_t o = t3_wgpu_stream(w, data, n);
+  *tok = w->stream_short == short_before ? w->stage_serial : 0;   /* (no room: not kept) */
+  *off = o;
+  return o;
 }
 WGPUBuffer t3_wgpu_stream_buffer(t3_wgpu *w) { return w->stream; }
 void t3_wgpu_begin_pass(t3_wgpu *w, const t3_wgpu_pass *p) {

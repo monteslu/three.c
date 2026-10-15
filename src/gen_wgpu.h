@@ -54,6 +54,11 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t stream_estimate);
 void t3_wgpu_begin_pass(t3_wgpu *w, const t3_wgpu_pass *p);
 /* the frame's uniform stream: copy n bytes, get the dynamic offset */
 uint32_t t3_wgpu_stream(t3_wgpu *w, const void *data, uint32_t n);
+/* t3_wgpu_stream for data that may already be in the stream: when it has not
+ * changed (changed false) since it was streamed at *off, and the stream
+ * still holds what was written then (*tok), *off again; else streamed anew
+ * and *tok / *off updated */
+uint32_t t3_wgpu_stream_keep(t3_wgpu *w, uint32_t *tok, uint32_t *off, const void *data, uint32_t n, bool changed);
 WGPUBuffer t3_wgpu_stream_buffer(t3_wgpu *w);
 WGPURenderPassEncoder t3_wgpu_pass_encoder(t3_wgpu *w);
 void t3_wgpu_end_pass(t3_wgpu *w);
