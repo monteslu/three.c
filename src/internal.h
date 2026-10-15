@@ -50,7 +50,7 @@ extern uint32_t t3__graph_epoch;
  * compute it; cached until the world matrix or the geometry's bounds change. */
 const float *t3__world_sphere(t3_object *o, t3_geometry *g);
 #define T3_CHECK_ALLOC(p) do { if (!(p)) t3__fatal("out of memory"); } while (0)
-/* extension names (gen_program.c): a process-wide id per name (1..), 0 for
+/* extension names (core.c): a process-wide id per name (1..), 0 for
  * NULL, for a name that is not [a-z0-9_]{1,31} or when the ids run out; and
  * the name of an id (NULL for 0) */
 uint16_t t3__extension_id(const char *name);

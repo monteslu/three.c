@@ -344,6 +344,25 @@ t3_material *t3_mesh_phong_material_new(uint32_t c) { return colored(T3_MESH_PHO
 t3_material *t3_mesh_standard_material_new(uint32_t c) { return colored(T3_MESH_STANDARD_MATERIAL, c); }
 t3_material *t3_mesh_physical_material_new(uint32_t c) { return colored(T3_MESH_PHYSICAL_MATERIAL, c); }
 t3_material *t3_mesh_normal_material_new(void) { return t3_material_new(T3_MESH_NORMAL_MATERIAL); }
+/* extension names, interned for the life of the process: a material keys
+ * its program on the id (here, not with the programs: a tool that links
+ * three.c without GL still sets a material's extension) */
+#define T3_MAX_EXTENSIONS 64
+static char ext_names[T3_MAX_EXTENSIONS][32];
+static int n_ext_names;
+uint16_t t3__extension_id(const char *name) {
+  if (!name) return 0;
+  size_t n = strlen(name);
+  if (!n || n > 31) return 0;
+  for (size_t i = 0; i < n; i++)
+    if (!((name[i] >= 'a' && name[i] <= 'z') || (name[i] >= '0' && name[i] <= '9') || name[i] == '_')) return 0;
+  for (int i = 0; i < n_ext_names; i++) if (!strcmp(ext_names[i], name)) return (uint16_t)(i + 1);
+  if (n_ext_names == T3_MAX_EXTENSIONS) return 0;
+  memcpy(ext_names[n_ext_names], name, n + 1);
+  return (uint16_t)++n_ext_names;
+}
+const char *t3__extension_name(uint16_t id) { return id >= 1 && id <= n_ext_names ? ext_names[id - 1] : NULL; }
+
 bool t3_material_set_extension(t3_material *m, const char *name) {
   uint16_t id = t3__extension_id(name);
   if (name && !id) return false;

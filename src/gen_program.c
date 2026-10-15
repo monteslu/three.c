@@ -359,24 +359,6 @@ static uint8_t source_kind(const t3_gen_gl *g, const char *s, uint8_t *arg) {
   return t3_gen_source_kind(s, arg);
 }
 
-/* extension names, interned for the life of the process: a material keys
- * its program on the id */
-#define T3_MAX_EXTENSIONS 64
-static char ext_names[T3_MAX_EXTENSIONS][32];
-static int n_ext_names;
-uint16_t t3__extension_id(const char *name) {
-  if (!name) return 0;
-  size_t n = strlen(name);
-  if (!n || n > 31) return 0;
-  for (size_t i = 0; i < n; i++)
-    if (!((name[i] >= 'a' && name[i] <= 'z') || (name[i] >= '0' && name[i] <= '9') || name[i] == '_')) return 0;
-  for (int i = 0; i < n_ext_names; i++) if (!strcmp(ext_names[i], name)) return (uint16_t)(i + 1);
-  if (n_ext_names == T3_MAX_EXTENSIONS) return 0;
-  memcpy(ext_names[n_ext_names], name, n + 1);
-  return (uint16_t)++n_ext_names;
-}
-const char *t3__extension_name(uint16_t id) { return id >= 1 && id <= n_ext_names ? ext_names[id - 1] : NULL; }
-
 t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params params, char *err, size_t errcap) {
   if (src->n_groups > T3_GEN_MAX_GROUPS) { snprintf(err, errcap, "%s: %d groups", src->state, src->n_groups); return NULL; }
   char *vsrc = t3_gen_source(src, false, err, errcap);
