@@ -344,6 +344,39 @@ static char *apply_templates(const char *text, const t3_gen_program *src, t3_gen
   return t;
 }
 
+/* an extension texture's slot in g (by its source, "ext.<name>"), or -1 */
+static int ext_tex_slot(const t3_gen_gl *g, const char *source) {
+  for (int t = 0; t < g->n_ext_tex; t++) if (!strcmp(g->ext_tex[t].name, source + 4)) return t;
+  return -1;
+}
+/* t3_gen_source_kind, with an extension's textures resolved to their slots */
+static uint8_t source_kind(const t3_gen_gl *g, const char *s, uint8_t *arg) {
+  if (s && !strncmp(s, "ext.", 4)) {
+    int slot = ext_tex_slot(g, s);
+    *arg = (uint8_t)(slot < 0 ? 0 : slot);
+    return slot < 0 ? T3_SRC_NONE : T3_SRC_EXT;
+  }
+  return t3_gen_source_kind(s, arg);
+}
+
+/* extension names, interned for the life of the process: a material keys
+ * its program on the id */
+#define T3_MAX_EXTENSIONS 64
+static char ext_names[T3_MAX_EXTENSIONS][32];
+static int n_ext_names;
+uint16_t t3__extension_id(const char *name) {
+  if (!name) return 0;
+  size_t n = strlen(name);
+  if (!n || n > 31) return 0;
+  for (size_t i = 0; i < n; i++)
+    if (!((name[i] >= 'a' && name[i] <= 'z') || (name[i] >= '0' && name[i] <= '9') || name[i] == '_')) return 0;
+  for (int i = 0; i < n_ext_names; i++) if (!strcmp(ext_names[i], name)) return (uint16_t)(i + 1);
+  if (n_ext_names == T3_MAX_EXTENSIONS) return 0;
+  memcpy(ext_names[n_ext_names], name, n + 1);
+  return (uint16_t)++n_ext_names;
+}
+const char *t3__extension_name(uint16_t id) { return id >= 1 && id <= n_ext_names ? ext_names[id - 1] : NULL; }
+
 t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params params, char *err, size_t errcap) {
   if (src->n_groups > T3_GEN_MAX_GROUPS) { snprintf(err, errcap, "%s: %d groups", src->state, src->n_groups); return NULL; }
   char *vsrc = t3_gen_source(src, false, err, errcap);
@@ -439,7 +472,7 @@ t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params
         glUniform1i(loc, g->n_textures);
         g->tex[g->n_textures].loc = loc;
         g->tex[g->n_textures].layout = &L->textures[t];
-        g->tex[g->n_textures].kind = t3_gen_source_kind(L->textures[t].source, &g->tex[g->n_textures].arg);
+        g->tex[g->n_textures].kind = source_kind(g, L->textures[t].source, &g->tex[g->n_textures].arg);
         g->n_textures++;
       }
     }
@@ -455,10 +488,43 @@ void t3_gen_common(t3_gen_gl *g) {
   g->ops = calloc((size_t)src->n_properties + 1, sizeof *g->ops);
   T3_CHECK_ALLOC(g->ops);
   g->complete = true;
+  /* an extension's textures, in manifest order, then its uniforms and the
+   * textures' flipY flags: filled by its hook, not by ops */
+  g->ext_id = t3__extension_id(src->extension);
+  for (int i = 0; i < src->n_groups; i++)
+    for (uint32_t t = 0; t < src->groups[i]->n_textures; t++) {
+      const char *so = src->groups[i]->textures[t].source;
+      if (!so || strncmp(so, "ext.", 4) || ext_tex_slot(g, so) >= 0) continue;
+      if (g->n_ext_tex == (int)(sizeof g->ext_tex / sizeof g->ext_tex[0])) { g->complete = false; snprintf(g->unsupported, sizeof g->unsupported, "%s (too many extension textures)", so); continue; }
+      g->ext_tex[g->n_ext_tex].name = so + 4;
+      g->ext_tex[g->n_ext_tex].flip_group = -1;
+      g->n_ext_tex++;
+    }
+  for (int k = 0; k < src->n_properties; k++) {
+    const t3_gen_property *pr = &src->properties[k];
+    if (strncmp(pr->path, "ext.", 4)) continue;
+    if (!g->bytes[pr->group]) continue;   /* its group was optimised out of the link */
+    size_t nl = strcspn(pr->path, "#");
+    if (nl > 10 && !strncmp(pr->path + nl - 6, ".flipY", 6)) {
+      /* "ext.<texture>.flipY" */
+      int slot = -1;
+      for (int t = 0; t < g->n_ext_tex; t++)
+        if (strlen(g->ext_tex[t].name) == nl - 10 && !strncmp(g->ext_tex[t].name, pr->path + 4, nl - 10)) slot = t;
+      if (slot >= 0) { g->ext_tex[slot].flip_group = (int8_t)pr->group; g->ext_tex[slot].flip_off = pr->offset; continue; }
+    }
+    if (g->n_ext == (int)(sizeof g->ext / sizeof g->ext[0])) { g->complete = false; snprintf(g->unsupported, sizeof g->unsupported, "%s (too many extension uniforms)", pr->path); continue; }
+    g->ext[g->n_ext].name = pr->path + 4;
+    g->ext[g->n_ext].group = (int8_t)pr->group;
+    g->ext[g->n_ext].off = pr->offset;
+    g->ext[g->n_ext].len = pr->length;
+    g->ext[g->n_ext].mat3 = pr->std140_mat3;
+    g->n_ext++;
+  }
   for (int pass = 0; pass < 2; pass++)
     for (int k = 0; k < src->n_properties; k++) {
       const t3_gen_property *pr = &src->properties[k];
       uint8_t op, idx, sub = 0;
+      if (!strncmp(pr->path, "ext.", 4)) continue;
       if (!parse_op(pr->path, &op, &idx, &sub)) {
         if (pass == 0) { g->complete = false; if (!g->unsupported[0]) snprintf(g->unsupported, sizeof g->unsupported, "%s", pr->path); }
         continue;
@@ -489,7 +555,7 @@ void t3_gen_common(t3_gen_gl *g) {
   for (int i = 0; i < g->n_buffers; i++) { uint8_t a; g->buf[i].kind = t3_gen_source_kind(g->buf[i].source, &a); }
   for (int i = 0; i < src->n_groups && i < T3_GEN_MAX_GROUPS; i++) {
     const t3_bk_group_layout *L = src->groups[i];
-    for (uint32_t t = 0; t < L->n_textures && t < 8; t++) g->wtex_kind[i][t] = t3_gen_source_kind(L->textures[t].source, &g->wtex_arg[i][t]);
+    for (uint32_t t = 0; t < L->n_textures && t < 8; t++) g->wtex_kind[i][t] = source_kind(g, L->textures[t].source, &g->wtex_arg[i][t]);
   }
   bool inst = false;
   for (int a = 0; a < src->n_attributes && a < 16; a++) {

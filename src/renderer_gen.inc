@@ -23,7 +23,7 @@ static bool gen_note(t3_renderer *r, const char *what) {
 }
 
 /* a state's name in the generator's syntax (kind+features+lDPSH+sDPS) */
-static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast) {
+static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast, uint16_t ext) {
   static const char *const kinds[] = { "basic", "lambert", "phong", "standard", "physical", "depth", "points", "psprite", "line", "sprite", "normal" };
   static const char *const feats[] = T3_GEN_FEATURE_NAMES;
   int n = snprintf(name, cap, "%s", kind < (int)(sizeof kinds / sizeof kinds[0]) ? kinds[kind] : "?");
@@ -32,7 +32,8 @@ static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f,
   if (kind != T3_GEN_BASIC && kind != T3_GEN_NORMAL && kind <= T3_GEN_PHYSICAL)
     n += snprintf(name + n, cap - (size_t)n, "+l%d%d%d%d", want[0], want[1], want[2], want[3]);
   if (cast && (cast[0] != want[0] || cast[1] != want[1] || cast[2] != want[2]))
-    snprintf(name + n, cap - (size_t)n, "+s%d%d%d", cast[0], cast[1], cast[2]);
+    n += snprintf(name + n, cap - (size_t)n, "+s%d%d%d", cast[0], cast[1], cast[2]);
+  if (ext && n < (int)cap) snprintf(name + n, cap - (size_t)n, "+x%s", t3__extension_name(ext));
 }
 static bool gen_missing_has(const t3_renderer *r, const char *name) {
   size_t len = strlen(name);
@@ -63,7 +64,7 @@ static void gen_record_missing_name(const t3_renderer *rc, const char *name) {
 }
 static void gen_record_missing(const t3_renderer *r, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast) {
   char name[256];
-  gen_state_name(name, sizeof name, kind, f, want, cast);
+  gen_state_name(name, sizeof name, kind, f, want, cast, 0);
   gen_record_missing_name(r, name);
 }
 
@@ -99,6 +100,7 @@ typedef struct {
   uint64_t f;
   uint8_t kind, shadow, enc, cast[3], want[4];
   uint16_t bones, morphs, morph_width;
+  uint16_t ext;   /* the material's extension (t3__extension_id), 0 = none */
 } gen_key;
 struct gen_slot { gen_key key; t3_gen_gl *gl; bool used; };
 
@@ -236,6 +238,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   if (shadow) memcpy(key->cast, cast, 3);
   memcpy(key->want, want, 4);
   key->enc = r->gen_direct;
+  key->ext = m->extension;
   if (o->type == T3_SKINNED_MESH) key->bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
   if (g->morph_count) {
     int w = g->attributes[T3_ATTR_POSITION]->count * (g->morph_normal ? 2 : 1);
@@ -251,6 +254,7 @@ static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key 
   uint64_t f = key->f;
   bool shadow = key->shadow;
   const uint8_t *cast = key->cast, *want = key->want;
+  const char *ext = t3__extension_name(key->ext);
   const t3_gen_program *best = NULL;
   int best_cost = 1 << 30;
   const t3_gen_table *const *tables;
@@ -258,7 +262,8 @@ static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key 
   for (int t = 0; t < nt; t++)
     for (unsigned i = 0; i < tables[t]->count; i++) {
       const t3_gen_program *p = &tables[t]->programs[i];
-      if (p->kind != kind || p->features != f || p->extension) continue;
+      if (p->kind != kind || p->features != f) continue;
+      if (key->ext ? !p->extension || strcmp(p->extension, ext) : p->extension != NULL) continue;
       if (shadow && memcmp(p->cast, cast, 3)) continue;
       bool covers = true;
       int cost = 0;
@@ -268,7 +273,7 @@ static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key 
   if (!best) {
     *why = "no table state for this feature / light combination";
     char name[256];
-    gen_state_name(name, sizeof name, kind, f, want, shadow ? cast : NULL);
+    gen_state_name(name, sizeof name, kind, f, want, shadow ? cast : NULL, key->ext);
 #ifdef T3_BUILDER
     /* build it now (once: a state that failed stays on the missing list) */
     if (!gen_missing_has(r, name)) {
@@ -369,11 +374,11 @@ static t3_gen_gl *gen_program_p(t3_renderer *r, const t3_gen_program *src, bool 
 
 /* the program an item takes, or NULL (the state is not in the table: the draw is skipped) */
 static uint64_t gen_key_hash(const gen_key *k) {
-  uint64_t w[3];
+  uint64_t w[4];
   memcpy(w, k, sizeof w);
   uint64_t h = w[0] * 0x9E3779B97F4A7C15ull;
   h = (h ^ (h >> 29) ^ w[1]) * 0xBF58476D1CE4E5B9ull;
-  h = (h ^ (h >> 31) ^ w[2]) * 0x94D049BB133111EBull;
+  h = (h ^ (h >> 31) ^ w[2] ^ (w[3] << 17)) * 0x94D049BB133111EBull;
   return h ^ (h >> 32);
 }
 /* the key's slot in the renderer's lookup table: its own, or the empty one it would take */
@@ -393,7 +398,7 @@ static void gen_slots_reset(t3_renderer *r, size_t cap) {
 }
 /* the program an item takes, or NULL (the state is not in the table: the draw is skipped) */
 static t3_gen_gl *gen_pick(t3_renderer *r, const t3_material *m, const t3_object *o, const t3_geometry *g, bool batched) {
-  _Static_assert(sizeof(gen_key) == 24, "gen_key is hashed as three words");
+  _Static_assert(sizeof(gen_key) == 32, "gen_key is hashed as four words");
   const char *why = "";
   gen_key key;
   if (!gen_state_key(r, m, o, g, batched, &why, &key)) { gen_note(r, why); r->info.skipped++; return NULL; }
@@ -652,6 +657,93 @@ static void gen_fill_draw(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, c
     default: break;
     }
   }
+}
+
+/* ── extension programs: the hook registered for the program's extension
+ * fills its "ext.<name>" uniforms and textures for each draw ── */
+struct t3_extension_ctx { t3_renderer *r; t3_gen_gl *gl; const t3_material *m; const t3_object *o; };
+const t3_object *t3_extension_object(const t3_extension_ctx *c) { return c->o; }
+const t3_material *t3_extension_material(const t3_extension_ctx *c) { return c->m; }
+/* bytes into a group's mirror, marking it dirty only when they change (a
+ * shared group then uploads, or streams, only when its values do) */
+static void ext_put(t3_gen_gl *gl, int group, uint16_t off, const void *v, size_t n) {
+  uint8_t *d = gl->mirror[group] + off;
+  if (memcmp(d, v, n)) { memcpy(d, v, n); gl->dirty[group] = true; }
+}
+/* "tint" against a manifest name, which may carry "#n" (another copy) */
+static bool ext_name_is(const char *manifest, const char *name) {
+  size_t n = strlen(name);
+  return !strncmp(manifest, name, n) && (manifest[n] == 0 || manifest[n] == '#');
+}
+bool t3_extension_set_uniform(t3_extension_ctx *c, const char *name, const float *v, int n) {
+  t3_gen_gl *gl = c->gl;
+  bool found = false;
+  for (int i = 0; i < gl->n_ext; i++) {
+    if (!ext_name_is(gl->ext[i].name, name) || !gl->mirror[gl->ext[i].group]) continue;
+    if (gl->ext[i].mat3) {
+      /* std140 / WGSL mat3x3: three columns at a 16-byte stride */
+      if (n != 9) return false;
+      float cols[11] = { v[0], v[1], v[2], 0, v[3], v[4], v[5], 0, v[6], v[7], v[8] };
+      ext_put(gl, gl->ext[i].group, gl->ext[i].off, cols, 44);
+    } else {
+      if (n < 1 || (size_t)n * 4 > gl->ext[i].len) return false;
+      ext_put(gl, gl->ext[i].group, gl->ext[i].off, v, (size_t)n * 4);
+    }
+    found = true;
+  }
+  return found;
+}
+bool t3_extension_set_texture(t3_extension_ctx *c, const char *name, t3_texture *t) {
+  t3_gen_gl *gl = c->gl;
+  for (int i = 0; i < gl->n_ext_tex; i++)
+    if (!strcmp(gl->ext_tex[i].name, name)) { gl->ext_tex[i].tex = t; return true; }
+  return false;
+}
+void t3_renderer_set_extension(t3_renderer *r, const char *name, t3_extension_fill fill, void *user) {
+  uint16_t id = t3__extension_id(name);
+  if (!id) return;
+  int h = 0;
+  while (h < r->ext_hook_n && r->ext_hooks[h].id != id) h++;
+  if (!fill) {
+    if (h < r->ext_hook_n) r->ext_hooks[h] = r->ext_hooks[--r->ext_hook_n];
+    return;
+  }
+  if (h == r->ext_hook_n) {
+    if (h == (int)(sizeof r->ext_hooks / sizeof r->ext_hooks[0])) { gen_note(r, "t3_renderer_set_extension: more extensions than the renderer has room for"); return; }
+    r->ext_hook_n++;
+  }
+  r->ext_hooks[h].id = id;
+  r->ext_hooks[h].fill = fill;
+  r->ext_hooks[h].user = user;
+}
+/* run the hook for a draw of an extension program: false (noted) when the
+ * extension has no hook or the hook left a texture unset, and the draw is
+ * skipped */
+static bool gen_fill_ext(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, const t3_object *o) {
+  if (!gl->src->extension) return true;
+  int h = 0;
+  while (h < r->ext_hook_n && r->ext_hooks[h].id != gl->ext_id) h++;
+  char buf[200];
+  if (h == r->ext_hook_n) {
+    snprintf(buf, sizeof buf, "program %s: no hook for extension %s (t3_renderer_set_extension)", gl->src->state, gl->src->extension);
+    return gen_note(r, buf);
+  }
+  for (int t = 0; t < gl->n_ext_tex; t++) gl->ext_tex[t].tex = NULL;
+  struct t3_extension_ctx c = { r, gl, m, o };
+  r->ext_hooks[h].fill(&c, r->ext_hooks[h].user);
+  for (int t = 0; t < gl->n_ext_tex; t++) {
+    const t3_texture *tx = gl->ext_tex[t].tex;
+    if (!tx) {
+      snprintf(buf, sizeof buf, "program %s: extension %s left texture %s unset", gl->src->state, gl->src->extension, gl->ext_tex[t].name);
+      return gen_note(r, buf);
+    }
+    /* r186 TextureNode flipY: a texture the GPU drew is stored flipped */
+    if (gl->ext_tex[t].flip_group >= 0 && gl->mirror[gl->ext_tex[t].flip_group]) {
+      uint32_t v = tx->gpu_made;
+      ext_put(gl, gl->ext_tex[t].flip_group, gl->ext_tex[t].flip_off, &v, 4);
+    }
+  }
+  return true;
 }
 
 /* r186's precomputed DFG LUT as a texture (16 x 16 RG16F, linear, clamp) */
@@ -937,6 +1029,11 @@ static void gen_bind_textures_g(t3_renderer *r, t3_gen_gl *gl, const t3_material
       break;
     }
     case T3_SRC_SHADOW_DIR: case T3_SRC_SHADOW_SPOT: case T3_SRC_SHADOW_POINT: gen_bind_shadow(r, gl->tex[i].kind, arg, i); break;
+    case T3_SRC_EXT: {   /* (gen_fill_ext has checked it is set) */
+      t3_texture *tx = gl->ext_tex[arg].tex;
+      if (tx->is_cube) bind_cube_texture(tx, i); else bind_texture(tx, i);
+      break;
+    }
     case T3_SRC_ENV: case T3_SRC_BG: case T3_SRC_PMREM: {
       const t3_texture *aux = gl->tex[i].kind == T3_SRC_ENV ? r->aux.env : gl->tex[i].kind == T3_SRC_BG ? r->aux.bg : r->aux.pm_src;
       if (aux) { if (aux->is_cube) bind_cube_texture((t3_texture *)aux, i); else bind_texture((t3_texture *)aux, i); }
@@ -972,6 +1069,7 @@ static void gen_prepare_list(t3_renderer *r, render_list *l, const t3_camera *ca
     if (gl->draw_group < 0) continue;
     gen_set_aux(r, it->material);
     gen_fill_draw(r, gl, it->material, it->object, it->batch_count > 0);
+    gen_fill_ext(r, gl, it->material, it->object);   /* (a failure skips the draw, in gen_draw_gl) */
     uint32_t n = gl->bytes[gl->draw_group];
     if (gen_dump()) {
       fprintf(stderr, "[gen] %s draw block:", gl->src->state);
@@ -1090,6 +1188,9 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
   gen_set_aux(r, m);
   bool streamed = it->gen_gl && gl->draw_group >= 0 && it->gen_off >= 0;
   if (!streamed) gen_fill_draw(r, gl, m, o, it->batch_count > 0);
+  /* (again when streamed: the block went out with the frame's, but the
+   * extension's own groups and textures are bound now) */
+  if (!gen_fill_ext(r, gl, m, o)) { r->info.skipped++; return; }
   if (gen_dump()) {
     for (int gi = 0; gi < gl->n_groups; gi++) if (gl->mirror[gi]) {
       fprintf(stderr, "[gen] group %d (%s, %u B):", gi, gl->src->groups[gi]->name, gl->bytes[gi]);

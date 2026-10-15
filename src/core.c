@@ -344,6 +344,13 @@ t3_material *t3_mesh_phong_material_new(uint32_t c) { return colored(T3_MESH_PHO
 t3_material *t3_mesh_standard_material_new(uint32_t c) { return colored(T3_MESH_STANDARD_MATERIAL, c); }
 t3_material *t3_mesh_physical_material_new(uint32_t c) { return colored(T3_MESH_PHYSICAL_MATERIAL, c); }
 t3_material *t3_mesh_normal_material_new(void) { return t3_material_new(T3_MESH_NORMAL_MATERIAL); }
+bool t3_material_set_extension(t3_material *m, const char *name) {
+  uint16_t id = t3__extension_id(name);
+  if (name && !id) return false;
+  if (m->extension != id) { m->extension = id; m->version++; }
+  return true;
+}
+const char *t3_material_get_extension(const t3_material *m) { return t3__extension_name(m->extension); }
 
 void t3_material_set_map(t3_material *m, t3_texture *map) { t3_material_set_texture(m, T3_MAP, map); }
 

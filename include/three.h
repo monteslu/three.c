@@ -453,6 +453,9 @@ typedef struct t3_material {
   float anisotropy, anisotropy_rotation;    /* 0, 0 */
   float transmission, thickness, attenuation_distance;   /* 0, 0, INFINITY */
   t3_color attenuation_color;               /* (1, 1, 1) */
+  /* the generator extension the material's program carries (an id from
+   * t3_material_set_extension; 0 = none) */
+  uint16_t extension;
 } t3_material;
 enum { T3_MULTIPLY_OPERATION = 0, T3_MIX_OPERATION = 1, T3_ADD_OPERATION = 2 };
 
@@ -914,7 +917,7 @@ typedef enum {
 
 typedef struct t3_render_info {
   unsigned frame, calls, triangles, programs, geometries, textures;
-  unsigned skipped;   /* draws of the last render whose material state the program table lacks */
+  unsigned skipped;   /* draws of the last render that could not be made: a material state the program table lacks, an extension program with no hook */
   /* GPU timing (t3_renderer_set_gpu_timing): the GPU time of the latest
    * render whose timer query has a result (they arrive a frame or more
    * late), that render's frame number, and whether timer queries work here
@@ -1063,6 +1066,45 @@ void t3_register_program_table(const struct t3_gen_table *gl_table, const struct
  * skipped; this names those states, one per line, in the generator's syntax:
  * add them to tools/gen-states.txt and regenerate. */
 const char *t3_renderer_generated_missing(const t3_renderer *r);
+
+/* ── extension programs ───────────────────────────────────────────────
+ * A generator extension (tools/extensions/<name>.mjs, or a project's own
+ * module through --extend) adds r186 TSL to a material before its program is
+ * captured: uniform() and texture() nodes, colorNode and the rest, as a
+ * three.js application writes them. The state carries x<name>
+ * ("standard+map+xtint"), and the captured program lands in a table like any
+ * other (three.c's own carries xtint; a project's come from
+ * tools/gen-project-table.mjs --extend and t3_register_program_table).
+ *
+ * The values the extension declared as "ext.<name>" are filled at run time,
+ * on GLES and WebGPU alike, by a hook the application registers for the
+ * extension's name. The hook runs for each draw of a program with that
+ * extension, as r186's onObjectUpdate does (and may run more than once for one
+ * draw, so it should only set values): it sets each uniform and texture by
+ * its name. A uniform the extension put in a group of its own
+ * (sharedUniformGroup) is uploaded only when its bytes change; one in r186's
+ * default object group travels with the draw. A draw whose extension has no
+ * hook, or whose hook left one of its textures unset, is skipped and noted
+ * in the renderer's error. Meshes with an extension are never auto-instanced
+ * (t3_renderer_set_auto_instancing): each object is its own draw. */
+/* the extension a material's program carries: name as in the state's x<name>
+ * ([a-z0-9_], up to 31 characters), or NULL for none; false for a bad name */
+bool t3_material_set_extension(t3_material *m, const char *name);
+const char *t3_material_get_extension(const t3_material *m);
+typedef struct t3_extension_ctx t3_extension_ctx;
+typedef void (*t3_extension_fill)(t3_extension_ctx *ctx, void *user);
+/* the renderer's hook for an extension; fill NULL removes it */
+void t3_renderer_set_extension(t3_renderer *r, const char *name, t3_extension_fill fill, void *user);
+/* what the draw being filled draws */
+const t3_object *t3_extension_object(const t3_extension_ctx *c);
+const t3_material *t3_extension_material(const t3_extension_ctx *c);
+/* uniform "ext.<name>" from n floats: 1 to 4 for a float or vector, 9 for a
+ * mat3 (column-major), 16 for a mat4. false when the program has no such
+ * uniform (also when the driver optimised it out) or n does not fit it */
+bool t3_extension_set_uniform(t3_extension_ctx *c, const char *name, const float *v, int n);
+/* texture "ext.<name>", sampled as the extension's texture() node samples it;
+ * false when the program has no such texture */
+bool t3_extension_set_texture(t3_extension_ctx *c, const char *name, t3_texture *t);
 /* Render with WebGPU instead of GLES (three.c built with T3_WGPU): device and
  * queue are a WGPUDevice and its WGPUQueue (core webgpu.h), out_format the
  * WGPUTextureFormat of the output texture. */

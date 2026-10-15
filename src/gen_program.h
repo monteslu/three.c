@@ -101,7 +101,8 @@ enum {
   T3_SRC_NONE, T3_SRC_MAT, T3_SRC_DFG, T3_SRC_VIEWPORT, T3_SRC_OUTPUT, T3_SRC_MORPH,
   T3_SRC_ENV, T3_SRC_BG, T3_SRC_PMREM,
   T3_SRC_SHADOW_DIR, T3_SRC_SHADOW_SPOT, T3_SRC_SHADOW_POINT, T3_SRC_SHADOW_NONE,
-  T3_SRC_BONES, T3_SRC_MORPH_INFLUENCES
+  T3_SRC_BONES, T3_SRC_MORPH_INFLUENCES,
+  T3_SRC_EXT   /* an extension's own texture ("ext.<name>"); arg: its slot in t3_gen_gl.ext_tex */
 };
 uint8_t t3_gen_source_kind(const char *source, uint8_t *arg);
 /* a WebGPU vertex input that is not a geometry slot (t3_gen_gl.attr_slot) */
@@ -141,6 +142,15 @@ typedef struct t3_gen_gl {
   uint32_t wtok[T3_GEN_MAX_GROUPS], woff[T3_GEN_MAX_GROUPS];
   unsigned render_stamp;   /* the render the frame ops were last run for */
   struct gen_wgpu_prog *wg;   /* the WebGPU half (gen_wgpu.c), NULL on GLES */
+  /* an extension program's own values ("ext.<name>" in the manifest), filled
+   * by the hook registered for its extension (t3_renderer_set_extension):
+   * uniforms where the manifest put them, textures by slot (T3_SRC_EXT) with
+   * the byte their flipY flag lives at (group -1: none). Last: a draw of any
+   * other program reads none of it. */
+  uint16_t ext_id;         /* t3__extension_id(src->extension), 0 = none */
+  int n_ext, n_ext_tex;
+  struct { const char *name; int8_t group; uint16_t off, len; bool mat3; } ext[16];
+  struct { const char *name; t3_texture *tex; int8_t flip_group; uint16_t flip_off; } ext_tex[8];
 } t3_gen_gl;
 
 /* NULL with err set when the driver rejects the program or a name is unknown */

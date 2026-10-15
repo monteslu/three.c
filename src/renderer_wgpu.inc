@@ -92,6 +92,13 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
         samplers[nt] = NULL;
         break;
       }
+      case T3_SRC_EXT: {   /* (gen_fill_ext has checked it is set) */
+        t3_texture *tx = gl->ext_tex[arg].tex;
+        views[nt] = t3_wgpu_texture(w, tx);
+        samplers[nt] = t3_wgpu_sampler(w, tx, false);
+        if (!views[nt]) return false;
+        break;
+      }
       case T3_SRC_MAT: {
         const t3_texture *tx = m ? gen_tex(m, arg) : NULL;
         if (!tx) return false;
@@ -140,6 +147,7 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   if (gl->render_stamp != r->stamp) { gen_fill_frame(r, gl, cam); gl->render_stamp = r->stamp; }
   gen_set_aux(r, m);
   gen_fill_draw(r, gl, m, o, batched);
+  if (!gen_fill_ext(r, gl, m, o)) { r->info.skipped++; return; }
   t3_wgpu *w = r->wgpu;
   WGPURenderPassEncoder pass = t3_wgpu_pass_encoder(w);
   /* the pipeline state */

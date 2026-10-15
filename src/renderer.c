@@ -294,6 +294,9 @@ struct t3_renderer {
   /* program lookups by key (renderer_gen.inc gen_pick), open addressing;
    * cleared when the program tables change (t3_gen_tables_serial) */
   struct gen_slot *gen_slots; size_t gen_slot_cap, gen_slot_n; unsigned gen_slot_serial;
+  /* the hooks that fill extension programs (t3_renderer_set_extension), by extension id */
+  struct { uint16_t id; t3_extension_fill fill; void *user; } ext_hooks[16];
+  int ext_hook_n;
   /* r186 renders the scene into a linear (half float) target and a final pass
    * applies the output colour space (and tone mapping); on when the output
    * encoding is sRGB or a tone mapping is set, for the screen target only */
@@ -1599,7 +1602,8 @@ T3_HOT static void push_mesh_item(t3_renderer *r, t3_object *o, t3_geometry *g, 
   if (!m || !m->visible) return;
   /* r186 RenderList: transmission goes with the transparent objects */
   bool tr = m->transparent || (m->type == T3_MESH_PHYSICAL_MATERIAL && m->transmission > 0);
-  if (can_batch && !tr) { batch_add(r, o, g, m, grp); return; }
+  /* (an extension program's hook fills each object's values: its meshes draw one by one) */
+  if (can_batch && !tr && !m->extension) { batch_add(r, o, g, m, grp); return; }
   render_item it = { o, g, m, grp, item_z(r, o), o->render_order, 0, 0 };
   list_push(tr ? &r->transparent : &r->opaque, it);
 }
