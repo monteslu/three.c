@@ -32,6 +32,9 @@
  *   cc -std=c99 -O2 -DT3_WGPU -I include -I src -I <dawn>/include test/test_extension.c \
  *     build/native-wgpu/libthree.a -L <dawn>/lib -lwebgpu_dawn -Wl,-rpath,<dawn>/lib -lEGL -lGLESv2 -lz -lm
  *
+ * The WebGPU build takes "compat" as its argument for a compatibility-mode
+ * device (test/run.sh runs both).
+ *
  * Exits 0 on success, 77 when no WebGPU adapter is available. */
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,10 +61,12 @@ static void error_cb(WGPUDevice const *d, WGPUErrorType t, WGPUStringView m, voi
 }
 static WGPUDevice dev;
 static WGPUQueue queue;
+static bool compat;   /* argv[1] "compat": a compatibility-mode device, as wasmcart gives carts */
 static int setup(void) {
   inst = wgpuCreateInstance(NULL);
   WGPUAdapter ad = NULL; int done = 0;
-  WGPURequestAdapterOptions ao = { .powerPreference = WGPUPowerPreference_HighPerformance };
+  WGPURequestAdapterOptions ao = { .powerPreference = WGPUPowerPreference_HighPerformance,
+                                   .featureLevel = compat ? WGPUFeatureLevel_Compatibility : WGPUFeatureLevel_Core };
   wgpuInstanceRequestAdapter(inst, &ao, (WGPURequestAdapterCallbackInfo){ .mode = WGPUCallbackMode_AllowProcessEvents, .callback = adapter_cb, .userdata1 = &ad, .userdata2 = &done });
   while (!done) wgpuInstanceProcessEvents(inst);
   if (!ad) return 77;
@@ -81,6 +86,7 @@ static t3_renderer *renderer(void) {
 }
 static void read_frame(t3_renderer *r, uint8_t *px) { t3_renderer_wgpu_read(r, px); }
 #define BACKEND "webgpu"
+#define MODE (compat ? " compat" : "")
 #else
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
@@ -106,10 +112,11 @@ static t3_renderer *renderer(void) {
 }
 static void read_frame(t3_renderer *r, uint8_t *px) { (void)r; glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, px); }
 #define BACKEND "gles"
+#define MODE ""
 #endif
 
 static int failures;
-#define CHECK(cond, ...) do { if (!(cond)) { failures++; fprintf(stderr, "FAIL (" BACKEND "): " __VA_ARGS__); fputc('\n', stderr); } } while (0)
+#define CHECK(cond, ...) do { if (!(cond)) { failures++; fprintf(stderr, "FAIL (" BACKEND "%s): ", MODE); fprintf(stderr, __VA_ARGS__); fputc('\n', stderr); } } while (0)
 
 /* texels of a and b differing by more than 1 in a channel, over columns [x0, x1) */
 static int differ(const uint8_t *a, const uint8_t *b, int x0, int x1) {
@@ -173,7 +180,12 @@ static void render(t3_renderer *r, uint8_t *px) {
   read_frame(r, px);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+#ifdef T3_WGPU
+  compat = argc > 1 && !strcmp(argv[1], "compat");
+#else
+  (void)argc; (void)argv;
+#endif
   int st = setup();
   if (st == 77) { puts("test_extension (" BACKEND "): no WebGPU adapter, skipped"); return 77; }
   if (st) return st;
@@ -387,6 +399,44 @@ int main(void) {
     render(r5, le);
     d = differ(ls, le, 0, W);
     CHECK(d > 20, "new texels in layer 1 changed only %d texels", d);
+    /* a mipmapped DataArrayTexture seen from far away: its levels average a
+     * one-texel checker to grey, as a flat grey array draws it (made by the
+     * GPU from the level above: on WebGPU through a 2D-array view, the only
+     * one compatibility mode binds) */
+    {
+      static uint8_t ck[64 * 64 * 4 * 4], gr[64 * 64 * 4 * 4];
+      for (int i = 0; i < 64 * 64 * 4; i++) {
+        uint8_t v = (((i % 64) + (i / 64)) & 1) ? 255 : 0;
+        ck[i * 4] = ck[i * 4 + 1] = ck[i * 4 + 2] = v; ck[i * 4 + 3] = 255;
+        gr[i * 4] = gr[i * 4 + 1] = gr[i * 4 + 2] = 128; gr[i * 4 + 3] = 255;
+      }
+      t3_texture *keep_map = layer_map;
+      t3_texture *mc = t3_data_array_texture_new(64, 64, 4, ck, T3_RGBA_FORMAT, T3_UNSIGNED_BYTE_TYPE);
+      t3_texture *mg = t3_data_array_texture_new(64, 64, 4, gr, T3_RGBA_FORMAT, T3_UNSIGNED_BYTE_TYPE);
+      t3_texture *ts[2] = { mc, mg };
+      for (int k = 0; k < 2; k++) {
+        ts[k]->wrap_s = ts[k]->wrap_t = T3_REPEAT;
+        ts[k]->mag_filter = T3_LINEAR;
+        ts[k]->min_filter = T3_LINEAR_MIPMAP_LINEAR;
+        ts[k]->generate_mipmaps = true;
+      }
+      t3_object_set_position(cam, 0, 0, 40);
+      static uint8_t fc[W * H * 4], fg[W * H * 4];
+      layer_map = mc; render(r5, fc);
+      layer_map = mg; render(r5, fg);
+      int far = 0, off = 0;
+      for (int i = 0; i < W * H; i++) {
+        int dd = 0;
+        for (int c = 0; c < 3; c++) { int x = abs(fc[i * 4 + c] - fg[i * 4 + c]); if (x > dd) dd = x; }
+        if (dd > 12) off++;
+        if (fg[i * 4] > 30) far++;   /* (the lit grey plane, on the dark clear colour) */
+      }
+      CHECK(off <= 2, "a mipmapped checker array differs from flat grey at %d texels from far away (its mips)", off);
+      CHECK(far > 4, "the far plane covers %d texels", far);
+      t3_object_set_position(cam, 0, 0, 3);
+      layer_map = keep_map;
+      t3_release(mc); t3_release(mg);
+    }
     t3_renderer_set_extension(r5, "layers", NULL, NULL);
     render(r5, le);
     CHECK(t3_renderer_info(r5)->skipped == 1, "with no hook %u draws were skipped, not 1", t3_renderer_info(r5)->skipped);
@@ -439,6 +489,6 @@ int main(void) {
 #ifdef T3_WGPU
   CHECK(wgpu_errors == 0, "%d WebGPU validation errors", wgpu_errors);
 #endif
-  if (!failures) printf("test_extension (" BACKEND "): ok\n");
+  if (!failures) printf("test_extension (" BACKEND "%s): ok\n", MODE);
   return failures ? 1 : 0;
 }

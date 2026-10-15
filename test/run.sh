@@ -81,6 +81,10 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
   set +e; ./build/test/test_extension_wgpu > build/test/test_extension_wgpu.log 2>&1; st=$?; set -e
   if [ $st = 0 ]; then echo "ok    test_extension_wgpu"; elif [ $st = 77 ]; then echo "skip  test_extension_wgpu (no WebGPU adapter)"
   else echo "FAIL  test_extension_wgpu"; grep -v '^Warning' build/test/test_extension_wgpu.log; fail=1; fi
+  # ... and on a compatibility-mode device (as wasmcart gives carts): a texture binds only with the view dimension it was made with
+  set +e; ./build/test/test_extension_wgpu compat > build/test/test_extension_wgpu_compat.log 2>&1; st=$?; set -e
+  if [ $st = 0 ]; then echo "ok    test_extension_wgpu_compat"; elif [ $st = 77 ]; then echo "skip  test_extension_wgpu_compat (no WebGPU adapter)"
+  else echo "FAIL  test_extension_wgpu_compat"; grep -v '^Warning' build/test/test_extension_wgpu_compat.log; fail=1; fi
 else
   echo "skip  test_wgpu_external, test_extension_wgpu (no WGPU=1 build or no native-dawn)"
 fi

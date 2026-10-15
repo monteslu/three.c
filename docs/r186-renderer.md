@@ -315,6 +315,9 @@ wasmcart gives carts) needs a few things, and the renderer handles them:
   face.
 - A DepthTexture used as a map takes r186's compatibility program (`cm`),
   which reads it as `texture_2d<f32>`.
+- A DataArrayTexture is created to bind as a 2D array, and its mipmaps are
+  drawn from the level above bound that way, the layer picked per draw
+  (r186's `main_2d_array` mipmap pass).
 
 ## Checking against three.js
 

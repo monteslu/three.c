@@ -86,7 +86,7 @@ struct t3_wgpu {
   WGPUShaderModule mip_module;
   WGPUSampler mip_sampler;
   WGPUBuffer mip_noflip, mip_flip;
-  struct { WGPUTextureFormat fmt; WGPURenderPipeline p; } mip_pipes[8];
+  struct { WGPUTextureFormat fmt; bool array; WGPURenderPipeline p; } mip_pipes[8];
   int n_mip_pipes;
 };
 
@@ -604,24 +604,31 @@ void t3_wgpu_end_frame(t3_wgpu *w) {
 
 /* ── mipmaps: r186's WebGPUTexturePassUtils, a pass per level drawing the
  * level above through a linear-min sampler over one big triangle ────── */
+/* r186's mipmap shader (WebGPUTexturePassUtils): a level drawn from the one
+ * above, the source bound with the view dimension the texture is bound with
+ * (main_2d; main_2d_array for a DataArrayTexture, which in compatibility mode
+ * may be bound only as a 2D array: the layer is the instance index) */
 static const char mip_wgsl[] =
-  "struct VarysStruct { @builtin( position ) Position: vec4f, @location( 0 ) vTex : vec2f };\n"
+  "struct VarysStruct { @builtin( position ) Position: vec4f, @location( 0 ) vTex : vec2f, @location( 1 ) @interpolate(flat, either) vBaseArrayLayer: u32 };\n"
   "@group( 0 ) @binding ( 2 ) var<uniform> flipY: u32;\n"
-  "@vertex fn mainVS( @builtin( vertex_index ) vertexIndex : u32 ) -> VarysStruct {\n"
+  "@vertex fn mainVS( @builtin( vertex_index ) vertexIndex : u32, @builtin( instance_index ) instanceIndex : u32 ) -> VarysStruct {\n"
   "  var Varys : VarysStruct;\n"
   "  var pos = array( vec2f( -1, -1 ), vec2f( -1, 3 ), vec2f( 3, -1 ) );\n"
   "  let p = pos[ vertexIndex ];\n"
   "  let mult = select( vec2f( 0.5, -0.5 ), vec2f( 0.5, 0.5 ), flipY != 0 );\n"
   "  Varys.vTex = p * mult + vec2f( 0.5 );\n"
   "  Varys.Position = vec4f( p, 0, 1 );\n"
+  "  Varys.vBaseArrayLayer = instanceIndex;\n"
   "  return Varys;\n"
   "}\n"
   "@group( 0 ) @binding( 0 ) var imgSampler : sampler;\n"
   "@group( 0 ) @binding( 1 ) var img2d : texture_2d<f32>;\n"
-  "@fragment fn main_2d( Varys: VarysStruct ) -> @location( 0 ) vec4<f32> { return textureSample( img2d, imgSampler, Varys.vTex ); }\n";
+  "@fragment fn main_2d( Varys: VarysStruct ) -> @location( 0 ) vec4<f32> { return textureSample( img2d, imgSampler, Varys.vTex ); }\n"
+  "@group( 0 ) @binding( 1 ) var img2dArray : texture_2d_array<f32>;\n"
+  "@fragment fn main_2d_array( Varys: VarysStruct ) -> @location( 0 ) vec4<f32> { return textureSample( img2dArray, imgSampler, Varys.vTex, Varys.vBaseArrayLayer ); }\n";
 
-static WGPURenderPipeline mip_pipeline(t3_wgpu *w, WGPUTextureFormat fmt) {
-  for (int i = 0; i < w->n_mip_pipes; i++) if (w->mip_pipes[i].fmt == fmt) return w->mip_pipes[i].p;
+static WGPURenderPipeline mip_pipeline(t3_wgpu *w, WGPUTextureFormat fmt, bool array) {
+  for (int i = 0; i < w->n_mip_pipes; i++) if (w->mip_pipes[i].fmt == fmt && w->mip_pipes[i].array == array) return w->mip_pipes[i].p;
   if (!w->mip_module) {
     w->mip_module = module(w, mip_wgsl);
     WGPUSamplerDescriptor sd = { .addressModeU = WGPUAddressMode_ClampToEdge, .addressModeV = WGPUAddressMode_ClampToEdge,
@@ -636,33 +643,37 @@ static WGPURenderPipeline mip_pipeline(t3_wgpu *w, WGPUTextureFormat fmt) {
     wgpuQueueWriteBuffer(w->q, w->mip_flip, 0, one, 16);
   }
   WGPUColorTargetState ct = { .format = fmt, .writeMask = WGPUColorWriteMask_All };
-  WGPUFragmentState fs = { .module = w->mip_module, .entryPoint = SV("main_2d"), .targetCount = 1, .targets = &ct };
+  WGPUFragmentState fs = { .module = w->mip_module, .entryPoint = SV(array ? "main_2d_array" : "main_2d"), .targetCount = 1, .targets = &ct };
   WGPURenderPipelineDescriptor d = {
     .vertex = { .module = w->mip_module, .entryPoint = SV("mainVS") },
     .primitive = { .topology = WGPUPrimitiveTopology_TriangleList, .cullMode = WGPUCullMode_None, .frontFace = WGPUFrontFace_CCW },
     .multisample = { .count = 1, .mask = 0xFFFFFFFF },
     .fragment = &fs };
   WGPURenderPipeline p = wgpuDeviceCreateRenderPipeline(w->dev, &d);
-  if (w->n_mip_pipes < 8) { w->mip_pipes[w->n_mip_pipes].fmt = fmt; w->mip_pipes[w->n_mip_pipes++].p = p; }
+  if (w->n_mip_pipes < 8) { w->mip_pipes[w->n_mip_pipes].fmt = fmt; w->mip_pipes[w->n_mip_pipes].array = array; w->mip_pipes[w->n_mip_pipes++].p = p; }
   return p;
 }
 
-static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureFormat fmt, uint32_t levels, uint32_t layers);
-static void generate_mipmaps(t3_wgpu *w, WGPUTexture tex, WGPUTextureFormat fmt, uint32_t levels) { generate_mipmaps_layers(w, tex, fmt, levels, 1); }
-/* (a cube's faces: each layer's chain from its own level above, as r186's
- * 2d-array mipmap pipeline does) */
-static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureFormat fmt, uint32_t levels, uint32_t layers) {
-  WGPURenderPipeline p = mip_pipeline(w, fmt);
+static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureFormat fmt, uint32_t levels, uint32_t layers, bool array);
+static void generate_mipmaps(t3_wgpu *w, WGPUTexture tex, WGPUTextureFormat fmt, uint32_t levels) { generate_mipmaps_layers(w, tex, fmt, levels, 1, false); }
+/* each level from the one above, per layer. array: the texture is bound as a
+ * 2D array (a DataArrayTexture): the source is the whole level above as a 2D
+ * array, the layer picked by the instance, as r186's main_2d_array pass;
+ * compatibility mode allows no 2D view of one layer for binding. (Cubes make
+ * their chains on the CPU, cube_mips_cpu.) */
+static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureFormat fmt, uint32_t levels, uint32_t layers, bool array) {
+  WGPURenderPipeline p = mip_pipeline(w, fmt, array);
   WGPUBindGroupLayout bgl = wgpuRenderPipelineGetBindGroupLayout(p, 0);
   /* into the open frame when there is one (its draws into the texture come first) */
   bool own = !w->enc || w->pass;
   WGPUCommandEncoder enc = own ? wgpuDeviceCreateCommandEncoder(w->dev, NULL) : w->enc;
   for (uint32_t lv = 1; lv < levels; lv++) for (uint32_t layer = 0; layer < layers; layer++) {
-    WGPUTextureViewDescriptor sv = { .format = fmt, .dimension = WGPUTextureViewDimension_2D, .baseMipLevel = lv - 1, .mipLevelCount = 1,
-                                     .baseArrayLayer = layer, .arrayLayerCount = 1, .aspect = WGPUTextureAspect_All };
+    WGPUTextureViewDescriptor sv = { .format = fmt, .dimension = array ? WGPUTextureViewDimension_2DArray : WGPUTextureViewDimension_2D,
+                                     .baseMipLevel = lv - 1, .mipLevelCount = 1, .baseArrayLayer = array ? 0 : layer,
+                                     .arrayLayerCount = array ? layers : 1, .aspect = WGPUTextureAspect_All };
     WGPUTextureView src = wgpuTextureCreateView(tex, &sv);
-    WGPUTextureViewDescriptor dv = sv;
-    dv.baseMipLevel = lv;
+    WGPUTextureViewDescriptor dv = { .format = fmt, .dimension = WGPUTextureViewDimension_2D, .baseMipLevel = lv, .mipLevelCount = 1,
+                                     .baseArrayLayer = layer, .arrayLayerCount = 1, .aspect = WGPUTextureAspect_All };
     WGPUTextureView dst = wgpuTextureCreateView(tex, &dv);
     WGPUBindGroupEntry e[3] = { { .binding = 0, .sampler = w->mip_sampler }, { .binding = 1, .textureView = src },
                                 { .binding = 2, .buffer = w->mip_noflip, .size = 4 } };
@@ -673,7 +684,7 @@ static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureForm
     WGPURenderPassEncoder pe = wgpuCommandEncoderBeginRenderPass(enc, &pd);
     wgpuRenderPassEncoderSetPipeline(pe, p);
     wgpuRenderPassEncoderSetBindGroup(pe, 0, bg, 0, NULL);
-    wgpuRenderPassEncoderDraw(pe, 3, 1, 0, 0);
+    wgpuRenderPassEncoderDraw(pe, 3, 1, 0, array ? layer : 0);
     wgpuRenderPassEncoderEnd(pe);
     wgpuRenderPassEncoderRelease(pe);
     wgpuBindGroupRelease(bg);
@@ -868,7 +879,7 @@ WGPUTextureView t3_wgpu_texture(t3_wgpu *w, t3_texture *t) {
   wgpuQueueWriteTexture(w->q, &dst, src, row * (size_t)t->height * layers, &lay, &ext);
   free(rows);
   if (levels > 1 && t->is_cube) cube_mips_cpu(w, x->t, src, t->width, t->height, levels, srgb);
-  else if (levels > 1) generate_mipmaps_layers(w, x->t, fmt, levels, layers);
+  else if (levels > 1) generate_mipmaps_layers(w, x->t, fmt, levels, layers, t->depth > 0);
   x->version = t->version;
   return x->v;
 }
@@ -1142,7 +1153,7 @@ WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView s
     x->v = wgpuTextureCreateView(x->t, NULL);
     x->w = width; x->h = height; x->fmt = fmt; x->levels = levels;
   }
-  WGPURenderPipeline p = mip_pipeline(w, fmt);
+  WGPURenderPipeline p = mip_pipeline(w, fmt, false);
   WGPUBindGroupLayout bgl = wgpuRenderPipelineGetBindGroupLayout(p, 0);
   WGPUTextureViewDescriptor dv = { .format = fmt, .dimension = WGPUTextureViewDimension_2D, .baseMipLevel = 0, .mipLevelCount = 1,
                                    .baseArrayLayer = 0, .arrayLayerCount = 1, .aspect = WGPUTextureAspect_All };
