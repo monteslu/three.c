@@ -995,9 +995,12 @@ static void flip_rows(uint8_t *dst, const uint8_t *src, int w, int h, size_t tex
 }
 
 /* WebGLUtils.convert / getInternalFormat (WebGL2) for the formats three.c
- * keeps: RGBA (RGB uploads as RGBA) and depth */
+ * keeps: RGBA (RGB uploads as RGBA), depth and the integer formats */
 static GLenum gl_type(t3_texture_type t) {
   switch (t) {
+  case T3_BYTE_TYPE: return 0x1400;   /* GL_BYTE */
+  case T3_SHORT_TYPE: return 0x1402;  /* GL_SHORT */
+  case T3_INT_TYPE: return 0x1404;    /* GL_INT */
   case T3_FLOAT_TYPE: return GL_FLOAT;
   case T3_HALF_FLOAT_TYPE: return GL_HALF_FLOAT;
   case T3_UNSIGNED_SHORT_TYPE: return GL_UNSIGNED_SHORT;
@@ -1007,10 +1010,32 @@ static GLenum gl_type(t3_texture_type t) {
   }
 }
 static bool is_depth_format(t3_texture_format f) { return f == T3_DEPTH_FORMAT || f == T3_DEPTH_STENCIL_FORMAT; }
+static bool is_integer_format(t3_texture_format f) { return f == T3_RED_INTEGER_FORMAT || f == T3_RG_INTEGER_FORMAT || f == T3_RGBA_INTEGER_FORMAT; }
 static GLenum gl_format(const t3_texture *t) {
-  return t->format == T3_DEPTH_FORMAT ? GL_DEPTH_COMPONENT : t->format == T3_DEPTH_STENCIL_FORMAT ? GL_DEPTH_STENCIL : GL_RGBA;
+  switch (t->format) {
+  case T3_DEPTH_FORMAT: return GL_DEPTH_COMPONENT;
+  case T3_DEPTH_STENCIL_FORMAT: return GL_DEPTH_STENCIL;
+  case T3_RED_INTEGER_FORMAT: return 0x8D94;    /* GL_RED_INTEGER */
+  case T3_RG_INTEGER_FORMAT: return 0x8228;     /* GL_RG_INTEGER */
+  case T3_RGBA_INTEGER_FORMAT: return 0x8D99;   /* GL_RGBA_INTEGER */
+  default: return GL_RGBA;
+  }
+}
+/* getInternalFormat's integer rows: R8UI .. RGBA32I by channels, size and sign */
+static GLenum gl_integer_internal_format(const t3_texture *t) {
+  static const GLenum u[3][3] = { { 0x8232, 0x8234, 0x8236 },     /* R8UI R16UI R32UI */
+                                  { 0x8238, 0x823A, 0x823C },     /* RG8UI RG16UI RG32UI */
+                                  { 0x8D7C, 0x8D76, 0x8D70 } };   /* RGBA8UI RGBA16UI RGBA32UI */
+  static const GLenum i[3][3] = { { 0x8231, 0x8233, 0x8235 },     /* R8I R16I R32I */
+                                  { 0x8237, 0x8239, 0x823B },     /* RG8I RG16I RG32I */
+                                  { 0x8D8E, 0x8D88, 0x8D82 } };   /* RGBA8I RGBA16I RGBA32I */
+  int c = t->format == T3_RED_INTEGER_FORMAT ? 0 : t->format == T3_RG_INTEGER_FORMAT ? 1 : 2;
+  int z = t->type == T3_UNSIGNED_BYTE_TYPE || t->type == T3_BYTE_TYPE ? 0 : t->type == T3_UNSIGNED_SHORT_TYPE || t->type == T3_SHORT_TYPE ? 1 : 2;
+  bool sign = t->type == T3_BYTE_TYPE || t->type == T3_SHORT_TYPE || t->type == T3_INT_TYPE;
+  return sign ? i[c][z] : u[c][z];
 }
 static GLenum gl_internal_format(const t3_texture *t) {
+  if (is_integer_format(t->format)) return gl_integer_internal_format(t);
   if (is_depth_format(t->format)) {
     /* uploadTexture's DepthTexture branch (WebGL2 wants a sized format) */
     switch (t->type) {
@@ -1027,9 +1052,7 @@ static GLenum gl_internal_format(const t3_texture *t) {
     return 0x8C43; /* GL_SRGB8_ALPHA8 */
   return t->type == T3_FLOAT_TYPE ? GL_RGBA32F : t->type == T3_HALF_FLOAT_TYPE ? GL_RGBA16F : GL_RGBA8;
 }
-static size_t texel_size(const t3_texture *t) {
-  return t->type == T3_FLOAT_TYPE ? 16 : t->type == T3_HALF_FLOAT_TYPE ? 8 : 4;
-}
+static size_t texel_size(const t3_texture *t) { return t3_texture_texel_bytes(t->format, t->type); }
 
 static GLenum gl_wrap(t3_wrapping w) {
   return w == T3_REPEAT ? GL_REPEAT : w == T3_MIRRORED_REPEAT ? GL_MIRRORED_REPEAT : GL_CLAMP_TO_EDGE;
@@ -1194,7 +1217,27 @@ static void bind_cube_texture(t3_texture *t, int unit) {
   tg->version = t->version;
 }
 
+/* a DataArrayTexture (uploadTexture's isDataArrayTexture branch): its layers
+ * with one glTexImage3D on the unit's 2D-array target. (The unit's 2D and
+ * cube bindings are their own; the array binding is not cached.) */
+static void bind_array_texture(t3_texture *t, int unit) {
+  texture_gl *tg = texture_gl_of(t);
+  bool upload = tg->version != t->version && t->pixels;
+  tu_activate(unit);
+  glBindTexture(0x8C1A /* GL_TEXTURE_2D_ARRAY */, tg->tex);
+  if (upload) {
+    int align = t->unpack_alignment ? t->unpack_alignment : 4;
+    glPixelStorei(GL_UNPACK_ALIGNMENT, align);
+    glTexImage3D(0x8C1A, 0, gl_internal_format(t), t->width, t->height, t->depth, 0, gl_format(t), gl_type(t->type), t->pixels);
+    if (align != 4) glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    texture_params(0x8C1A, t);
+    if (needs_mipmaps(t)) glGenerateMipmap(0x8C1A);
+    tg->version = t->version;
+  }
+}
+
 static void bind_texture(t3_texture *t, int unit) {
+  if (t->depth > 0) { bind_array_texture(t, unit); return; }
   texture_gl *tg = texture_gl_of(t);
   /* a render target's (or depth) texture has no texels to upload: the GPU
    * writes it, and its storage and parameters are set up with the target */

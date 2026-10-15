@@ -223,8 +223,23 @@ that fills it:
   `tools/extensions/swell.mjs` (vertices pushed along their normals) and the
   `e2-extension-shadow` scene check it.
 
-`test/test_extension.c` (both backends) and the `e1-extension` and
-`e2-extension-shadow` scenes (under `tools/parity-r186.mjs`, against r186
+- Array and integer textures, as r186 has them: `t3_data_array_texture_new`
+  (DataArrayTexture, sampled with `texture(map, uv).depth(layer)`) and
+  `t3_data_texture_new_format` with `T3_RED_INTEGER_FORMAT`,
+  `T3_RG_INTEGER_FORMAT` or `T3_RGBA_INTEGER_FORMAT` (read with
+  `textureLoad`, texelFetch on GLES). r186's TSL types an integer texture as
+  one only for a 32-bit type (`UnsignedIntType` / `IntType`: R32UI, RG32UI,
+  RGBA32UI and the signed ones); with a smaller type it declares a float
+  texture, which the integer data cannot bind to. Pack 16-bit values into a
+  32-bit texture instead. `tools/extensions/layers.mjs` and the
+  `e3-extension-textures` scene check both.
+- A texture's sampling settings are part of the program (r186 reads a
+  nearest-filtered texture with `textureLoad` and bakes wrap modes into the
+  code), so an extension's textures at run time need the filters and
+  wrapping its module captured them with.
+
+`test/test_extension.c` (both backends) and the `e1-extension`,
+`e2-extension-shadow` and `e3-extension-textures` scenes (under `tools/parity-r186.mjs`, against r186
 running the same TSL) check it.
 
 ## renderer.info

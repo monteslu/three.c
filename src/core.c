@@ -198,6 +198,13 @@ t3_texture *t3_cube_texture_new(int size, const uint8_t *const faces[6]) {
 static size_t texel_bytes(t3_texture_type type) {
   return type == T3_FLOAT_TYPE ? 16 : type == T3_HALF_FLOAT_TYPE ? 8 : 4;
 }
+size_t t3_texture_texel_bytes(t3_texture_format format, t3_texture_type type) {
+  if (format == T3_RGBA_FORMAT) return texel_bytes(type);
+  size_t channels = format == T3_RED_INTEGER_FORMAT ? 1 : format == T3_RG_INTEGER_FORMAT ? 2 : 4;
+  size_t bytes = type == T3_UNSIGNED_BYTE_TYPE || type == T3_BYTE_TYPE ? 1
+               : type == T3_UNSIGNED_SHORT_TYPE || type == T3_SHORT_TYPE || type == T3_HALF_FLOAT_TYPE ? 2 : 4;
+  return channels * bytes;
+}
 
 t3_texture *t3_data_texture_new_typed(int w, int h, const void *rgba, t3_texture_type type) {
   t3_texture *t = t3_data_texture_new(w, h, NULL);
@@ -207,6 +214,22 @@ t3_texture *t3_data_texture_new_typed(int w, int h, const void *rgba, t3_texture
   t->pixels = calloc(1, n ? n : 1);
   T3_CHECK_ALLOC(t->pixels);
   if (rgba) memcpy(t->pixels, rgba, n);
+  return t;
+}
+
+t3_texture *t3_data_texture_new_format(int w, int h, const void *data, t3_texture_format format, t3_texture_type type) {
+  return t3_data_array_texture_new(w, h, 0, data, format, type);
+}
+t3_texture *t3_data_array_texture_new(int w, int h, int depth, const void *data, t3_texture_format format, t3_texture_type type) {
+  t3_texture *t = t3_data_texture_new(w, h, NULL);
+  t->format = format;
+  t->type = type;
+  t->depth = depth > 0 ? depth : 0;
+  size_t n = (size_t)w * h * (depth > 0 ? (size_t)depth : 1) * t3_texture_texel_bytes(format, type);
+  free(t->pixels);
+  t->pixels = calloc(1, n ? n : 1);
+  T3_CHECK_ALLOC(t->pixels);
+  if (data) memcpy(t->pixels, data, n);
   return t;
 }
 

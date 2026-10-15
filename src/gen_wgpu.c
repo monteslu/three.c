@@ -777,47 +777,69 @@ static void cube_mips_cpu(t3_wgpu *w, WGPUTexture tex, const uint8_t *faces, int
 }
 
 struct dmap { WGPUTexture t; WGPUTextureView sample, faces[6]; int w, h; bool cube; uint32_t version; };
-struct tex { WGPUTexture t; WGPUTextureView v, v0; uint32_t version; int w, h; WGPUTextureFormat fmt; uint32_t levels;
+struct tex { WGPUTexture t; WGPUTextureView v, v0; uint32_t version; int w, h; WGPUTextureFormat fmt; uint32_t levels, layers;
              bool borrowed_t, borrowed_v; /* t3_texture_adopt_wgpu: the embedder's texture / view, not released here */ };
+/* GPUTextureFormat of an integer format and type (WebGPUTextureUtils.getFormat), 0 for none */
+static WGPUTextureFormat integer_format(const t3_texture *t) {
+  static const WGPUTextureFormat u[3][3] = {
+    { WGPUTextureFormat_R8Uint, WGPUTextureFormat_R16Uint, WGPUTextureFormat_R32Uint },
+    { WGPUTextureFormat_RG8Uint, WGPUTextureFormat_RG16Uint, WGPUTextureFormat_RG32Uint },
+    { WGPUTextureFormat_RGBA8Uint, WGPUTextureFormat_RGBA16Uint, WGPUTextureFormat_RGBA32Uint } };
+  static const WGPUTextureFormat i[3][3] = {
+    { WGPUTextureFormat_R8Sint, WGPUTextureFormat_R16Sint, WGPUTextureFormat_R32Sint },
+    { WGPUTextureFormat_RG8Sint, WGPUTextureFormat_RG16Sint, WGPUTextureFormat_RG32Sint },
+    { WGPUTextureFormat_RGBA8Sint, WGPUTextureFormat_RGBA16Sint, WGPUTextureFormat_RGBA32Sint } };
+  int c = t->format == T3_RED_INTEGER_FORMAT ? 0 : t->format == T3_RG_INTEGER_FORMAT ? 1 : 2;
+  int z = t->type == T3_UNSIGNED_BYTE_TYPE || t->type == T3_BYTE_TYPE ? 0 : t->type == T3_UNSIGNED_SHORT_TYPE || t->type == T3_SHORT_TYPE ? 1
+        : t->type == T3_UNSIGNED_INT_TYPE || t->type == T3_INT_TYPE ? 2 : -1;
+  if (z < 0) return (WGPUTextureFormat)0;
+  bool sign = t->type == T3_BYTE_TYPE || t->type == T3_SHORT_TYPE || t->type == T3_INT_TYPE;
+  return sign ? i[c][z] : u[c][z];
+}
 WGPUTextureView t3_wgpu_texture(t3_wgpu *w, t3_texture *t) {
   struct tex *x = t->_wgpu;
   if (x && x->version == t->version) return x->v;
   if (!t->pixels) return x ? x->v : NULL;
   bool srgb = t->color_space == T3_SRGB_COLOR_SPACE;
   bool half = t->type == T3_HALF_FLOAT_TYPE, flt = t->type == T3_FLOAT_TYPE;
-  WGPUTextureFormat fmt = flt ? WGPUTextureFormat_RGBA32Float : half ? WGPUTextureFormat_RGBA16Float
+  bool integer = t->format == T3_RED_INTEGER_FORMAT || t->format == T3_RG_INTEGER_FORMAT || t->format == T3_RGBA_INTEGER_FORMAT;
+  WGPUTextureFormat fmt = integer ? integer_format(t) : flt ? WGPUTextureFormat_RGBA32Float : half ? WGPUTextureFormat_RGBA16Float
                         : srgb ? WGPUTextureFormat_RGBA8UnormSrgb : WGPUTextureFormat_RGBA8Unorm;
-  /* Textures.needsMipmaps / getMipLevels: generateMipmaps alone decides */
+  if (!fmt) return NULL;
+  /* Textures.needsMipmaps / getMipLevels: generateMipmaps alone decides (an
+   * integer texture has none: it cannot be filtered or rendered to here) */
   uint32_t levels = 1;
-  if (t->generate_mipmaps) for (int m = t->width > t->height ? t->width : t->height; m > 1; m >>= 1) levels++;
-  uint32_t layers = t->is_cube ? 6 : 1;
+  if (t->generate_mipmaps && !integer) for (int m = t->width > t->height ? t->width : t->height; m > 1; m >>= 1) levels++;
+  /* a DataArrayTexture's layers, a cube's six faces */
+  uint32_t layers = t->is_cube ? 6 : t->depth > 0 ? (uint32_t)t->depth : 1;
   /* a cube's mip chain is made on the CPU (a 2 x 2 box, in linear for sRGB):
    * compatibility mode samples a cube only as a whole cube, so the GPU pass
    * that reads one face per level cannot run there; 8-bit cubes only */
   if (t->is_cube && (flt || half)) levels = 1;
-  if (!x || x->w != t->width || x->h != t->height || x->fmt != fmt || x->levels != levels) {
+  if (!x || x->w != t->width || x->h != t->height || x->fmt != fmt || x->levels != levels || x->layers != layers) {
     if (!x) { x = calloc(1, sizeof *x); T3_CHECK_ALLOC(x); t->_wgpu = x; }
     else { wgpuTextureViewRelease(x->v); wgpuTextureRelease(x->t); view_epoch++; }
     /* (compatibility mode: a texture is bound with one view dimension, named at creation) */
     WGPUTextureBindingViewDimension bvd = { .chain = { .sType = WGPUSType_TextureBindingViewDimension },
-                                            .textureBindingViewDimension = WGPUTextureViewDimension_Cube };
-    WGPUTextureDescriptor d = { .nextInChain = t->is_cube ? &bvd.chain : NULL,
+                                            .textureBindingViewDimension = t->is_cube ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2DArray };
+    WGPUTextureDescriptor d = { .nextInChain = t->is_cube || t->depth > 0 ? &bvd.chain : NULL,
       .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst | (levels > 1 && !t->is_cube ? WGPUTextureUsage_RenderAttachment : 0),
       .dimension = WGPUTextureDimension_2D,
       .size = { (uint32_t)t->width, (uint32_t)t->height, layers }, .format = fmt, .mipLevelCount = levels, .sampleCount = 1 };
     x->t = wgpuDeviceCreateTexture(w->dev, &d);
-    WGPUTextureViewDescriptor vd = { .format = fmt, .dimension = t->is_cube ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2D,
+    WGPUTextureViewDescriptor vd = { .format = fmt, .dimension = t->is_cube ? WGPUTextureViewDimension_Cube
+                                                              : t->depth > 0 ? WGPUTextureViewDimension_2DArray : WGPUTextureViewDimension_2D,
                                      .mipLevelCount = levels, .arrayLayerCount = layers, .aspect = WGPUTextureAspect_All };
     x->v = wgpuTextureCreateView(x->t, &vd);
-    x->w = t->width; x->h = t->height; x->fmt = fmt; x->levels = levels;
+    x->w = t->width; x->h = t->height; x->fmt = fmt; x->levels = levels; x->layers = layers;
   }
-  size_t texel = flt ? 16 : half ? 8 : 4, row = (size_t)t->width * texel;
+  size_t texel = t3_texture_texel_bytes(t->format, t->type), row = (size_t)t->width * texel;
   /* t3 rows run top to bottom; r186 uploads a flipY texture flipped (GL
    * convention: v = 0 at the bottom), so row 0 of the GPU texture is the
    * image's bottom row then */
   uint8_t *rows = NULL;
   const uint8_t *src = t->pixels;
-  if (t->flip_y) {
+  if (t->flip_y && t->depth == 0) {   /* (a DataArrayTexture is never flipped: three.js leaves flipY false) */
     rows = malloc(row * (size_t)t->height);
     T3_CHECK_ALLOC(rows);
     for (int y = 0; y < t->height; y++) memcpy(rows + row * (size_t)y, t->pixels + row * (size_t)(t->height - 1 - y), row);

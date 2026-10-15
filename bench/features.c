@@ -834,6 +834,66 @@ static void e2_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── e3-extension-textures ────────────────────────────────────────
+ * the example extension with an array texture and an integer texture
+ * (tools/extensions/layers.mjs): an R32UI index picks per cell a layer of an
+ * RGBA8 DataArrayTexture; a shift per object. BENCH_EXT_NOFILL=1 registers
+ * no hook. */
+static t3_mesh *e3_meshes[4];
+static t3_texture *e3_index, *e3_map;
+static void e3_fill(t3_extension_ctx *c, void *user) {
+  const t3_object *o = t3_extension_object(c);
+  float s = 0;
+  for (int i = 0; i < 3; i++) if (o == &e3_meshes[i]->base) s = (float)i;
+  t3_extension_set_uniform(c, "layerShift", &s, 1);
+  t3_extension_set_texture(c, "layerIndex", e3_index);
+  t3_extension_set_texture(c, "layerMap", e3_map);
+  (void)user;
+}
+static void e3_setup(void) {
+  enum { LAYERS = 4 };
+  R = make_renderer(0x202028);
+  if (!getenv("BENCH_EXT_NOFILL")) t3_renderer_set_extension(R, "layers", e3_fill, NULL);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 1.5f, 9);
+  t3_object_look_at(C, 0, 0, 0);
+  uint32_t idx[16];
+  for (int i = 0; i < 16; i++) idx[i] = (uint32_t)((i * 7 + (i >> 2)) % LAYERS);
+  e3_index = t3_data_texture_new_format(4, 4, idx, T3_RED_INTEGER_FORMAT, T3_UNSIGNED_INT_TYPE);
+  static const int r0[4] = { 230, 60, 240, 40 }, g0[4] = { 70, 200, 220, 90 }, b0[4] = { 50, 80, 60, 230 };
+  uint8_t data[4 * 4 * 4 * LAYERS];
+  for (int l = 0; l < LAYERS; l++)
+    for (int i = 0; i < 16; i++) {
+      uint8_t *o = data + (l * 16 + i) * 4;
+      o[0] = (uint8_t)(r0[l] - (i & 3) * 12); o[1] = (uint8_t)(g0[l] + (i >> 2) * 8); o[2] = (uint8_t)b0[l]; o[3] = 255;
+    }
+  e3_map = t3_data_array_texture_new(4, 4, LAYERS, data, T3_RGBA_FORMAT, T3_UNSIGNED_BYTE_TYPE);
+  e3_map->mag_filter = e3_map->min_filter = T3_LINEAR;
+  t3_material *ext = t3_mesh_standard_material_new(0xffffff), *plain = t3_mesh_standard_material_new(0xffffff);
+  ext->roughness = plain->roughness = 0.6f;
+  ext->metalness = plain->metalness = 0.1f;
+  t3_material_set_extension(ext, "layers");
+  t3_geometry *geos[4] = { t3_box_geometry_new(1.6f, 1.6f, 1.6f, 1, 1, 1), t3_sphere_geometry_new(1, 32, 16),
+                           t3_torus_geometry_new(0.8f, 0.3f, 16, 48, 6.283185307179586f), t3_sphere_geometry_new(1, 32, 16) };
+  for (int i = 0; i < 4; i++) {
+    e3_meshes[i] = add_mesh(&S->base, geos[i], i < 3 ? ext : plain);
+    t3_object_set_position(e3_meshes[i], -4.5f + i * 3, 0, 0);
+    t3_release(geos[i]);
+  }
+  t3_release(ext); t3_release(plain);
+  add_light(t3_ambient_light_new(0x404040, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 1.2f);
+  t3_object_set_position(sun, 3, 5, 6);
+  add_light(sun);
+}
+static void e3_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  for (int i = 0; i < 4; i++) t3_object_set_rotation(e3_meshes[i], (float)(t * 0.5 + i), (float)(t * 0.8 + i * 0.5), 0);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── t6-shadow-cover ──────────────────────────────────────────────── */
 static t3_mesh *sc_balls[3];
 static t3_light *sc_flash;

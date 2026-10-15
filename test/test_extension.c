@@ -15,6 +15,11 @@
  * shadow onto a floor, the object itself out of view: with swell 0 the shadow
  * equals the plain material's (plain caster), a swell grows it (the caster
  * is depth+xswell, filled by the hook), and with no hook it is gone.
+ * And the example with an array texture and an integer texture
+ * (tools/extensions/layers.mjs) on a plane facing the camera: an R32UI index
+ * of all 1 draws what an index of all 0 with a shift of 1 draws (the integer
+ * is read, the shift added and the layer picked); new texels in a layer, or
+ * in the index, change the picture; with no hook the draw is skipped.
  *
  * GLES (built against build/native/libthree.a, EGL surfaceless):
  *   cc -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_extension.c \
@@ -130,6 +135,15 @@ static void fill(t3_extension_ctx *c, void *user) {
 
 static float swell;
 static void fill_swell(t3_extension_ctx *c, void *user) { (void)user; t3_extension_set_uniform(c, "swell", &swell, 1); }
+
+static float layer_shift;
+static t3_texture *layer_index, *layer_map;
+static void fill_layers(t3_extension_ctx *c, void *user) {
+  (void)user;
+  t3_extension_set_uniform(c, "layerShift", &layer_shift, 1);
+  t3_extension_set_texture(c, "layerIndex", layer_index);
+  t3_extension_set_texture(c, "layerMap", layer_map);
+}
 
 static t3_scene *scene;
 static t3_camera *cam;
@@ -299,9 +313,71 @@ int main(void) {
     d = differ(s1, sn, 0, W);
     CHECK(d > 50, "with no hook the shadow is still there (%d texels differ)", d);
     t3_renderer_destroy(r4);
-    t3_release(bm); t3_release(s2); t3_release(c2);
+    t3_release(bm);   /* (s2 and c2 stay the scene and camera until the next block) */
   }
 
+  /* an array texture and an integer texture */
+  {
+    t3_scene *s3 = t3_scene_new();
+    t3_camera *c3 = t3_perspective_camera_new(40, (float)W / H, 0.1f, 50);
+    t3_object_set_position(c3, 0, 0, 3);
+    t3_object_look_at(c3, 0, 0, 0);
+    t3_light *amb3 = t3_ambient_light_new(0x404040, 1), *sun3 = t3_directional_light_new(0xffffff, 1.5f);
+    t3_object_set_position(sun3, 1, 2, 4);
+    t3_object_add(&s3->base, amb3); t3_object_add(&s3->base, sun3);
+    t3_release(amb3); t3_release(sun3);
+    uint32_t idx[16];
+    for (int i = 0; i < 16; i++) idx[i] = 0;
+    layer_index = t3_data_texture_new_format(4, 4, idx, T3_RED_INTEGER_FORMAT, T3_UNSIGNED_INT_TYPE);
+    uint8_t layers[4 * 4 * 4 * 4];
+    for (int l = 0; l < 4; l++)
+      for (int i = 0; i < 16; i++) {
+        uint8_t *o = layers + (l * 16 + i) * 4;
+        o[0] = (uint8_t)(40 + l * 60); o[1] = (uint8_t)(220 - l * 50); o[2] = (uint8_t)(90 + (i & 3) * 30); o[3] = 255;
+      }
+    layer_map = t3_data_array_texture_new(4, 4, 4, layers, T3_RGBA_FORMAT, T3_UNSIGNED_BYTE_TYPE);
+    layer_map->mag_filter = layer_map->min_filter = T3_LINEAR;
+    CHECK(layer_map->depth == 4 && t3_texture_texel_bytes(T3_RED_INTEGER_FORMAT, T3_UNSIGNED_INT_TYPE) == 4, "array / integer texture fields");
+    t3_geometry *pg = t3_plane_geometry_new(2.4f, 2.4f, 1, 1);
+    t3_material *lm = t3_mesh_standard_material_new(0xffffff);
+    t3_material_set_extension(lm, "layers");
+    t3_mesh *plane = t3_mesh_new(pg, lm);
+    t3_object_add(&s3->base, plane);
+    t3_release(plane); t3_release(pg); t3_release(lm);
+    t3_release(scene); t3_release(cam);
+    scene = s3; cam = c3;
+    static uint8_t l0[W * H * 4], l1[W * H * 4], ls[W * H * 4], le[W * H * 4];
+    t3_renderer *r5 = renderer();
+    t3_renderer_set_extension(r5, "layers", fill_layers, NULL);
+    layer_shift = 0;
+    render(r5, l0);
+    CHECK(t3_renderer_info(r5)->skipped == 0, "the layers scene skipped %u draws: %s (%s)", t3_renderer_info(r5)->skipped,
+          t3_renderer_last_error(r5) ? t3_renderer_last_error(r5) : "", t3_renderer_generated_missing(r5) ? t3_renderer_generated_missing(r5) : "");
+    uint32_t *ix = (uint32_t *)layer_index->pixels;
+    for (int i = 0; i < 16; i++) ix[i] = 1;
+    layer_index->version++;
+    render(r5, l1);
+    d = differ(l0, l1, 0, W);
+    CHECK(d > 500, "an index of 1 instead of 0 changed only %d texels", d);
+    for (int i = 0; i < 16; i++) ix[i] = 0;
+    layer_index->version++;
+    layer_shift = 1;
+    render(r5, ls);
+    d = differ(l1, ls, 0, W);
+    CHECK(d == 0, "index 0 shifted by 1 differs from index 1 at %d texels", d);
+    layer_map->pixels[(16 + 5) * 4 + 1] ^= 0xff;   /* layer 1, one texel */
+    layer_map->version++;
+    render(r5, le);
+    d = differ(ls, le, 0, W);
+    CHECK(d > 20, "new texels in layer 1 changed only %d texels", d);
+    t3_renderer_set_extension(r5, "layers", NULL, NULL);
+    render(r5, le);
+    CHECK(t3_renderer_info(r5)->skipped == 1, "with no hook %u draws were skipped, not 1", t3_renderer_info(r5)->skipped);
+    t3_renderer_destroy(r5);
+    t3_release(layer_index); t3_release(layer_map);
+  }
+
+  t3_release(scene); t3_release(cam);
   t3_release(other); t3_release(tint_map); t3_release(map); t3_release(g); t3_release(mat);
   t3_renderer_destroy(r); t3_renderer_destroy(r2); t3_renderer_destroy(r3);
 #ifdef T3_WGPU

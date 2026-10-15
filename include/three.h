@@ -143,10 +143,19 @@ typedef enum {
 
 /* texture.type / texture.format */
 typedef enum {
-  T3_UNSIGNED_BYTE_TYPE = 1009, T3_UNSIGNED_SHORT_TYPE = 1012, T3_UNSIGNED_INT_TYPE = 1014, T3_FLOAT_TYPE = 1015,
-  T3_HALF_FLOAT_TYPE = 1016, T3_UNSIGNED_INT_248_TYPE = 1020
+  T3_UNSIGNED_BYTE_TYPE = 1009, T3_BYTE_TYPE = 1010, T3_SHORT_TYPE = 1011, T3_UNSIGNED_SHORT_TYPE = 1012, T3_INT_TYPE = 1013,
+  T3_UNSIGNED_INT_TYPE = 1014, T3_FLOAT_TYPE = 1015, T3_HALF_FLOAT_TYPE = 1016, T3_UNSIGNED_INT_248_TYPE = 1020
 } t3_texture_type;
-typedef enum { T3_RGBA_FORMAT = 1023, T3_DEPTH_FORMAT = 1026, T3_DEPTH_STENCIL_FORMAT = 1027 } t3_texture_format;
+/* the integer formats (RedIntegerFormat, RGIntegerFormat, RGBAIntegerFormat)
+ * hold unnormalised integers of the texture's type: R32UI is
+ * T3_RED_INTEGER_FORMAT + T3_UNSIGNED_INT_TYPE, RG16UI T3_RG_INTEGER_FORMAT +
+ * T3_UNSIGNED_SHORT_TYPE, a signed type gives the signed format. A program
+ * reads them with r186's textureLoad (texelFetch / textureLoad), never
+ * filtered: keep such a texture's filters T3_NEAREST, as DataTexture's are. */
+typedef enum {
+  T3_RGBA_FORMAT = 1023, T3_DEPTH_FORMAT = 1026, T3_DEPTH_STENCIL_FORMAT = 1027,
+  T3_RED_INTEGER_FORMAT = 1029, T3_RG_INTEGER_FORMAT = 1031, T3_RGBA_INTEGER_FORMAT = 1033
+} t3_texture_format;
 
 typedef struct t3_texture {
   uint32_t _kind; int _refs;
@@ -177,6 +186,9 @@ typedef struct t3_texture {
    * r186's isRenderTargetTexture / isDepthTexture, which flip its sampling */
   bool gpu_made;
   void *_wgpu;              /* renderer-private: the WebGPU texture */
+  /* DataArrayTexture: image.depth, its layer count (pixels hold the layers
+   * one after another); 0 for any other texture */
+  int depth;
 } t3_texture;
 
 /* Takes a copy of w*h RGBA8 pixels. three.js Texture defaults: flipY,
@@ -190,6 +202,17 @@ t3_texture *t3_texture_load_memory(const void *data, size_t len);
 /* DataTexture(data, w, h, RGBAFormat, FloatType / HalfFloatType): takes a
  * copy of w*h RGBA floats (FloatType) or halves (HalfFloatType, uint16) */
 t3_texture *t3_data_texture_new_typed(int w, int h, const void *rgba, t3_texture_type type);
+/* DataTexture(data, w, h, format, type) in any format and type: takes a copy
+ * of w*h texels (channels of the format, each the type's size; zeros for a
+ * NULL data). Nearest filtered, no mipmaps, no flipY. */
+t3_texture *t3_data_texture_new_format(int w, int h, const void *data, t3_texture_format format, t3_texture_type type);
+/* DataArrayTexture(data, w, h, depth): depth layers of w*h texels, one after
+ * another, in a format and type (T3_RGBA_FORMAT + T3_UNSIGNED_BYTE_TYPE is
+ * three.js's default); sampled per layer by r186's texture(...).depth(layer).
+ * Nearest filtered, no mipmaps, no flipY, as three.js makes it. */
+t3_texture *t3_data_array_texture_new(int w, int h, int depth, const void *data, t3_texture_format format, t3_texture_type type);
+/* the bytes of one texel of a texture's format and type */
+size_t t3_texture_texel_bytes(t3_texture_format format, t3_texture_type type);
 /* DepthTexture(w, h, type): format DepthFormat (DepthStencilFormat for
  * T3_UNSIGNED_INT_248_TYPE), nearest filtered, no mipmaps; type 0 = the
  * default (UnsignedIntType). Attach it to a render target. */
