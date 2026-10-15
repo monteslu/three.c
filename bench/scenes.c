@@ -1100,6 +1100,7 @@ const bench_scene bench_scenes[] = {
   { "r7-lod", r7_setup, r7_frame, r7_probe },
   { "r9-physical-lights", r9_setup, r9_frame },
   { "r10-light-map", r10_setup, r10_frame },
+  { "r11-pmrem-probe", r11_setup, r11_frame, r11_probe_fn },
   { "a1-allocator", a1_setup, g4_frame, a1_probe },
   { "w1-world-matrix", w1_setup, w1_frame },
   { "i1-instance-color", i1_setup, i1_frame },

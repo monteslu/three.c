@@ -236,12 +236,18 @@ static t3_render_target *pm186_from_texture(t3_renderer *r, t3_texture *t, t3_re
   return rt;
 }
 
-/* fromScene: the scene drawn six times (a 90 degree camera per face) into the
- * cube-UV layout, an optional blur, then the GGX LODs */
-static t3_render_target *pm186_from_scene(t3_renderer *r, t3_scene *scene, float sigma, float near, float far, int size) {
+/* fromScene: the scene drawn six times (a 90 degree camera per face, at
+ * position) into the cube-UV layout, an optional blur, then the GGX LODs.
+ * reuse: r186's options.renderTarget, drawn into when it is the size this
+ * cube size allocates (otherwise a new target, as fromTexture does) */
+static t3_render_target *pm186_from_scene(t3_renderer *r, t3_scene *scene, float sigma, float near, float far, int size, t3_vec3 at,
+                                          t3_render_target *reuse) {
   struct pm186 *p = pm_get(r);
   pm_set_size(p, size);
-  t3_render_target *rt = pm_allocate(p, true);
+  int tw = 3 * (p->cube_size > 112 ? p->cube_size : 112), th = 4 * p->cube_size;
+  t3_render_target *rt = reuse;
+  if (!rt || rt->width != tw || rt->height != th || !rt->depth_buffer) rt = pm_allocate(p, true);
+  else t3_retain(rt);
   pm_init(r, p, rt);
   static const float up_sign[6] = { 1, 1, 1, 1, -1, 1 }, fwd[6] = { 1, -1, 1, -1, 1, -1 };
   t3_camera *cc = t3_perspective_camera_new(90, 1, near, far);
@@ -262,10 +268,10 @@ static t3_render_target *pm186_from_scene(t3_renderer *r, t3_scene *scene, float
   scene->has_background = false;
   for (int i = 0; i < 6; i++) {
     int col = i % 3;
-    cc->base.position = t3_v3(0, 0, 0);
-    if (col == 0) { cc->base.up = t3_v3(0, up_sign[i], 0); t3_object_look_at(cc, fwd[i], 0, 0); }
-    else if (col == 1) { cc->base.up = t3_v3(0, 0, up_sign[i]); t3_object_look_at(cc, 0, fwd[i], 0); }
-    else { cc->base.up = t3_v3(0, up_sign[i], 0); t3_object_look_at(cc, 0, 0, fwd[i]); }
+    cc->base.position = at;
+    if (col == 0) { cc->base.up = t3_v3(0, up_sign[i], 0); t3_object_look_at(cc, at.x + fwd[i], at.y, at.z); }
+    else if (col == 1) { cc->base.up = t3_v3(0, 0, up_sign[i]); t3_object_look_at(cc, at.x, at.y + fwd[i], at.z); }
+    else { cc->base.up = t3_v3(0, up_sign[i], 0); t3_object_look_at(cc, at.x, at.y, at.z + fwd[i]); }
     t3_object_update_matrix_world(cc, false);
     int s = p->cube_size;
     rt->viewport[0] = rt->scissor[0] = col * s; rt->viewport[1] = rt->scissor[1] = i > 2 ? s : 0;
@@ -408,8 +414,19 @@ t3_pmrem_generator *t3_pmrem_generator_new(t3_renderer *r) {
 void t3_pmrem_generator_destroy(t3_pmrem_generator *g) { free(g); }
 t3_render_target *t3_pmrem_from_cubemap(t3_pmrem_generator *g, t3_texture *cube) { return pm186_from_texture(g->r, cube, NULL); }
 t3_render_target *t3_pmrem_from_equirectangular(t3_pmrem_generator *g, t3_texture *e) { return pm186_from_texture(g->r, e, NULL); }
+t3_render_target *t3_pmrem_from_cubemap_into(t3_pmrem_generator *g, t3_texture *cube, t3_render_target *rt) {
+  return pm186_from_texture(g->r, cube, rt);
+}
+t3_render_target *t3_pmrem_from_equirectangular_into(t3_pmrem_generator *g, t3_texture *e, t3_render_target *rt) {
+  return pm186_from_texture(g->r, e, rt);
+}
 t3_render_target *t3_pmrem_from_scene(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far) {
-  return pm186_from_scene(g->r, scene, sigma, near, far, 256);
+  return pm186_from_scene(g->r, scene, sigma, near, far, 256, t3_v3(0, 0, 0), NULL);
+}
+t3_render_target *t3_pmrem_from_scene_ex(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far,
+                                         const t3_pmrem_scene_options *o) {
+  if (!o) return t3_pmrem_from_scene(g, scene, sigma, near, far);
+  return pm186_from_scene(g->r, scene, sigma, near, far, o->size > 0 ? o->size : 256, o->position, o->render_target);
 }
 
 /* ── depth passes for embedders (three.h): the shadow pass's caster programs

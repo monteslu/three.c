@@ -1220,6 +1220,24 @@ t3_render_target *t3_pmrem_from_equirectangular(t3_pmrem_generator *g, t3_textur
 /* fromScene(scene, sigma, near, far): renders the scene from the origin into
  * the six faces, a 256 cube */
 t3_render_target *t3_pmrem_from_scene(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far);
+/* fromScene's options (r186): size (the cube's face size; 0 = 256; rounded
+ * down to a power of two in 16..1024), position (where the cube camera
+ * renders from) and render_target: a target an earlier call returned, drawn
+ * into again instead of a new one being made (when it is the size `size`
+ * allocates; otherwise a new target is returned). Either way the result is a
+ * new reference the caller releases, so a probe refreshed every few frames
+ * keeps one target: rt = t3_pmrem_from_scene_ex(.., &(t3_pmrem_scene_options){
+ * .size = 64, .position = p, .render_target = old }); t3_release(old).
+ * Costs six renders of the scene at size x size, the blur when sigma > 0, and
+ * the GGX filter over the LODs (a dozen small passes). */
+typedef struct t3_pmrem_scene_options { int size; t3_vec3 position; t3_render_target *render_target; } t3_pmrem_scene_options;
+t3_render_target *t3_pmrem_from_scene_ex(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far,
+                                         const t3_pmrem_scene_options *options);
+/* fromCubemap / fromEquirectangular(texture, renderTarget): the same, drawn
+ * into rt when it is the right size (a new target otherwise); a new
+ * reference either way */
+t3_render_target *t3_pmrem_from_cubemap_into(t3_pmrem_generator *g, t3_texture *cube, t3_render_target *rt);
+t3_render_target *t3_pmrem_from_equirectangular_into(t3_pmrem_generator *g, t3_texture *equirect, t3_render_target *rt);
 const t3_render_info *t3_renderer_info(t3_renderer *r);
 /* time each render on the GPU (GL_TIME_ELAPSED_EXT queries, read back
  * without stalling) into t3_renderer_info's gpu_ms; off by default. In a

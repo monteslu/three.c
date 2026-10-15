@@ -21,7 +21,7 @@ for (let i = 0; i < a.length; i++) { if (a[i] === '--tol') tol = +a[++i]; else i
 if (wgpu) out = join(out, 'wgpu');
 mkdirSync(out, { recursive: true });
 const FEATURES = ['t1-texture', 't2-fog', 't3-shadow-dir', 't4-shadow-spot-point', 'g1-box-textured', 'g2-cesium-man', 'g3-morph-cube',
-  'g4-water-bottle', 'g5-normal-tangent', 'r1-render-target', 'r2-tone-mapping', 'r4-env-map', 'r5-pmrem', 'r6-sprite-points',
+  'g4-water-bottle', 'g5-normal-tangent', 'r1-render-target', 'r2-tone-mapping', 'r4-env-map', 'r5-pmrem', 'r11-pmrem-probe', 'r6-sprite-points',
   'r7-lod', 'r9-physical-lights', 'r10-light-map', 'w1-world-matrix', 'i1-instance-color', 't5-transparent-basic', 'p1-physical', 'p2-transmission', 't6-shadow-cover'];
 // extension programs, filled at run time (tools/extensions/tint.mjs, swell.mjs, layers.mjs, mosaic.mjs)
 FEATURES.push('e1-extension', 'e2-extension-shadow', 'e3-extension-textures', 'e4-extension-many-textures');
@@ -41,6 +41,7 @@ const R186_BUGS = {
   'p1-physical:gl': 'not an r186 defect: the native bench draws straight into its EGL pbuffer surface, where a few pixel-centre ties on triangle edges resolve differently; the same three.c frame drawn into a framebuffer object matches r186 at 0 pixels (the wasmcart GL cart, or BENCH_EXACT_OUTPUT=1)',
   't6-shadow-cover:gl': 'not an r186 defect: the native bench draws straight into its EGL pbuffer surface, where a few pixel-centre ties on triangle edges resolve differently; the same three.c frame drawn into a framebuffer object matches r186 at 0 pixels (the wasmcart GL cart, or BENCH_EXACT_OUTPUT=1)',
   'r1-render-target:gl': 'r186 WebGL shares one program between a DepthTexture map and a colour map; the first built wins (build the depth quad first and every quad reads .x)',
+  'r11-pmrem-probe:gl': 'not an r186 defect: the native bench\'s EGL pbuffer surface resolves a few triangle-edge pixel-centre ties differently (as t6-shadow-cover:gl); drawn into a framebuffer object (BENCH_EXACT_OUTPUT=1) it matches r186 at 0 pixels',
 };
 let failures = 0;
 for (const s of scenes) {

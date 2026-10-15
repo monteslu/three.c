@@ -1264,3 +1264,59 @@ static void r10_frame(void) {
   }
 }
 
+
+/* ── r11-pmrem-probe: PMREMGenerator.fromScene's options as a probe
+ * refreshed every frame into one target (size 64, a position off the
+ * origin, renderTarget); a box orbits inside the captured ring. ─────── */
+static t3_scene *r11_capture;
+static t3_mesh *r11_orbiter;
+static t3_pmrem_generator *r11_pm;
+static t3_render_target *r11_probe;
+static t3_mesh *r11_spheres[5];
+static int r11_reused; /* frames that drew into the previous frame's target */
+static double r11_probe_fn(void) { return r11_reused; }
+static const t3_vec3 R11_P = { 6, 2, -4 };
+static void r11_setup(void) {
+  R = make_renderer(0x000000);
+  r11_capture = t3_scene_new();
+  static const uint32_t colours[6] = { 0xff4040, 0x40ff40, 0x4040ff, 0xffff40, 0xff40ff, 0x40ffff };
+  static const float dirs[6][3] = { { 3, 0, 0 }, { -3, 0, 0 }, { 0, 3, 0 }, { 0, -3, 0 }, { 0, 0, 3 }, { 0, 0, -3 } };
+  for (int i = 0; i < 6; i++) {
+    t3_geometry *bg = t3_box_geometry_new(1.5f, 1.5f, 1.5f, 1, 1, 1);
+    t3_material *bm = t3_mesh_basic_material_new(colours[i]);
+    t3_mesh *b = add_mesh(&r11_capture->base, bg, bm);
+    t3_object_set_position(b, R11_P.x + dirs[i][0], R11_P.y + dirs[i][1], R11_P.z + dirs[i][2]);
+    t3_release(bg); t3_release(bm);
+  }
+  t3_geometry *og = t3_box_geometry_new(1, 1, 1, 1, 1, 1);
+  t3_material *om = t3_mesh_basic_material_new(0xffffff);
+  r11_orbiter = add_mesh(&r11_capture->base, og, om);
+  t3_release(og); t3_release(om);
+  r11_pm = t3_pmrem_generator_new(R);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(45, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 0, 9);
+  t3_object_look_at(C, 0, 0, 0);
+  t3_geometry *geo = t3_sphere_geometry_new(0.75f, 48, 24);
+  static const float rough[5] = { 0, 0.2f, 0.4f, 0.7f, 1 };
+  for (int i = 0; i < 5; i++) {
+    t3_material *m = t3_mesh_standard_material_new(0xffffff);
+    m->metalness = 1;
+    m->roughness = rough[i];
+    r11_spheres[i] = add_mesh(&S->base, geo, m);
+    t3_object_set_position(r11_spheres[i], (i - 2) * 1.9f, 0, 0);
+    t3_release(m);
+  }
+  t3_release(geo);
+}
+static void r11_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  t3_object_set_position(r11_orbiter, (float)(R11_P.x + cos(t * 2) * 2), (float)(R11_P.y + sin(t * 3)), (float)(R11_P.z + sin(t * 2) * 2));
+  t3_render_target *next = t3_pmrem_from_scene_ex(r11_pm, r11_capture, 0, 0.1f, 100,
+                                                  &(t3_pmrem_scene_options){ .size = 64, .position = R11_P, .render_target = r11_probe });
+  if (r11_probe) r11_reused += next == r11_probe, t3_release(r11_probe);
+  r11_probe = next;
+  for (int i = 0; i < 5; i++) t3_material_set_texture(r11_spheres[i]->materials[0], T3_ENV_MAP, r11_probe->texture);
+  t3_renderer_render(R, S, C);
+}
