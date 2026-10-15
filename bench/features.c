@@ -776,6 +776,64 @@ static void e1_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── e2-extension-shadow ──────────────────────────────────────────
+ * the example extension that moves vertices (tools/extensions/swell.mjs):
+ * three objects pushed along their normals by a value per object, casting
+ * with the depth+xswell caster onto a ground plane; a fourth, plain one casts
+ * with the plain caster. BENCH_EXT_NOFILL=1 registers no hook. */
+static t3_mesh *e2_meshes[4];
+static void e2_fill(t3_extension_ctx *c, void *user) {
+  static const float swells[3] = { 0.3f, 0.5f, 0.15f };
+  const t3_object *o = t3_extension_object(c);
+  float s = 0;
+  for (int i = 0; i < 3; i++) if (o == &e2_meshes[i]->base) s = swells[i];
+  t3_extension_set_uniform(c, "swell", &s, 1);
+  (void)user;
+}
+static void e2_setup(void) {
+  R = make_renderer(0x202830);
+  t3_renderer_set_shadow_map(R, true, T3_PCF_SHADOW_MAP);
+  if (!getenv("BENCH_EXT_NOFILL")) t3_renderer_set_extension(R, "swell", e2_fill, NULL);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 6, 11);
+  t3_object_look_at(C, 0, 0, 0);
+  t3_geometry *pg = t3_plane_geometry_new(20, 20, 1, 1);
+  t3_material *gm = t3_mesh_standard_material_new(0x8090a0);
+  gm->roughness = 0.9f;
+  t3_mesh *ground = add_mesh(&S->base, pg, gm);
+  t3_object_set_rotation(ground, -3.141592653589793f / 2, 0, 0);
+  ground->base.receive_shadow = true;
+  t3_material *ext = t3_mesh_standard_material_new(0xe08040), *plain = t3_mesh_standard_material_new(0x40a0e0);
+  ext->roughness = plain->roughness = 0.5f;
+  t3_material_set_extension(ext, "swell");
+  t3_geometry *geos[4] = { t3_box_geometry_new(1.2f, 1.2f, 1.2f, 4, 4, 4), t3_sphere_geometry_new(0.8f, 32, 16),
+                           t3_torus_geometry_new(0.7f, 0.25f, 16, 48, 6.283185307179586f), t3_sphere_geometry_new(0.8f, 32, 16) };
+  for (int i = 0; i < 4; i++) {
+    e2_meshes[i] = add_mesh(&S->base, geos[i], i < 3 ? ext : plain);
+    t3_object_set_position(e2_meshes[i], i * 3 - 4.5f, 1.6f, 0);
+    e2_meshes[i]->base.cast_shadow = true;
+    t3_release(geos[i]);
+  }
+  add_light(t3_ambient_light_new(0x303040, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 1.2f);
+  t3_object_set_position(sun, 3, 10, 5);
+  sun->base.cast_shadow = true;
+  sun->shadow->map_width = sun->shadow->map_height = 1024;
+  t3_camera *sc = sun->shadow->camera;
+  sc->left = -8; sc->right = 8; sc->top = 8; sc->bottom = -8; sc->near = 1; sc->far = 30;
+  t3_camera_update_projection_matrix(sc);
+  sun->shadow->bias = -0.0005f;
+  add_light(sun);
+  t3_release(pg); t3_release(gm); t3_release(ext); t3_release(plain);
+}
+static void e2_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  for (int i = 0; i < 4; i++) t3_object_set_rotation(e2_meshes[i], (float)(t * 0.6 + i), (float)(t * 0.4 + i * 0.3), 0);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── t6-shadow-cover ──────────────────────────────────────────────── */
 static t3_mesh *sc_balls[3];
 static t3_light *sc_flash;

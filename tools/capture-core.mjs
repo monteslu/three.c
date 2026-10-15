@@ -153,6 +153,7 @@ function allStates() {
     if (kind === 'standard' || kind === 'physical') out.push(`${kind}+map+nmap+ao+emap+rmap+mmap`);   // the glTF PBR set
   }
   out.push('standard+map+xtint');   // the extension hook, exercised by the example extension
+  out.push('standard+xswell', 'depth+xswell');   // an extension that moves vertices, and its shadow caster
   for (const kind of LIT) out.push(`${kind}+shadow`);
   out.push('standard+l0100+shadow', 'standard+l0010+shadow');   // point (cube depth) and spot shadows
   // (Lambert / Phong take no PMREM environment in r186: their envMap is the classic cube / equirect reflection, a later feature)
@@ -537,8 +538,9 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     const m = new THREE.Matrix4().makeRotationFromEuler(rot).transpose();
     props[own ? 'material.envMapRotation' : 'scene.environmentRotation'] = { kind: 'mat4', value: Array.from(m.elements) };
   }
-  // the depth kind keeps only the caster program's inputs
-  if (kind === 'depth') for (const k of Object.keys(props)) if (!/^(object\.|skin\.|morph\.)/.test(k)) delete props[k];
+  // the depth kind keeps only the caster program's inputs (an extension's among them: r186
+  // draws a caster with the material's positionNode and colorNode alpha)
+  if (kind === 'depth') for (const k of Object.keys(props)) if (!/^(object\.|skin\.|morph\.|ext\.)/.test(k)) delete props[k];
   if (kind === 'output') {
     for (const k of Object.keys(props)) if (!/^renderer\./.test(k)) delete props[k];
     props['renderer.toneMappingExposure'] = { kind: 'f32', value: [exposure], optional: true };   // only tone-mapped passes read it

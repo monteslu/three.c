@@ -215,10 +215,17 @@ that fills it:
   skipped, counted in `info.skipped` and named in the renderer's error.
 - Meshes with an extension are not auto-instanced: each object is its own
   draw, so its values are its own.
-- Shadow casters draw an extension material with the plain caster program.
+- Shadow casters: r186 draws the shadow pass with the material's
+  `positionNode` (and its `colorNode`'s alpha), so an extension material
+  casts with `depth+x<name>` (`depth+instbig+x<name>` and so on for the
+  object's deformations), filled by the same hook. A table without that
+  state lists it as missing and the plain caster draws.
+  `tools/extensions/swell.mjs` (vertices pushed along their normals) and the
+  `e2-extension-shadow` scene check it.
 
-`test/test_extension.c` (both backends) and the `e1-extension` scene (under
-`tools/parity-r186.mjs`, against r186 running the same TSL) check it.
+`test/test_extension.c` (both backends) and the `e1-extension` and
+`e2-extension-shadow` scenes (under `tools/parity-r186.mjs`, against r186
+running the same TSL) check it.
 
 ## renderer.info
 

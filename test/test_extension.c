@@ -11,6 +11,10 @@
  *     brings the old picture back (the shared group is uploaded on change);
  *   - the controls: with no hook, or a hook that leaves the texture unset, the
  *     two draws are skipped, counted in info.skipped and named in the error.
+ * And the example that moves vertices (tools/extensions/swell.mjs) casting a
+ * shadow onto a floor, the object itself out of view: with swell 0 the shadow
+ * equals the plain material's (plain caster), a swell grows it (the caster
+ * is depth+xswell, filled by the hook), and with no hook it is gone.
  *
  * GLES (built against build/native/libthree.a, EGL surfaceless):
  *   cc -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_extension.c \
@@ -123,6 +127,9 @@ static void fill(t3_extension_ctx *c, void *user) {
   t3_extension_set_uniform(c, "tintScale", &s, 1);
   if (set_texture) t3_extension_set_texture(c, "tintMap", tint_map);
 }
+
+static float swell;
+static void fill_swell(t3_extension_ctx *c, void *user) { (void)user; t3_extension_set_uniform(c, "swell", &swell, 1); }
 
 static t3_scene *scene;
 static t3_camera *cam;
@@ -244,8 +251,58 @@ int main(void) {
   d = differ(plain, back, 0, W);
   CHECK(d == 0 && t3_material_get_extension(mat) == NULL, "clearing the extension left %d texels changed", d);
 
+  /* the shadow of an object whose vertices the extension moves */
+  {
+    t3_scene *s2 = t3_scene_new();
+    t3_camera *c2 = t3_perspective_camera_new(40, (float)W / H, 0.1f, 50);
+    t3_object_set_position(c2, -1, 5, 0.01f);
+    t3_object_look_at(c2, -1, 0, 0);
+    t3_light *amb2 = t3_ambient_light_new(0x404040, 1), *sun2 = t3_directional_light_new(0xffffff, 1.5f);
+    t3_object_set_position(sun2, 8, 6, 0);
+    sun2->base.cast_shadow = true;
+    sun2->shadow->map_width = sun2->shadow->map_height = 512;
+    t3_object_add(&s2->base, amb2); t3_object_add(&s2->base, sun2);
+    t3_release(amb2); t3_release(sun2);
+    t3_geometry *fg = t3_plane_geometry_new(12, 12, 1, 1), *sg = t3_sphere_geometry_new(0.8f, 32, 16);
+    t3_material *fm = t3_mesh_standard_material_new(0xc0c0c0), *bm = t3_mesh_standard_material_new(0xe08040);
+    t3_mesh *floor = t3_mesh_new(fg, fm);
+    t3_object_set_rotation(floor, -3.141592653589793f / 2, 0, 0);
+    floor->base.receive_shadow = true;
+    t3_mesh *ball = t3_mesh_new(sg, bm);
+    t3_object_set_position(ball, 3, 3, 0);
+    ball->base.cast_shadow = true;
+    t3_object_add(&s2->base, floor); t3_object_add(&s2->base, ball);
+    t3_release(floor); t3_release(ball); t3_release(fg); t3_release(sg); t3_release(fm);
+    static uint8_t sp[W * H * 4], s0[W * H * 4], s1[W * H * 4], sn[W * H * 4];
+    t3_release(scene); t3_release(cam);
+    scene = s2; cam = c2;
+    t3_renderer *r4 = renderer();
+    t3_renderer_set_shadow_map(r4, true, T3_PCF_SHADOW_MAP);
+    render(r4, sp);   /* plain material, plain caster */
+    CHECK(t3_renderer_info(r4)->skipped == 0, "the plain shadow scene skipped %u draws", t3_renderer_info(r4)->skipped);
+    t3_material_set_extension(bm, "swell");
+    t3_renderer_set_extension(r4, "swell", fill_swell, NULL);
+    swell = 0;
+    render(r4, s0);
+    CHECK(t3_renderer_info(r4)->skipped == 0, "the swell scene skipped %u draws: %s (%s)", t3_renderer_info(r4)->skipped,
+          t3_renderer_last_error(r4) ? t3_renderer_last_error(r4) : "", t3_renderer_generated_missing(r4) ? t3_renderer_generated_missing(r4) : "");
+    d = differ(sp, s0, 0, W);
+    CHECK(d == 0, "a swell of 0 changed the shadow at %d texels", d);
+    swell = 0.4f;
+    render(r4, s1);
+    d = differ(s0, s1, 0, W);
+    CHECK(d > 50, "a swell of 0.4 changed the shadow at only %d texels (the caster ignores the extension)", d);
+    t3_renderer_set_extension(r4, "swell", NULL, NULL);
+    render(r4, sn);
+    CHECK(t3_renderer_info(r4)->skipped >= 1 && t3_renderer_last_error(r4) && strstr(t3_renderer_last_error(r4), "no hook for extension swell"),
+          "with no hook the caster still drew (%u skipped, error %s)", t3_renderer_info(r4)->skipped, t3_renderer_last_error(r4) ? t3_renderer_last_error(r4) : "(none)");
+    d = differ(s1, sn, 0, W);
+    CHECK(d > 50, "with no hook the shadow is still there (%d texels differ)", d);
+    t3_renderer_destroy(r4);
+    t3_release(bm); t3_release(s2); t3_release(c2);
+  }
+
   t3_release(other); t3_release(tint_map); t3_release(map); t3_release(g); t3_release(mat);
-  t3_release(scene); t3_release(cam);
   t3_renderer_destroy(r); t3_renderer_destroy(r2); t3_renderer_destroy(r3);
 #ifdef T3_WGPU
   CHECK(wgpu_errors == 0, "%d WebGPU validation errors", wgpu_errors);

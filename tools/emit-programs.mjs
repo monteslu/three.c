@@ -243,7 +243,8 @@ if (TABLE) {
   console.log(`wrote ${OUT}/${TABLE}_gl.c (${gl.n} states, ${gl.kb.toFixed(0)} KB), ${TABLE}_wgpu.c (${wgpu.n} states, ${wgpu.kb.toFixed(0)} KB)`);
   process.exit(0);
 }
-const core = states.filter((st) => CORE_KINDS.has(st.split('+')[0]));
+// (an extension's states belong to the tables of whoever uses the extension, not the renderer's own)
+const core = states.filter((st) => CORE_KINDS.has(st.split('+')[0]) && !st.split('+').some((t) => /^x/.test(t)));
 const gl = emitBackend('gl', states, 'programs_gl.c', 't3_gen_base_gl', 'ifndef');
 const wgpu = emitBackend('wgpu', states, 'programs_wgpu.c', 't3_gen_base_wgpu', 'ifndef');
 const cgl = emitBackend('gl', core, 'programs_core_gl.c', 't3_gen_base_gl', 'ifdef');

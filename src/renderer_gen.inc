@@ -823,14 +823,25 @@ static void gen_bind_shadow(t3_renderer *r, uint8_t kind, int idx, int unit) {
 
 /* the caster program for an object (r186 draws the shadow pass with an
  * override NodeMaterial: kind depth, plus the object's deformations) */
-static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t3_geometry *g) {
+static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t3_geometry *g, const t3_material *m) {
   if (g->morph_count && (g->morph_normal || o->type != T3_MESH)) return NULL;
   uint64_t f = 0;
   if (g->morph_count) f |= T3_GEN_MORPH;
   if (o->type == T3_INSTANCED_MESH) f |= T3_GEN_INSTBIG;
   if (o->type == T3_SKINNED_MESH) f |= T3_GEN_SKIN;
   /* (the caster program does not depend on the lights: look it up by name) */
-  const t3_gen_program *src = gen_by_name(r, f & T3_GEN_INSTBIG ? "depth+instbig" : f & T3_GEN_SKIN ? "depth+skin" : f & T3_GEN_MORPH ? "depth+morph" : "depth");
+  const char *base = f & T3_GEN_INSTBIG ? "depth+instbig" : f & T3_GEN_SKIN ? "depth+skin" : f & T3_GEN_MORPH ? "depth+morph" : "depth";
+  const t3_gen_program *src = NULL;
+  if (m->extension) {
+    /* r186 draws the shadow pass with the material's positionNode (and its
+     * colorNode's alpha): an extension material casts with depth+x<name>.
+     * A table without it is listed as missing, and the plain caster draws. */
+    char name[96];
+    snprintf(name, sizeof name, "%s+x%s", base, t3__extension_name(m->extension));
+    src = gen_by_name(r, name);
+    if (!src) gen_record_missing_name(r, name);
+  }
+  if (!src) src = gen_by_name(r, base);
   if (!src) { gen_record_missing(r, T3_GEN_DEPTH, f, (const uint8_t[4]){ 0, 0, 0, 0 }, NULL); return NULL; }
   t3_gen_params prm = { 0, 0, 0 };
   if (src->tpl[0] && o->type == T3_SKINNED_MESH) prm.bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
@@ -870,6 +881,7 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
     if (gl->draw_group < 0) continue;
     gen_set_aux(r, c->it.material);
     gen_fill_draw(r, gl, c->it.material, c->it.object, false);
+    gen_fill_ext(r, gl, c->it.material, c->it.object);   /* (a failure skips the draw, in gen_draw_gl) */
     uint32_t n = gl->bytes[gl->draw_group];
     const uint8_t *blk = gl->mirror[gl->draw_group];
     if (gl == prev_gl && prev_off >= 0 && !memcmp(r->cast_stage + prev_off, blk, n)) { c->it.gen_off = prev_off; continue; }
@@ -924,12 +936,13 @@ static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *s
     t3_mesh *mesh = (t3_mesh *)o;
     t3_geometry *g = mesh->geometry;
     if (g && g->attributes[T3_ATTR_POSITION] && (!o->frustum_culled || in_shadow_frustum(r, o, g))) {
-      t3_gen_gl *gl = gen_caster_program(r, o, g);
-      for (int k = 0; gl && k < (mesh->material_count > 1 && g->group_count ? g->group_count : 1); k++) {
+      for (int k = 0; k < (mesh->material_count > 1 && g->group_count ? g->group_count : 1); k++) {
         const t3_group *grp = mesh->material_count > 1 && g->group_count ? &g->groups[k] : NULL;
         int mi = grp ? grp->material_index : 0;
         if (mi < 0 || mi >= mesh->material_count || !mesh->materials[mi]->visible) continue;
         const t3_material *src = mesh->materials[mi];
+        t3_gen_gl *gl = gen_caster_program(r, o, g, src);
+        if (!gl) continue;
         render_item it = { o, g, (t3_material *)src, grp, 0, 0, 0, 0 };
         it.gen_off = -1;
 #ifdef T3_WGPU

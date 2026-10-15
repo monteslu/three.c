@@ -1086,7 +1086,9 @@ const char *t3_renderer_generated_missing(const t3_renderer *r);
  * default object group travels with the draw. A draw whose extension has no
  * hook, or whose hook left one of its textures unset, is skipped and noted
  * in the renderer's error. Meshes with an extension are never auto-instanced
- * (t3_renderer_set_auto_instancing): each object is its own draw. */
+ * (t3_renderer_set_auto_instancing): each object is its own draw. As in r186,
+ * a shadow caster draws with the material's extension too (state
+ * depth+x<name>), and the same hook fills it. */
 /* the extension a material's program carries: name as in the state's x<name>
  * ([a-z0-9_], up to 31 characters), or NULL for none; false for a bad name */
 bool t3_material_set_extension(t3_material *m, const char *name);
