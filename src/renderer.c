@@ -82,7 +82,13 @@ typedef struct {
   GLuint morph_tex;
   uint32_t morph_version;
   int pv_n;
+  uint32_t refreshed;   /* the draw_epoch its attributes were last checked in */
 } geometry_gl;
+/* Bumped by each public call that draws (render, render_depth): attribute
+ * versions only change between such calls, so a geometry drawn again in the
+ * same call (a shadow pass, the main pass, a second view) skips checking its
+ * attributes for new data. */
+static uint32_t draw_epoch = 1;
 
 static void delete_program_vaos(t3_renderer *r, geometry_gl *gg);
 
@@ -942,7 +948,7 @@ static void use_geometry_bind(t3_renderer *r, t3_object *o, t3_geometry *g, bool
       im->_gl = gg;
     }
     bind_vao(r, gg->vao);
-    refresh_attributes(g);
+    if (gg->refreshed != draw_epoch) { refresh_attributes(g); gg->refreshed = draw_epoch; }
     instance_buffer(im->instance_matrix, im->count);
     if (im->instance_color) instance_buffer(im->instance_color, im->count);
   }
@@ -970,9 +976,14 @@ static void use_plain_geometry(t3_renderer *r, t3_geometry *g, bool bind) {
   /* A batch draw does not need the plain VAO bound, except to re-upload an
    * index buffer: that binds ELEMENT_ARRAY_BUFFER, which is VAO state, and
    * would otherwise land in whichever VAO is current. */
+  if (gg->refreshed == draw_epoch) {
+    if (bind) bind_vao(r, gg->vao);
+    return;
+  }
   t3_attribute *ix = g->index;
   if (bind || (ix && ix->_gl && ((attribute_gl *)ix->_gl)->version != ix->version)) bind_vao(r, gg->vao);
   refresh_attributes(g);
+  gg->refreshed = draw_epoch;
 }
 
 static void flip_rows(uint8_t *dst, const uint8_t *src, int w, int h, size_t texel) {
@@ -2258,6 +2269,7 @@ void t3_renderer_compile(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
 }
 
 void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
+  draw_epoch++;
   r->stamp++;
   r->info.frame++;
   r->info.calls = r->info.triangles = r->info.skipped = 0;

@@ -424,6 +424,7 @@ static void depth_skeletons(t3_object *o, void *ctx) {
   }
 }
 void t3_renderer_render_depth(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
+  draw_epoch++;
   if (r->wgpu) { gen_note(r, "render_depth: on WebGPU use t3_renderer_render_depth_to (a pass needs its depth view)"); return; }
   if (scene->auto_update) t3_object_update_matrix_world(scene, false);
   if (!cam->base.parent) t3_object_update_matrix_world(cam, false);
