@@ -35,6 +35,11 @@ enum {
 #endif
 
 #define T3_GEN_MAX_GROUPS 6
+/* texture bindings a program may have, over all its groups: WebGPU's default
+ * limits (maxSampledTexturesPerShaderStage, maxSamplersPerShaderStage: 16,
+ * and a binding is visible to both stages), and 16 units on GLES 3. A
+ * program with more fails to build and says so. */
+#define T3_GEN_MAX_TEXTURES 16
 
 /* What a manifest property is: each path the generator fingerprinted maps to
  * one op the renderer knows how to fill; `idx` is the light index of
@@ -131,17 +136,17 @@ typedef struct t3_gen_gl {
   struct { GLuint ubo; uint32_t bytes; const char *source; GLuint point; uint8_t kind; } buf[T3_GEN_MAX_BUFFERS];
   /* sampler uniforms by manifest texture, set to units 0.. at build */
   int n_textures;
-  struct { GLint loc; const t3_bk_texture_layout *layout; uint8_t kind, arg; } tex[16];
+  struct { GLint loc; const t3_bk_texture_layout *layout; uint8_t kind, arg; } tex[T3_GEN_MAX_TEXTURES];
   /* the groups the frame ops and the draw ops write (bit per group) */
   uint8_t frame_groups, draw_groups;
-  /* WebGPU: each group's textures (manifest order, at most 8) by kind, and
-   * each vertex input's geometry slot or T3_ATTR_IN_* (manifest order) */
-  uint8_t wtex_kind[T3_GEN_MAX_GROUPS][8], wtex_arg[T3_GEN_MAX_GROUPS][8];
+  /* WebGPU: each vertex input's geometry slot or T3_ATTR_IN_* (manifest order) */
   int8_t attr_slot[16];
   /* WebGPU: where each group's block was last streamed (t3_wgpu_stream_keep) */
   uint32_t wtok[T3_GEN_MAX_GROUPS], woff[T3_GEN_MAX_GROUPS];
   unsigned render_stamp;   /* the render the frame ops were last run for */
   struct gen_wgpu_prog *wg;   /* the WebGPU half (gen_wgpu.c), NULL on GLES */
+  /* WebGPU: each group's textures (manifest order) by kind */
+  uint8_t wtex_kind[T3_GEN_MAX_GROUPS][T3_GEN_MAX_TEXTURES], wtex_arg[T3_GEN_MAX_GROUPS][T3_GEN_MAX_TEXTURES];
   /* an extension program's own values ("ext.<name>" in the manifest), filled
    * by the hook registered for its extension (t3_renderer_set_extension):
    * uniforms where the manifest put them, textures by slot (T3_SRC_EXT) with
@@ -150,7 +155,7 @@ typedef struct t3_gen_gl {
   uint16_t ext_id;         /* t3__extension_id(src->extension), 0 = none */
   int n_ext, n_ext_tex;
   struct { const char *name; int8_t group; uint16_t off, len; bool mat3; } ext[16];
-  struct { const char *name; t3_texture *tex; int8_t flip_group; uint16_t flip_off; } ext_tex[8];
+  struct { const char *name; t3_texture *tex; int8_t flip_group; uint16_t flip_off; } ext_tex[T3_GEN_MAX_TEXTURES];
 } t3_gen_gl;
 
 /* NULL with err set when the driver rejects the program or a name is unknown */
@@ -158,6 +163,8 @@ typedef struct t3_gen_gl {
  * for frames drawn straight to the screen with no output pass */
 t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params params, char *err, size_t errcap);
 void t3_gen_gl_free(t3_gen_gl *g);
+/* a program's texture bindings over all its groups (at most T3_GEN_MAX_TEXTURES build) */
+uint32_t t3_gen_texture_count(const t3_gen_program *src);
 /* backend-neutral part of a build (ops, draw group, constants) */
 void t3_gen_common(t3_gen_gl *g);
 /* the program text with the object's template values (gen_program.c) */

@@ -894,6 +894,67 @@ static void e3_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── e4-extension-many-textures ───────────────────────────────────
+ * the example extension with many textures (tools/extensions/mosaic.mjs):
+ * ten tiles and a height texture read in both stages, thirteen bindings in
+ * one group; a lift per object. BENCH_EXT_NOFILL=1 registers no hook. */
+enum { E4_TILES = 10 };
+static t3_mesh *e4_meshes[4];
+static t3_texture *e4_tiles[E4_TILES], *e4_height;
+static void e4_fill(t3_extension_ctx *c, void *user) {
+  static const float lifts[3] = { 0, 0.15f, 0.3f };
+  const t3_object *o = t3_extension_object(c);
+  float s = 0;
+  for (int i = 0; i < 3; i++) if (o == &e4_meshes[i]->base) s = lifts[i];
+  t3_extension_set_uniform(c, "mosaicLift", &s, 1);
+  for (int i = 0; i < E4_TILES; i++) {
+    char name[16];
+    snprintf(name, sizeof name, "tile%d", i);
+    t3_extension_set_texture(c, name, e4_tiles[i]);
+  }
+  t3_extension_set_texture(c, "height", e4_height);
+  (void)user;
+}
+static void e4_setup(void) {
+  R = make_renderer(0x202028);
+  if (!getenv("BENCH_EXT_NOFILL")) t3_renderer_set_extension(R, "mosaic", e4_fill, NULL);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 1.5f, 9);
+  t3_object_look_at(C, 0, 0, 0);
+  for (int i = 0; i < E4_TILES; i++) {
+    const uint8_t px[16] = { (uint8_t)(25 * i), (uint8_t)(255 - 20 * i), 128, 255, 200, (uint8_t)(30 * i), (uint8_t)(255 - 25 * i), 255,
+                             90, 90, (uint8_t)(20 * i), 255, 255, 255, 255, 255 };
+    e4_tiles[i] = t3_data_texture_new(2, 2, px);
+    e4_tiles[i]->mag_filter = e4_tiles[i]->min_filter = T3_LINEAR;
+  }
+  uint8_t hpx[64];
+  for (int i = 0; i < 64; i++) hpx[i] = (uint8_t)((i * 37) & 255);
+  e4_height = t3_data_texture_new(4, 4, hpx);
+  t3_material *ext = t3_mesh_standard_material_new(0xffffff), *plain = t3_mesh_standard_material_new(0xffffff);
+  ext->roughness = plain->roughness = 0.6f;
+  ext->metalness = plain->metalness = 0.1f;
+  t3_material_set_extension(ext, "mosaic");
+  t3_geometry *geos[4] = { t3_box_geometry_new(1.6f, 1.6f, 1.6f, 4, 4, 4), t3_sphere_geometry_new(1, 32, 16),
+                           t3_torus_geometry_new(0.8f, 0.3f, 16, 48, 6.283185307179586f), t3_sphere_geometry_new(1, 32, 16) };
+  for (int i = 0; i < 4; i++) {
+    e4_meshes[i] = add_mesh(&S->base, geos[i], i < 3 ? ext : plain);
+    t3_object_set_position(e4_meshes[i], -4.5f + i * 3, 0, 0);
+    t3_release(geos[i]);
+  }
+  t3_release(ext); t3_release(plain);
+  add_light(t3_ambient_light_new(0x404040, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 1.2f);
+  t3_object_set_position(sun, 3, 5, 6);
+  add_light(sun);
+}
+static void e4_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  for (int i = 0; i < 4; i++) t3_object_set_rotation(e4_meshes[i], (float)(t * 0.5 + i), (float)(t * 0.8 + i * 0.5), 0);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── t6-shadow-cover ──────────────────────────────────────────────── */
 static t3_mesh *sc_balls[3];
 static t3_light *sc_flash;

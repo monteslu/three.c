@@ -50,10 +50,10 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
       dyn[nd++] = (struct dynoff){ gl->buf[bi].ubo, t3_wgpu_stream(w, data, gl->buf[bi].bytes) };
     }
     for (int a = 1; a < nd; a++) for (int b = a; b > 0 && dyn[b - 1].binding > dyn[b].binding; b--) { struct dynoff t = dyn[b]; dyn[b] = dyn[b - 1]; dyn[b - 1] = t; }
-    WGPUTextureView views[8] = { 0 };
-    WGPUSampler samplers[8] = { 0 };
+    WGPUTextureView views[T3_GEN_MAX_TEXTURES];   /* (the first nt are set: what the bind group reads and compares) */
+    WGPUSampler samplers[T3_GEN_MAX_TEXTURES];
     int nt = 0;
-    for (uint32_t t = 0; t < L->n_textures && t < 8; t++) {
+    for (uint32_t t = 0; t < L->n_textures && t < T3_GEN_MAX_TEXTURES; t++) {
       uint8_t kind = gl->wtex_kind[gi][t], arg = gl->wtex_arg[gi][t];
       switch (kind) {
       case T3_SRC_DFG: views[nt] = wgpu_dfg(r); samplers[nt] = t3_wgpu_sampler(w, NULL, false); break;

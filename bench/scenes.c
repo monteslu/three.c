@@ -1110,6 +1110,7 @@ const bench_scene bench_scenes[] = {
   { "e1-extension", e1_setup, e1_frame },
   { "e2-extension-shadow", e2_setup, e2_frame },
   { "e3-extension-textures", e3_setup, e3_frame },
+  { "e4-extension-many-textures", e4_setup, e4_frame },
   { "q1-gpu-timer", q1_setup, q1_frame, q1_probe },
   { "x1-texture-from-gl", x1_setup, t1_frame },
   { "s1-stress", stress_setup, stress_frame, stress_probe },

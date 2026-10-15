@@ -233,13 +233,20 @@ that fills it:
   texture, which the integer data cannot bind to. Pack 16-bit values into a
   32-bit texture instead. `tools/extensions/layers.mjs` and the
   `e3-extension-textures` scene check both.
+- A program may have up to 16 texture bindings over all its groups (WebGPU's
+  default per-stage limits for textures and samplers, and GLES 3's units).
+  r186 binds a texture that both stages read twice. A program over the
+  limit (or the device's, if lower) does not build: its draws are skipped
+  and the renderer's error names it. `tools/extensions/mosaic.mjs` and the
+  `e4-extension-many-textures` scene draw thirteen.
 - A texture's sampling settings are part of the program (r186 reads a
   nearest-filtered texture with `textureLoad` and bakes wrap modes into the
   code), so an extension's textures at run time need the filters and
   wrapping its module captured them with.
 
 `test/test_extension.c` (both backends) and the `e1-extension`,
-`e2-extension-shadow` and `e3-extension-textures` scenes (under `tools/parity-r186.mjs`, against r186
+`e2-extension-shadow`, `e3-extension-textures` and
+`e4-extension-many-textures` scenes (under `tools/parity-r186.mjs`, against r186
 running the same TSL) check it.
 
 ## renderer.info

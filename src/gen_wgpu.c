@@ -12,7 +12,7 @@
 #define MAX_BG 64
 
 struct pipe { t3_wgpu_state st; WGPURenderPipeline p; };
-struct bg { WGPUTextureView views[8]; WGPUSampler samplers[8]; uint32_t gen, epoch; WGPUBindGroup g; };
+struct bg { WGPUTextureView views[T3_GEN_MAX_TEXTURES]; WGPUSampler samplers[T3_GEN_MAX_TEXTURES]; uint32_t gen, epoch; WGPUBindGroup g; };
 /* bumped when three.c releases a view it may have named in a cached bind
  * group: a cached bind group keyed by a view pointer must not match a new
  * view that reuses the address (a cart's WebGPU handles are its own heap
@@ -33,7 +33,7 @@ struct gen_wgpu_prog {
   int last_bg[T3_GEN_MAX_GROUPS];   /* the entry the group's last lookup returned (consecutive draws mostly repeat it) */
   /* per group: its textures (manifest order) and extra buffers */
   int n_tex[T3_GEN_MAX_GROUPS];
-  const t3_bk_texture_layout *tex[T3_GEN_MAX_GROUPS][8];
+  const t3_bk_texture_layout *tex[T3_GEN_MAX_GROUPS][T3_GEN_MAX_TEXTURES];
 };
 
 struct target { WGPUTexture tex; WGPUTextureView view; int w, h; WGPUTextureFormat fmt; };
@@ -140,6 +140,23 @@ static WGPUTextureViewDimension view_dim(t3_bk_tex_dim d) {
 
 t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_params params, char *err, size_t errcap) {
   if (src->n_groups > T3_GEN_MAX_GROUPS) { snprintf(err, errcap, "%s: %d groups", src->state, src->n_groups); return NULL; }
+  /* every binding is visible to both stages: the program's textures and
+   * samplers count against each stage's limit (never dropped: a program over
+   * it does not build, and the renderer names it) */
+  {
+    uint32_t nt = t3_gen_texture_count(src), ns = 0;
+    for (int i = 0; i < src->n_groups; i++)
+      for (uint32_t t = 0; t < src->groups[i]->n_textures; t++) ns += src->groups[i]->textures[t].has_sampler;
+    WGPULimits lim = { 0 };
+    uint32_t maxt = 16, maxs = 16;
+    if (wgpuDeviceGetLimits(w->dev, &lim) == WGPUStatus_Success) { maxt = lim.maxSampledTexturesPerShaderStage; maxs = lim.maxSamplersPerShaderStage; }
+    if (maxt > T3_GEN_MAX_TEXTURES) maxt = T3_GEN_MAX_TEXTURES;
+    if (maxs > T3_GEN_MAX_TEXTURES) maxs = T3_GEN_MAX_TEXTURES;
+    if (nt > maxt || ns > maxs) {
+      snprintf(err, errcap, "%s: %u textures and %u samplers, more than the %u and %u a shader stage may have", src->state, nt, ns, maxt, maxs);
+      return NULL;
+    }
+  }
   char *vsrc = t3_gen_source(src, false, err, errcap);
   if (!vsrc) return NULL;
   char *vt = t3_gen_apply_templates(vsrc, src, params, err, errcap);
@@ -171,7 +188,7 @@ t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_param
    * textures + samplers, its extra buffers (dynamic offsets too) */
   for (int i = 0; i < src->n_groups; i++) {
     const t3_bk_group_layout *L = src->groups[i];
-    WGPUBindGroupLayoutEntry e[24];
+    WGPUBindGroupLayoutEntry e[1 + 2 * T3_GEN_MAX_TEXTURES + T3_GEN_MAX_BUFFERS];
     int n = 0;
     memset(e, 0, sizeof e);
     if (wg->present[i] && L->uniform_bytes) {
@@ -185,7 +202,7 @@ t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_param
       e[n].buffer.minBindingSize = L->uniform_bytes;
       n++;
     }
-    for (uint32_t t = 0; t < L->n_textures && t < 8; t++) {
+    for (uint32_t t = 0; t < L->n_textures; t++) {   /* (counted against the limits above) */
       const t3_bk_texture_layout *T = &L->textures[t];
       wg->tex[i][wg->n_tex[i]++] = T;
       e[n].binding = T->binding;
@@ -375,7 +392,7 @@ WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextur
     }
   }
   const t3_bk_group_layout *L = g->src->groups[group];
-  WGPUBindGroupEntry e[24];
+  WGPUBindGroupEntry e[1 + 2 * T3_GEN_MAX_TEXTURES + T3_GEN_MAX_BUFFERS];
   int n = 0;
   memset(e, 0, sizeof e);
   if (g->bytes[group]) e[n++] = (WGPUBindGroupEntry){ .binding = L->uniform_binding, .buffer = w->stream, .offset = 0, .size = g->bytes[group] };

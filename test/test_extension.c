@@ -20,6 +20,10 @@
  * of all 1 draws what an index of all 0 with a shift of 1 draws (the integer
  * is read, the shift added and the layer picked); new texels in a layer, or
  * in the index, change the picture; with no hook the draw is skipped.
+ * And the example with many textures (tools/extensions/mosaic.mjs): thirteen
+ * bindings in one group, the height texture bound for both stages. New
+ * texels in the tenth tile, or in the height texture, change the picture
+ * (no binding past the eighth is dropped).
  *
  * GLES (built against build/native/libthree.a, EGL surfaceless):
  *   cc -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_extension.c \
@@ -143,6 +147,19 @@ static void fill_layers(t3_extension_ctx *c, void *user) {
   t3_extension_set_uniform(c, "layerShift", &layer_shift, 1);
   t3_extension_set_texture(c, "layerIndex", layer_index);
   t3_extension_set_texture(c, "layerMap", layer_map);
+}
+
+static t3_texture *mosaic_tiles[10], *mosaic_height;
+static void fill_mosaic(t3_extension_ctx *c, void *user) {
+  (void)user;
+  float lift = 0.2f;
+  t3_extension_set_uniform(c, "mosaicLift", &lift, 1);
+  for (int i = 0; i < 10; i++) {
+    char name[16];
+    snprintf(name, sizeof name, "tile%d", i);
+    t3_extension_set_texture(c, name, mosaic_tiles[i]);
+  }
+  t3_extension_set_texture(c, "height", mosaic_height);
 }
 
 static t3_scene *scene;
@@ -375,6 +392,45 @@ int main(void) {
     CHECK(t3_renderer_info(r5)->skipped == 1, "with no hook %u draws were skipped, not 1", t3_renderer_info(r5)->skipped);
     t3_renderer_destroy(r5);
     t3_release(layer_index); t3_release(layer_map);
+  }
+
+  /* many textures */
+  {
+    uint8_t px[16] = { 200, 120, 60, 255, 60, 200, 120, 255, 120, 60, 200, 255, 255, 255, 255, 255 };
+    for (int i = 0; i < 10; i++) {
+      mosaic_tiles[i] = t3_data_texture_new(2, 2, px);
+      mosaic_tiles[i]->mag_filter = mosaic_tiles[i]->min_filter = T3_LINEAR;
+    }
+    uint8_t hpx[64];
+    for (int i = 0; i < 64; i++) hpx[i] = (uint8_t)((i * 37) & 255);
+    mosaic_height = t3_data_texture_new(4, 4, hpx);
+    t3_mesh *plane = (t3_mesh *)scene->base.children[scene->base.child_count - 1];
+    t3_material *mm = t3_mesh_standard_material_new(0xffffff);
+    t3_material_set_extension(mm, "mosaic");
+    t3_geometry *pg = t3_plane_geometry_new(2.4f, 2.4f, 8, 8);
+    t3_mesh *mp = t3_mesh_new(pg, mm);
+    plane->base.visible = false;
+    t3_object_add(&scene->base, mp);
+    t3_release(mp); t3_release(pg); t3_release(mm);
+    static uint8_t m0[W * H * 4], m1[W * H * 4], m2[W * H * 4];
+    t3_renderer *r6 = renderer();
+    t3_renderer_set_extension(r6, "mosaic", fill_mosaic, NULL);
+    render(r6, m0);
+    CHECK(t3_renderer_info(r6)->skipped == 0, "the mosaic scene skipped %u draws: %s (%s)", t3_renderer_info(r6)->skipped,
+          t3_renderer_last_error(r6) ? t3_renderer_last_error(r6) : "", t3_renderer_generated_missing(r6) ? t3_renderer_generated_missing(r6) : "");
+    for (int i = 0; i < 16; i += 4) { mosaic_tiles[9]->pixels[i] ^= 0xff; mosaic_tiles[9]->pixels[i + 2] ^= 0xff; }
+    mosaic_tiles[9]->version++;
+    render(r6, m1);
+    d = differ(m0, m1, 0, W);
+    CHECK(d > 500, "new texels in the tenth tile changed only %d texels", d);
+    for (int i = 0; i < 64; i++) mosaic_height->pixels[i] = (uint8_t)(255 - mosaic_height->pixels[i]);
+    mosaic_height->version++;
+    render(r6, m2);
+    d = differ(m1, m2, 0, W);
+    CHECK(d > 500, "a new height texture changed only %d texels", d);
+    t3_renderer_destroy(r6);
+    for (int i = 0; i < 10; i++) t3_release(mosaic_tiles[i]);
+    t3_release(mosaic_height);
   }
 
   t3_release(scene); t3_release(cam);

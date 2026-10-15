@@ -359,8 +359,19 @@ static uint8_t source_kind(const t3_gen_gl *g, const char *s, uint8_t *arg) {
   return t3_gen_source_kind(s, arg);
 }
 
+/* a program's texture bindings over all its groups */
+uint32_t t3_gen_texture_count(const t3_gen_program *src) {
+  uint32_t n = 0;
+  for (int i = 0; i < src->n_groups; i++) n += src->groups[i]->n_textures;
+  return n;
+}
+
 t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params params, char *err, size_t errcap) {
   if (src->n_groups > T3_GEN_MAX_GROUPS) { snprintf(err, errcap, "%s: %d groups", src->state, src->n_groups); return NULL; }
+  if (t3_gen_texture_count(src) > T3_GEN_MAX_TEXTURES) {
+    snprintf(err, errcap, "%s: %u texture bindings, more than the %d a program may have", src->state, t3_gen_texture_count(src), T3_GEN_MAX_TEXTURES);
+    return NULL;
+  }
   char *vsrc = t3_gen_source(src, false, err, errcap);
   if (!vsrc) return NULL;
   char *vt = apply_templates(vsrc, src, params, err, errcap);
@@ -448,7 +459,7 @@ t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params
   glUseProgram(prog);
   for (uint32_t i = 0; i < src->n_groups; i++) {
     const t3_bk_group_layout *L = src->groups[i];
-    for (uint32_t t = 0; t < L->n_textures && g->n_textures < 16; t++) {
+    for (uint32_t t = 0; t < L->n_textures && g->n_textures < T3_GEN_MAX_TEXTURES; t++) {
       GLint loc = glGetUniformLocation(prog, L->textures[t].name);
       if (loc >= 0) {
         glUniform1i(loc, g->n_textures);
@@ -537,7 +548,7 @@ void t3_gen_common(t3_gen_gl *g) {
   for (int i = 0; i < g->n_buffers; i++) { uint8_t a; g->buf[i].kind = t3_gen_source_kind(g->buf[i].source, &a); }
   for (int i = 0; i < src->n_groups && i < T3_GEN_MAX_GROUPS; i++) {
     const t3_bk_group_layout *L = src->groups[i];
-    for (uint32_t t = 0; t < L->n_textures && t < 8; t++) g->wtex_kind[i][t] = source_kind(g, L->textures[t].source, &g->wtex_arg[i][t]);
+    for (uint32_t t = 0; t < L->n_textures && t < T3_GEN_MAX_TEXTURES; t++) g->wtex_kind[i][t] = source_kind(g, L->textures[t].source, &g->wtex_arg[i][t]);
   }
   bool inst = false;
   for (int a = 0; a < src->n_attributes && a < 16; a++) {

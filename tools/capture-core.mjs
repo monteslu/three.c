@@ -155,6 +155,7 @@ function allStates() {
   out.push('standard+map+xtint');   // the extension hook, exercised by the example extension
   out.push('standard+xswell', 'depth+xswell');   // an extension that moves vertices, and its shadow caster
   out.push('standard+xlayers');   // an extension with an array texture and an integer texture
+  out.push('standard+xmosaic');   // an extension with more textures than a bind group used to hold, one read in both stages
   for (const kind of LIT) out.push(`${kind}+shadow`);
   out.push('standard+l0100+shadow', 'standard+l0010+shadow');   // point (cube depth) and spot shadows
   // (Lambert / Phong take no PMREM environment in r186: their envMap is the classic cube / equirect reflection, a later feature)
