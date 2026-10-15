@@ -135,5 +135,8 @@ uint8_t *t3_gen_gl_op(t3_gen_gl *g, const struct t3_gen_op *op);
 /* bind and upload what changed: the frame groups (and the draw group too when
  * draw_group < 0) */
 void t3_gen_gl_flush(t3_gen_gl *g);
+/* bumped whenever the program tables change (a table registered, a program
+ * built at runtime): a renderer's cached lookups are stale then */
+unsigned t3_gen_tables_serial(void);
 
 #endif

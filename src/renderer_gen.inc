@@ -90,9 +90,21 @@ static const t3_gen_program *gen_by_name(const t3_renderer *r, const char *name)
  * either way) */
 static bool tex_nearest(const t3_texture *t) { return t->mag_filter == T3_NEAREST && t->min_filter == T3_NEAREST; }
 
-/* the table state for an item, or NULL (with *why set) */
-static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *m, const t3_object *o, const t3_geometry *g,
-                                       bool batched, const char **why) {
+/* What picks an item's program: the table state (kind, features, the
+ * frame's light vector and shadow casters) and what the object puts in the
+ * program's template (bones, morph targets), with the output encoding. Equal
+ * keys pick the same program, so a renderer looks programs up by key
+ * (gen_pick) and searches the tables only for a key it has not seen. */
+typedef struct {
+  uint64_t f;
+  uint8_t kind, shadow, enc, cast[3], want[4];
+  uint16_t bones, morphs, morph_width;
+} gen_key;
+struct gen_slot { gen_key key; t3_gen_gl *gl; bool used; };
+
+/* the table state for an item: false (with *why set) when no state fits */
+static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_object *o, const t3_geometry *g,
+                          bool batched, const char **why, gen_key *key) {
   t3_gen_kind kind;
   switch (m->type) {
   case T3_MESH_BASIC_MATERIAL: kind = T3_GEN_BASIC; break;
@@ -104,15 +116,15 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
   case T3_POINTS_MATERIAL: kind = T3_GEN_POINTS; break;      /* r186 draws a Points object as 1-pixel GL points */
   case T3_LINE_BASIC_MATERIAL: kind = T3_GEN_LINE; break;
   case T3_SPRITE_MATERIAL: kind = T3_GEN_SPRITE; break;
-  default: *why = "material kind"; return NULL;
+  default: *why = "material kind"; return false;
   }
   bool lineish = o->type == T3_LINE || o->type == T3_LINE_SEGMENTS || o->type == T3_LINE_LOOP;
   if (kind == T3_GEN_POINTS ? o->type != T3_POINTS : kind == T3_GEN_LINE ? !lineish : kind == T3_GEN_SPRITE ? o->type != T3_SPRITE
-      : (o->type != T3_MESH && o->type != T3_INSTANCED_MESH && o->type != T3_SKINNED_MESH)) { *why = "object kind"; return NULL; }
-  if (g->morph_count && !g->morph_position) { *why = "morph targets without positions"; return NULL; }
+      : (o->type != T3_MESH && o->type != T3_INSTANCED_MESH && o->type != T3_SKINNED_MESH)) { *why = "object kind"; return false; }
+  if (g->morph_count && !g->morph_position) { *why = "morph targets without positions"; return false; }
   if (o->type == T3_SKINNED_MESH) {
     const t3_skeleton *sk = ((const t3_skinned_mesh *)o)->skeleton;
-    if (!sk || sk->bone_count < 1 || sk->bone_count > 256) { *why = "skeleton missing or over 256 bones (r186's bone-texture path)"; return NULL; }
+    if (!sk || sk->bone_count < 1 || sk->bone_count > 256) { *why = "skeleton missing or over 256 bones (r186's bone-texture path)"; return false; }
   }
   /* (material / renderer clippingPlanes: r186's node renderer ignores them, its
    * clipping is ClippingGroup; the generated path does the same) */
@@ -125,18 +137,18 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
   if (m->env_map) {
     const t3_texture *e = m->env_map;
     if (pbr) {
-      if (!(e->is_cube || e->mapping == T3_CUBE_UV_REFLECTION_MAPPING || e->mapping == T3_EQUIRECTANGULAR_REFLECTION_MAPPING)) { *why = "envMap mapping"; return NULL; }
+      if (!(e->is_cube || e->mapping == T3_CUBE_UV_REFLECTION_MAPPING || e->mapping == T3_EQUIRECTANGULAR_REFLECTION_MAPPING)) { *why = "envMap mapping"; return false; }
       f |= T3_GEN_ENV;
     } else if (kind == T3_GEN_BASIC || kind == T3_GEN_LAMBERT || kind == T3_GEN_PHONG) {
-      if (!e->is_cube) { *why = "a Basic / Lambert / Phong envMap that is not a CubeTexture"; return NULL; }
+      if (!e->is_cube) { *why = "a Basic / Lambert / Phong envMap that is not a CubeTexture"; return false; }
       f |= T3_GEN_CENV;
       if (e->mapping == T3_CUBE_REFRACTION_MAPPING) f |= T3_GEN_REFR;
       if (m->combine == T3_MIX_OPERATION) f |= T3_GEN_MIX;
       else if (m->combine == T3_ADD_OPERATION) f |= T3_GEN_ADD;
-    } else { *why = "envMap on this material kind"; return NULL; }
+    } else { *why = "envMap on this material kind"; return false; }
   } else if (pbr && r->environment) {
     const t3_texture *e = r->environment;
-    if (!(e->is_cube || e->mapping == T3_CUBE_UV_REFLECTION_MAPPING || e->mapping == T3_EQUIRECTANGULAR_REFLECTION_MAPPING)) { *why = "scene.environment mapping"; return NULL; }
+    if (!(e->is_cube || e->mapping == T3_CUBE_UV_REFLECTION_MAPPING || e->mapping == T3_EQUIRECTANGULAR_REFLECTION_MAPPING)) { *why = "scene.environment mapping"; return false; }
     f |= T3_GEN_SENV;
   }
   if (m->normal_map) { f |= T3_GEN_NMAP; if (g->attributes[T3_ATTR_TANGENT]) f |= T3_GEN_TAN; }
@@ -163,7 +175,7 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
   if (m->map) {
     f |= T3_GEN_MAP;
     if (m->map->wrap_s == T3_REPEAT && m->map->wrap_t == T3_REPEAT) f |= T3_GEN_REP;
-    else if (m->map->wrap_s != T3_CLAMP_TO_EDGE || m->map->wrap_t != T3_CLAMP_TO_EDGE) { *why = "map wrapping"; return NULL; }
+    else if (m->map->wrap_s != T3_CLAMP_TO_EDGE || m->map->wrap_t != T3_CLAMP_TO_EDGE) { *why = "map wrapping"; return false; }
     /* (a depth map is nearest by default, which its state already implies) */
     if (m->map->format == T3_DEPTH_FORMAT || m->map->format == T3_DEPTH_STENCIL_FORMAT) {
       f |= T3_GEN_DMAP;
@@ -174,7 +186,7 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
     else if (tex_nearest(m->map)) f |= T3_GEN_NEAREST;
   }
   if (m->vertex_colors) {
-    if (!g->attributes[T3_ATTR_COLOR] || g->attributes[T3_ATTR_COLOR]->item_size != 3) { *why = "vertex colors that are not rgb"; return NULL; }
+    if (!g->attributes[T3_ATTR_COLOR] || g->attributes[T3_ATTR_COLOR]->item_size != 3) { *why = "vertex colors that are not rgb"; return false; }
     f |= T3_GEN_VCOL;
   }
   if (r->fog && m->fog) f |= r->fog->type == T3_FOG_LINEAR ? T3_GEN_FOG : T3_GEN_FOG2;
@@ -188,7 +200,7 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
   if (m->alpha_test > 0) f |= T3_GEN_ATEST;
   if ((kind == T3_GEN_SPRITE) && !m->size_attenuation) f |= T3_GEN_NOATTEN;
   if (m->flat_shading && (kind == T3_GEN_NORMAL || (kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL))) f |= T3_GEN_FLAT;
-  if (m->wireframe || m->premultiplied_alpha || m->dithering) { *why = "wireframe / premultiplied / dithering"; return NULL; }
+  if (m->wireframe || m->premultiplied_alpha || m->dithering) { *why = "wireframe / premultiplied / dithering"; return false; }
   /* shadows: r186 keys the program on receiveShadow when a light casts; the
    * table's +shadow states have every light of the vector casting */
   bool shadow = false;
@@ -202,7 +214,7 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
       bool plain_seen = false;
       for (int i = 0; i < num[t]; i++) {
         bool c = arr[t][i]->base.cast_shadow && arr[t][i]->shadow;
-        if (c && plain_seen) { *why = "a shadow-casting light after a plain one of its type (by id)"; return NULL; }
+        if (c && plain_seen) { *why = "a shadow-casting light after a plain one of its type (by id)"; return false; }
         if (c) cast[t]++; else plain_seen = true;
       }
     }
@@ -217,6 +229,28 @@ static const t3_gen_program *gen_state(const t3_renderer *r, const t3_material *
   if (kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL) {
     want[0] = (uint8_t)r->ls.num_dir; want[1] = (uint8_t)r->ls.num_point; want[2] = (uint8_t)r->ls.num_spot; want[3] = (uint8_t)r->ls.num_hemi;
   }
+  memset(key, 0, sizeof *key);
+  key->f = f;
+  key->kind = (uint8_t)kind;
+  key->shadow = shadow;
+  if (shadow) memcpy(key->cast, cast, 3);
+  memcpy(key->want, want, 4);
+  key->enc = r->gen_direct;
+  if (o->type == T3_SKINNED_MESH) key->bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
+  if (g->morph_count) {
+    int w = g->attributes[T3_ATTR_POSITION]->count * (g->morph_normal ? 2 : 1);
+    key->morphs = (uint16_t)g->morph_count;
+    key->morph_width = (uint16_t)(w > 4096 ? 4096 : w);
+  }
+  return true;
+}
+
+/* the table state for a key, or NULL (with *why set) */
+static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key *key, const char **why) {
+  t3_gen_kind kind = (t3_gen_kind)key->kind;
+  uint64_t f = key->f;
+  bool shadow = key->shadow;
+  const uint8_t *cast = key->cast, *want = key->want;
   const t3_gen_program *best = NULL;
   int best_cost = 1 << 30;
   const t3_gen_table *const *tables;
@@ -334,18 +368,68 @@ static t3_gen_gl *gen_program_p(t3_renderer *r, const t3_gen_program *src, bool 
 }
 
 /* the program an item takes, or NULL (the state is not in the table: the draw is skipped) */
+static uint64_t gen_key_hash(const gen_key *k) {
+  uint64_t w[3];
+  memcpy(w, k, sizeof w);
+  uint64_t h = w[0] * 0x9E3779B97F4A7C15ull;
+  h = (h ^ (h >> 29) ^ w[1]) * 0xBF58476D1CE4E5B9ull;
+  h = (h ^ (h >> 31) ^ w[2]) * 0x94D049BB133111EBull;
+  return h ^ (h >> 32);
+}
+/* the key's slot in the renderer's lookup table: its own, or the empty one it would take */
+static struct gen_slot *gen_slot_of(t3_renderer *r, const gen_key *k) {
+  size_t mask = r->gen_slot_cap - 1;
+  for (size_t i = (size_t)gen_key_hash(k) & mask;; i = (i + 1) & mask) {
+    struct gen_slot *s = &r->gen_slots[i];
+    if (!s->used || !memcmp(&s->key, k, sizeof *k)) return s;
+  }
+}
+static void gen_slots_reset(t3_renderer *r, size_t cap) {
+  free(r->gen_slots);
+  r->gen_slots = calloc(cap, sizeof *r->gen_slots);
+  T3_CHECK_ALLOC(r->gen_slots);
+  r->gen_slot_cap = cap;
+  r->gen_slot_n = 0;
+}
+/* the program an item takes, or NULL (the state is not in the table: the draw is skipped) */
 static t3_gen_gl *gen_pick(t3_renderer *r, const t3_material *m, const t3_object *o, const t3_geometry *g, bool batched) {
+  _Static_assert(sizeof(gen_key) == 24, "gen_key is hashed as three words");
   const char *why = "";
-  const t3_gen_program *src = gen_state(r, m, o, g, batched, &why);
-  if (!src) { gen_note(r, why); r->info.skipped++; return NULL; }
-  t3_gen_params prm = { 0, 0, 0 };
-  if (src->tpl[0] && o->type == T3_SKINNED_MESH) prm.bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
-  gen_morph_params(src, g, &prm);
-  t3_gen_gl *gl = gen_program_p(r, src, r->gen_direct, prm);
+  gen_key key;
+  if (!gen_state_key(r, m, o, g, batched, &why, &key)) { gen_note(r, why); r->info.skipped++; return NULL; }
+  unsigned serial = t3_gen_tables_serial();
+  if (!r->gen_slots || r->gen_slot_serial != serial) { gen_slots_reset(r, 64); r->gen_slot_serial = serial; }
+  struct gen_slot *slot = gen_slot_of(r, &key);
+  t3_gen_gl *gl;
+  if (slot->used) gl = slot->gl;
+  else {
+    const t3_gen_program *src = gen_state_find(r, &key, &why);
+    if (!src) { gen_note(r, why); r->info.skipped++; return NULL; }
+    t3_gen_params prm = { 0, 0, 0 };
+    if (src->tpl[0] && o->type == T3_SKINNED_MESH) prm.bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
+    gen_morph_params(src, g, &prm);
+    gl = gen_program_p(r, src, r->gen_direct, prm);
+    /* (a runtime build changes the tables: the next pick starts a fresh lookup table) */
+    if (r->gen_slot_serial == t3_gen_tables_serial()) {
+      if ((r->gen_slot_n + 1) * 2 > r->gen_slot_cap) {
+        struct gen_slot *old = r->gen_slots;
+        size_t n = r->gen_slot_cap;
+        r->gen_slots = NULL;
+        gen_slots_reset(r, n * 2);
+        for (size_t i = 0; i < n; i++) if (old[i].used) { *gen_slot_of(r, &old[i].key) = old[i]; r->gen_slot_n++; }
+        free(old);
+        slot = gen_slot_of(r, &key);
+      }
+      slot->used = true;
+      slot->key = key;
+      slot->gl = gl;
+      r->gen_slot_n++;
+    }
+  }
   if (!gl || !gl->complete) { r->info.skipped++; return NULL; }
   static int dbg = -1;
   if (dbg < 0) dbg = getenv("T3_GEN_DEBUG") != NULL;
-  if (dbg && r->stamp != gl->render_stamp) fprintf(stderr, "[gen] %s lights %d/%d/%d/%d frame ops %d ops %d\n", src->state, r->ls.num_dir, r->ls.num_point, r->ls.num_spot, r->ls.num_hemi, gl->n_frame_ops, gl->n_ops);
+  if (dbg && r->stamp != gl->render_stamp) fprintf(stderr, "[gen] %s lights %d/%d/%d/%d frame ops %d ops %d\n", gl->src->state, r->ls.num_dir, r->ls.num_point, r->ls.num_spot, r->ls.num_hemi, gl->n_frame_ops, gl->n_ops);
   return gl;
 }
 

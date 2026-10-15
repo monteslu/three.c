@@ -532,12 +532,16 @@ static int n_gl, n_wgpu;
 static t3_gen_table built[2][T3_BUILT_BLOCKS];
 static int n_built[2];
 static const t3_gen_table *all_tables[2][T3_MAX_TABLES + T3_BUILT_BLOCKS + 1];
+static unsigned tables_serial = 1;
+unsigned t3_gen_tables_serial(void) { return tables_serial; }
 void t3_register_program_table(const struct t3_gen_table *gl_table, const struct t3_gen_table *wgpu_table) {
+  tables_serial++;
   if (gl_table && n_gl < T3_MAX_TABLES) tables_gl[n_gl++] = gl_table;
   if (wgpu_table && n_wgpu < T3_MAX_TABLES) tables_wgpu[n_wgpu++] = wgpu_table;
 }
 const t3_gen_program *t3_gen_add_built(const t3_gen_program *p) {
   int b = p->backend == T3_GEN_WGPU;
+  tables_serial++;
   t3_gen_table *t = n_built[b] ? &built[b][n_built[b] - 1] : NULL;
   if (!t || t->count == T3_BUILT_BLOCK) {
     if (n_built[b] == T3_BUILT_BLOCKS) t3__fatal("the runtime builder made more programs than it has room for");

@@ -285,6 +285,9 @@ struct t3_renderer {
   GLint gen_align;
   GLuint gen_bound_buf[T3_GEN_MAX_GROUPS]; int gen_bound_off[T3_GEN_MAX_GROUPS];
   int gen_n, gen_cap;
+  /* program lookups by key (renderer_gen.inc gen_pick), open addressing;
+   * cleared when the program tables change (t3_gen_tables_serial) */
+  struct gen_slot *gen_slots; size_t gen_slot_cap, gen_slot_n; unsigned gen_slot_serial;
   /* r186 renders the scene into a linear (half float) target and a final pass
    * applies the output colour space (and tone mapping); on when the output
    * encoding is sRGB or a tone mapping is set, for the screen target only */
@@ -396,6 +399,7 @@ void t3_renderer_destroy(t3_renderer *r) {
 #else
   for (int i = 0; i < r->gen_n; i++) t3_gen_gl_free(r->gen[i].gl);
 #endif
+  free(r->gen_slots);
   free(r->gen);
   if (r->out_fbo) { glDeleteFramebuffers(1, &r->out_fbo); glDeleteTextures(1, &r->out_tex); glDeleteRenderbuffers(1, &r->out_depth); }
   if (r->out_vao) { glDeleteVertexArrays(1, &r->out_vao); glDeleteBuffers(1, &r->out_vbo); }
