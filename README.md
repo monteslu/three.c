@@ -75,11 +75,15 @@ For embedders: `t3_set_allocator`, world matrices the embedder owns
 (`t3_object_set_matrix_world`), per-render GPU timing, the shadow caster pass
 into any target (`t3_renderer_render_depth`, GLES), and GL / WebGPU hooks to
 draw into the embedder's own framebuffer, command encoder and swapchain view.
+Custom shading is written as r186 TSL in a generator extension, captured into
+a program table like any other state, and filled at run time from a C hook
+(`t3_material_set_extension`, `t3_renderer_set_extension`; see
+docs/r186-renderer.md, "Extension programs").
 
 Not covered yet: wireframe, premultipliedAlpha, dithering, mirrored repeat
 on a map, a texture's `channel` (a second UV set), an equirectangular
-background without blurriness, and the node materials' own extension points
-(TSL). A draw the program tables do not cover is skipped and named by
+background without blurriness, and TSL written at run time (an extension's
+TSL is captured offline). A draw the program tables do not cover is skipped and named by
 `t3_renderer_generated_missing`.
 
 ## How it draws

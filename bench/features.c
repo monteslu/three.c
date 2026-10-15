@@ -713,6 +713,69 @@ static void xm_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── e1-extension ─────────────────────────────────────────────────
+ * three.c's example extension program (tools/extensions/tint.mjs, state
+ * standard+map+xtint): one material on three objects, its tint (a shared
+ * uniform, changed every frame), tintMap (a texture) and tintScale (per
+ * object) filled by the hook; a fourth object draws the same material
+ * without the extension. BENCH_EXT_NOFILL=1 registers no hook: the three
+ * extension draws are skipped, the control that must not match. */
+static t3_mesh *e1_meshes[4];
+static t3_texture *e1_tint_map;
+static float e1_tint[3] = { 1, 1, 1 };
+static void e1_fill(t3_extension_ctx *c, void *user) {
+  static const float scales[3] = { 0.6f, 1, 1.4f };
+  const t3_object *o = t3_extension_object(c);
+  float s = 1;
+  for (int i = 0; i < 3; i++) if (o == &e1_meshes[i]->base) s = scales[i];
+  t3_extension_set_uniform(c, "tint", e1_tint, 3);
+  t3_extension_set_uniform(c, "tintScale", &s, 1);
+  t3_extension_set_texture(c, "tintMap", e1_tint_map);
+  (void)user;
+}
+static t3_texture *e1_checker(int n, const uint8_t a[3], const uint8_t b[3]) {
+  t3_texture *t = checker(n, a, b);
+  t->mag_filter = T3_LINEAR; t->min_filter = T3_LINEAR_MIPMAP_LINEAR; t->generate_mipmaps = true;
+  return t;
+}
+static void e1_setup(void) {
+  R = make_renderer(0x202028);
+  if (!getenv("BENCH_EXT_NOFILL")) t3_renderer_set_extension(R, "tint", e1_fill, NULL);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 1.5f, 9);
+  t3_object_look_at(C, 0, 0, 0);
+  const uint8_t m1[3] = { 230, 200, 160 }, m2[3] = { 250, 250, 250 }, t1[3] = { 255, 120, 60 }, t2[3] = { 80, 160, 255 };
+  t3_texture *map = e1_checker(32, m1, m2);
+  e1_tint_map = e1_checker(16, t1, t2);
+  t3_material *ext = t3_mesh_standard_material_new(0xffffff), *plain = t3_mesh_standard_material_new(0xffffff);
+  t3_material *mats[2] = { ext, plain };
+  for (int i = 0; i < 2; i++) { t3_material_set_map(mats[i], map); mats[i]->roughness = 0.5f; mats[i]->metalness = 0.1f; }
+  t3_material_set_extension(ext, "tint");
+  t3_geometry *geos[4] = { t3_box_geometry_new(1.6f, 1.6f, 1.6f, 1, 1, 1), t3_sphere_geometry_new(1, 32, 16),
+                           t3_torus_geometry_new(0.8f, 0.3f, 16, 48, 6.283185307179586f), t3_sphere_geometry_new(1, 32, 16) };
+  for (int i = 0; i < 4; i++) {
+    e1_meshes[i] = add_mesh(&S->base, geos[i], i < 3 ? ext : plain);
+    t3_object_set_position(e1_meshes[i], -4.5f + i * 3, 0, 0);
+    t3_release(geos[i]);
+  }
+  t3_release(ext); t3_release(plain); t3_release(map);
+  add_light(t3_ambient_light_new(0x404040, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 0.9f);
+  t3_object_set_position(sun, 3, 5, 6);
+  add_light(sun);
+  t3_light *lamp = t3_point_light_new(0xffe0c0, 6, 0, 2);
+  t3_object_set_position(lamp, -2, 2, 3);
+  add_light(lamp);
+}
+static void e1_frame(void) {
+  frame_no++;
+  double t = frame_no / 60.0;
+  e1_tint[0] = 1; e1_tint[1] = (float)(0.6 + 0.4 * sin(t)); e1_tint[2] = 0.8f;
+  for (int i = 0; i < 4; i++) t3_object_set_rotation(e1_meshes[i], (float)(t * 0.5 + i), (float)(t * 0.8 + i * 0.5), 0);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── t6-shadow-cover ──────────────────────────────────────────────── */
 static t3_mesh *sc_balls[3];
 static t3_light *sc_flash;

@@ -14,7 +14,7 @@ run test_math ./build/test/test_math
   src/{math,core,geometry,curves,animation,raycaster,loaders,gltf,renderer,backend_gles,gen_program}.c \
   src/gen/programs_gl.c src/gen/programs_dfg.c -w -lGLESv2 -lm -o build/test/test_free
 run test_free ./build/test/test_free
-for t in test_backend_seam test_shared_geometry test_instance_color test_gl_transmission_fbo; do
+for t in test_backend_seam test_shared_geometry test_instance_color test_gl_transmission_fbo test_extension; do
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done
@@ -73,7 +73,13 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
   set +e; ./build/test/test_wgpu_external > build/test/test_wgpu_external.log 2>&1; st=$?; set -e
   if [ $st = 0 ]; then echo "ok    test_wgpu_external"; elif [ $st = 77 ]; then echo "skip  test_wgpu_external (no WebGPU adapter)"
   else echo "FAIL  test_wgpu_external"; grep -v '^Warning' build/test/test_wgpu_external.log; fail=1; fi
+  # an extension program filled at run time, on WebGPU (the GLES run is in the loop above)
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_extension.c \
+    build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_wgpu
+  set +e; ./build/test/test_extension_wgpu > build/test/test_extension_wgpu.log 2>&1; st=$?; set -e
+  if [ $st = 0 ]; then echo "ok    test_extension_wgpu"; elif [ $st = 77 ]; then echo "skip  test_extension_wgpu (no WebGPU adapter)"
+  else echo "FAIL  test_extension_wgpu"; grep -v '^Warning' build/test/test_extension_wgpu.log; fail=1; fi
 else
-  echo "skip  test_wgpu_external (no WGPU=1 build or no native-dawn)"
+  echo "skip  test_wgpu_external, test_extension_wgpu (no WGPU=1 build or no native-dawn)"
 fi
 exit $fail

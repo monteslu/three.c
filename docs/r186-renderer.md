@@ -76,7 +76,8 @@ with `+`:
 - **`sDPS`:** how many directional, point and spot lights cast shadows.
 - **`z<n>`:** the PMREM target size, for `pmremggx` and `pmremblur`.
 - **`x<name>`:** an extension module (`tools/extensions/<name>.mjs`) that
-  adds TSL nodes and uniforms of its own before the capture.
+  adds TSL nodes and uniforms of its own before the capture (see
+  "Extension programs").
 
 `allStates()` in `tools/gen-programs.mjs` is the base table.
 `tools/gen-states.txt` adds the states three.c's own scenes and tests draw;
@@ -156,7 +157,68 @@ turned into a program by the same code the emitter uses
   core-table cart grows from 0.9 MB to 5.6 MB of wasm, more than the 1.25 MB
   of a full-table cart). The thread that renders needs a little over 1 MB of stack for a
   build (QuickJS's own bound); `wasm/build.sh` gives a builder cart 4 MB.
-- Generator extensions (`tools/extensions/`) are offline only.
+- Generator extensions are offline only: an x-state no table has is listed
+  as missing, not built.
+
+## Extension programs
+
+An application's own shading is written the way a three.js r186 application
+writes it: TSL on the material. A generator extension is a module that
+exports `name` and `apply()`; `apply` gets the capture scene (`THREE`,
+`TSL`, `mat`, `mesh`, `props`, `sentinel`, ...) and changes the material
+before the capture, for example:
+
+    const tint = uniform(new THREE.Color()).setName('tint');
+    tint.setGroup(sharedUniformGroup('tintFrame', 0, THREE.NodeUpdateType.RENDER));
+    mat.colorNode = materialColor.mul(tint).mul(texture(map, uv()).rgb).mul(scale);
+
+- A uniform the application fills at run time gets a sentinel value and is
+  registered as `props['ext.<name>']`, so the fingerprint finds its bytes.
+- A texture the application binds is named `ext.<name>` (`texture.name`),
+  which becomes the binding's source in the manifest.
+- A uniform in the default object group travels with each draw; one in a
+  group of its own (`sharedUniformGroup`, with an update type, as r186's own
+  `renderGroup`) is uploaded only when its bytes change. r186 names a GLSL
+  uniform block after its group, so a group needs a name none of its
+  uniforms has.
+
+The state takes `x<name>` (`standard+map+xtint`) and is captured and emitted
+like any other. three.c's own table carries only `xtint`
+(`tools/extensions/tint.mjs`, which its tests draw). A project keeps its
+modules and states in its own tree:
+
+    node tools/gen-project-table.mjs --name mygame --out gen/ --states mygame-states.txt \
+        --extend path/to/terrain.mjs
+
+At run time a material picks the extension and a renderer registers the hook
+that fills it:
+
+    static void fill_tint(t3_extension_ctx *c, void *user) {
+      const struct game *g = user;
+      float scale = object_scale(g, t3_extension_object(c));
+      t3_extension_set_uniform(c, "tint", g->tint, 3);
+      t3_extension_set_uniform(c, "tintScale", &scale, 1);
+      t3_extension_set_texture(c, "tintMap", g->tint_map);
+    }
+    t3_material_set_extension(m, "tint");
+    t3_renderer_set_extension(r, "tint", fill_tint, game);
+
+- The material's extension is part of its program key: the renderer picks the
+  table program whose state has the same kind, features, lights and `x<name>`.
+- The hook runs for each draw of an extension program, as r186's
+  `onObjectUpdate` does, on GLES and WebGPU alike; it may run more than once
+  for a draw (GLES fills the frame's per-draw blocks before drawing), so it
+  only sets values. Uniforms land where the manifest put them; textures bind
+  with the program's other textures, and a texture's `flipY` flag follows
+  the texture (`gpu_made`).
+- A draw whose extension has no hook, or whose hook left a texture unset, is
+  skipped, counted in `info.skipped` and named in the renderer's error.
+- Meshes with an extension are not auto-instanced: each object is its own
+  draw, so its values are its own.
+- Shadow casters draw an extension material with the plain caster program.
+
+`test/test_extension.c` (both backends) and the `e1-extension` scene (under
+`tools/parity-r186.mjs`, against r186 running the same TSL) check it.
 
 ## renderer.info
 
