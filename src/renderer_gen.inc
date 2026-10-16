@@ -738,10 +738,11 @@ static bool gen_fill_ext(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, co
       return gen_note(r, buf);
     }
     /* r186 TextureNode flipY: a texture the GPU drew is stored flipped */
-    if (gl->ext_tex[t].flip_group >= 0 && gl->mirror[gl->ext_tex[t].flip_group]) {
-      uint32_t v = tx->gpu_made;
-      ext_put(gl, gl->ext_tex[t].flip_group, gl->ext_tex[t].flip_off, &v, 4);
-    }
+    for (int k = 0; k < gl->ext_tex[t].n_flip; k++)
+      if (gl->mirror[gl->ext_tex[t].flip_group[k]]) {
+        uint32_t v = tx->gpu_made;
+        ext_put(gl, gl->ext_tex[t].flip_group[k], gl->ext_tex[t].flip_off[k], &v, 4);
+      }
   }
   return true;
 }

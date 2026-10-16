@@ -490,7 +490,7 @@ void t3_gen_common(t3_gen_gl *g) {
       if (!so || strncmp(so, "ext.", 4) || ext_tex_slot(g, so) >= 0) continue;
       if (g->n_ext_tex == (int)(sizeof g->ext_tex / sizeof g->ext_tex[0])) { g->complete = false; snprintf(g->unsupported, sizeof g->unsupported, "%s (too many extension textures)", so); continue; }
       g->ext_tex[g->n_ext_tex].name = so + 4;
-      g->ext_tex[g->n_ext_tex].flip_group = -1;
+      g->ext_tex[g->n_ext_tex].n_flip = 0;
       g->n_ext_tex++;
     }
   for (int k = 0; k < src->n_properties; k++) {
@@ -503,7 +503,13 @@ void t3_gen_common(t3_gen_gl *g) {
       int slot = -1;
       for (int t = 0; t < g->n_ext_tex; t++)
         if (strlen(g->ext_tex[t].name) == nl - 10 && !strncmp(g->ext_tex[t].name, pr->path + 4, nl - 10)) slot = t;
-      if (slot >= 0) { g->ext_tex[slot].flip_group = (int8_t)pr->group; g->ext_tex[slot].flip_off = pr->offset; continue; }
+      if (slot >= 0) {
+        if (g->ext_tex[slot].n_flip == T3_GEN_MAX_FLIPS) { g->complete = false; snprintf(g->unsupported, sizeof g->unsupported, "%s (sampled too many times)", pr->path); continue; }
+        int n = g->ext_tex[slot].n_flip++;
+        g->ext_tex[slot].flip_group[n] = (int8_t)pr->group;
+        g->ext_tex[slot].flip_off[n] = pr->offset;
+        continue;
+      }
     }
     if (g->n_ext == (int)(sizeof g->ext / sizeof g->ext[0])) { g->complete = false; snprintf(g->unsupported, sizeof g->unsupported, "%s (too many extension uniforms)", pr->path); continue; }
     g->ext[g->n_ext].name = pr->path + 4;

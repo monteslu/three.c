@@ -731,7 +731,10 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
   // framebuffer textures and flipped ImageBitmaps; GL only) is a uint the
   // capture's DataTextures leave 0. The shader reads it as
   // `v = bool( nodeUniformK )` just before sampling its texture: pair each flag
-  // with the next texture( ... ) call's sampler, whose binding names the source
+  // with the next texture( ... ) call's sampler, whose binding names the source.
+  // A texture sampled more than once (PMREM's two mip levels, an extension's
+  // atlas read at several places) has a flag per sample: the first is
+  // <source>.flipY, the others <source>.flipY#1, #2 ... (a copy of the same value)
   if (backend === 'gl') {
     const frag = stagesText().fragment;
     const re = /bool\( (nodeUniform\d+) \)|texture(?:Lod|Grad)?\( (nodeUniform\d+),|texelFetch\( (nodeUniform\d+),/g;
@@ -743,7 +746,13 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
       const tex = groups.flatMap((G) => G.bindings).find((B) => B.kind === 'texture' && B.name === sampler);
       for (const G of groups) for (const B of G.bindings) if (B.kind === 'uniforms') {
         const u = B.uniforms.find((x) => x.name === pend);
-        if (u && tex && tex.source) map[`${tex.source}.flipY`] = { group: G.name, binding: B.name, byteOffset: u.offset, byteLength: 4 };
+        if (!u || !tex || !tex.source) continue;
+        const hit = { group: G.name, binding: B.name, byteOffset: u.offset, byteLength: 4 };
+        const same = (h) => h && h.group === hit.group && h.binding === hit.binding && h.byteOffset === hit.byteOffset;
+        const base = `${tex.source}.flipY`;
+        let key = base;
+        for (let k = 1; map[key] && !same(map[key]); k++) key = `${base}#${k}`;
+        map[key] = hit;
       }
       pend = null;
     }

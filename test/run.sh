@@ -20,6 +20,8 @@ for t in test_backend_seam test_shared_geometry test_instance_color test_gl_tran
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done
+# a texture sampled twice has a flipY flag per sample, all in the property map (mock GPU)
+run test_flip_copies node test/test_flip_copies.mjs
 # a project's own program table with three.c's core table: the same picture as the full table
 if [ -d build/gen-programs ] && ls build/gen-programs/standard+map+nearest.gl.json >/dev/null 2>&1; then
   T3_TABLE=core ./build.sh >/dev/null 2>&1

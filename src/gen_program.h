@@ -40,6 +40,7 @@ enum {
  * and a binding is visible to both stages), and 16 units on GLES 3. A
  * program with more fails to build and says so. */
 #define T3_GEN_MAX_TEXTURES 16
+#define T3_GEN_MAX_FLIPS 16 /* flipY flags of one extension texture (one per sample) */
 
 /* What a manifest property is: each path the generator fingerprinted maps to
  * one op the renderer knows how to fill; `idx` is the light index of
@@ -155,7 +156,9 @@ typedef struct t3_gen_gl {
   uint16_t ext_id;         /* t3__extension_id(src->extension), 0 = none */
   int n_ext, n_ext_tex;
   struct { const char *name; int8_t group; uint16_t off, len; bool mat3; } ext[16];
-  struct { const char *name; t3_texture *tex; int8_t flip_group; uint16_t flip_off; } ext_tex[T3_GEN_MAX_TEXTURES];
+  /* an extension texture and its flipY flags: one per sample of it in the
+   * program (a texture read at several places has several), n_flip of them */
+  struct { const char *name; t3_texture *tex; uint8_t n_flip; int8_t flip_group[T3_GEN_MAX_FLIPS]; uint16_t flip_off[T3_GEN_MAX_FLIPS]; } ext_tex[T3_GEN_MAX_TEXTURES];
 } t3_gen_gl;
 
 /* NULL with err set when the driver rejects the program or a name is unknown */
