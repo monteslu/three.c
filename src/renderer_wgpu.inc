@@ -95,7 +95,11 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
       case T3_SRC_EXT: {   /* (gen_fill_ext has checked it is set) */
         t3_texture *tx = gl->ext_tex[arg].tex;
         views[nt] = t3_wgpu_texture(w, tx);
-        samplers[nt] = t3_wgpu_sampler(w, tx, false);
+        /* a DepthTexture the extension samples with compare (r186's
+         * texture(depth).compare(ref), a comparison sampler in the layout):
+         * a LessEqual comparison sampler, linear unless the texture is nearest */
+        samplers[nt] = L->textures[t].compare_sampler ? t3_wgpu_compare_sampler(w, tx->mag_filter != T3_NEAREST)
+                                                      : t3_wgpu_sampler(w, tx, false);
         if (!views[nt]) return false;
         break;
       }

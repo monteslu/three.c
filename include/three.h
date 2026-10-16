@@ -1127,8 +1127,11 @@ const t3_material *t3_extension_material(const t3_extension_ctx *c);
  * mat3 (column-major), 16 for a mat4. false when the program has no such
  * uniform (also when the driver optimised it out) or n does not fit it */
 bool t3_extension_set_uniform(t3_extension_ctx *c, const char *name, const float *v, int n);
-/* texture "ext.<name>", sampled as the extension's texture() node samples it;
- * false when the program has no such texture */
+/* texture "ext.<name>", sampled as the extension's texture() node samples it
+ * (a DepthTexture the extension samples with compare, r186's
+ * texture(depth).compare(ref), gets a LessEqual comparison sampler on WebGPU,
+ * linear unless the texture is nearest filtered; on GLES the GL texture's own
+ * compare mode applies); false when the program has no such texture */
 bool t3_extension_set_texture(t3_extension_ctx *c, const char *name, t3_texture *t);
 /* Render with WebGPU instead of GLES (three.c built with T3_WGPU): device and
  * queue are a WGPUDevice and its WGPUQueue (core webgpu.h), out_format the
@@ -1199,9 +1202,11 @@ void t3_renderer_set_external_encoder(t3_renderer *r, uintptr_t wgpu_command_enc
 /* t3_renderer_render_depth into a caller's depth-only target rect: color is
  * the depth-only framebuffer on GLES (depth the view, depth_format its
  * format, on WebGPU; the only depth render there), LOAD unless
- * load_depth is false (then the rect is cleared to clear_depth first), the
- * rect as viewport and scissor, so many tiles of one shadow atlas survive
- * each other. Leaves the framebuffer, viewport and scissor as it set them,
+ * load_depth is false (then the rect is cleared to clear_depth first; on
+ * WebGPU a render pass clears its whole attachment, so there the whole view
+ * is cleared: clear a tile with a draw of your own and render it with
+ * load_depth true), the rect as viewport and scissor, so many tiles of one
+ * shadow atlas survive each other. Leaves the framebuffer, viewport and scissor as it set them,
  * like t3_renderer_render_depth leaves the caller's. */
 void t3_renderer_render_depth_to(t3_renderer *r, t3_scene *scene, t3_camera *camera, const t3_external_target *depth_only);
 

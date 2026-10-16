@@ -17,7 +17,7 @@
 // everything twice and fails on any difference (the generator must be
 // deterministic).
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
-import { join, dirname, resolve } from 'node:path';
+import { join, dirname, resolve, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
@@ -78,7 +78,7 @@ const EXTRA = existsSync(join(ROOT, 'tools', 'gen-states.txt'))
 const states = opt.states === 'all' ? [...new Set([...allStates(), ...EXTRA])] : opt.states.split(',');
 for (const st of states) parseState(st);   // every name parses before any capture runs
 async function loadExtension(name) {
-  const cands = [...(opt.extend || []), join(ROOT, 'tools', 'extensions', name + '.mjs')].filter((f) => existsSync(f) && (f.endsWith('/' + name + '.mjs') || f.endsWith(name + '.mjs')));
+  const cands = [...(opt.extend || []), join(ROOT, 'tools', 'extensions', name + '.mjs')].filter((f) => existsSync(f) && basename(f) === name + '.mjs');   // (exactly: xcsm must not load clustercsm.mjs)
   if (!cands.length) throw new Error(`extension ${name}: no module (tools/extensions/${name}.mjs or --extend <path>)`);
   const m = await import(pathToFileURL(cands[0]).href);
   if (typeof m.apply !== 'function') throw new Error(`extension ${name}: the module exports no apply()`);
