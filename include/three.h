@@ -1108,8 +1108,9 @@ const char *t3_renderer_generated_missing(const t3_renderer *r);
  * (sharedUniformGroup) is uploaded only when its bytes change; one in r186's
  * default object group travels with the draw. A draw whose extension has no
  * hook, or whose hook left one of its textures unset, is skipped and noted
- * in the renderer's error. Meshes with an extension are never auto-instanced
- * (t3_renderer_set_auto_instancing): each object is its own draw. As in r186,
+ * in the renderer's error. Meshes with an extension are not auto-instanced
+ * (t3_renderer_set_auto_instancing) unless t3_renderer_set_extension_batching
+ * says the hook reads nothing of the object. As in r186,
  * a shadow caster draws with the material's extension too (state
  * depth+x<name>), and the same hook fills it. */
 /* the extension a material's program carries: name as in the state's x<name>
@@ -1120,6 +1121,13 @@ typedef struct t3_extension_ctx t3_extension_ctx;
 typedef void (*t3_extension_fill)(t3_extension_ctx *ctx, void *user);
 /* the renderer's hook for an extension; fill NULL removes it */
 void t3_renderer_set_extension(t3_renderer *r, const char *name, t3_extension_fill fill, void *user);
+/* on: the extension's hook reads nothing of the object it fills for (no
+ * t3_extension_object; per-frame values, and values auto-instancing keeps
+ * equal across a batch: render order, receive_shadow), so meshes whose
+ * material carries it are auto-instanced as any other (the hook runs once a
+ * batch, with its first mesh). Off by default. three.c's own (three.js
+ * renders each mesh on its own). */
+void t3_renderer_set_extension_batching(t3_renderer *r, const char *name, bool on);
 /* what the draw being filled draws */
 const t3_object *t3_extension_object(const t3_extension_ctx *c);
 const t3_material *t3_extension_material(const t3_extension_ctx *c);

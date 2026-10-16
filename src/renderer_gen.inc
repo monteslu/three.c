@@ -726,6 +726,19 @@ void t3_renderer_set_extension(t3_renderer *r, const char *name, t3_extension_fi
   r->ext_hooks[h].fill = fill;
   r->ext_hooks[h].user = user;
 }
+void t3_renderer_set_extension_batching(t3_renderer *r, const char *name, bool on) {
+  uint16_t id = t3__extension_id(name);
+  if (!id) return;
+  int i = 0;
+  while (i < r->ext_batch_n && r->ext_batch[i] != id) i++;
+  if (!on) {
+    if (i < r->ext_batch_n) r->ext_batch[i] = r->ext_batch[--r->ext_batch_n];
+    return;
+  }
+  if (i < r->ext_batch_n) return;
+  if (r->ext_batch_n == (int)(sizeof r->ext_batch / sizeof r->ext_batch[0])) { gen_note(r, "t3_renderer_set_extension_batching: too many extensions"); return; }
+  r->ext_batch[r->ext_batch_n++] = id;
+}
 /* run the hook for a draw of an extension program: false (noted) when the
  * extension has no hook or the hook left a texture unset, and the draw is
  * skipped */

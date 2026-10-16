@@ -20,6 +20,18 @@ for t in test_backend_seam test_shared_geometry test_instance_color test_gl_tran
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done
+# extension materials auto-instanced (t3_renderer_set_extension_batching): a table of the test's
+# own (the tint example, plain and instanced), captured on the mock GPU
+mkdir -p build/test/exttab
+printf 'standard+map+l1000+xtint\nstandard+map+instbig+l1000+xtint\n' > build/test/exttab/states.txt
+if node tools/gen-project-table.mjs --name exttab --out build/test/exttab --states build/test/exttab/states.txt \
+     --cache build/test/exttab/cache --extend tools/extensions/tint.mjs >/dev/null 2>&1; then
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_extension_batch.c build/test/exttab/exttab_gl.c \
+    build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_batch
+  run test_extension_batch env EGL_PLATFORM=surfaceless ./build/test/test_extension_batch
+else
+  echo "FAIL  test_extension_batch (gen-project-table)"; fail=1
+fi
 # a texture sampled twice has a flipY flag per sample, all in the property map (mock GPU)
 run test_flip_copies node test/test_flip_copies.mjs
 # a project's own program table with three.c's core table: the same picture as the full table
@@ -83,6 +95,14 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
   set +e; ./build/test/test_extension_wgpu > build/test/test_extension_wgpu.log 2>&1; st=$?; set -e
   if [ $st = 0 ]; then echo "ok    test_extension_wgpu"; elif [ $st = 77 ]; then echo "skip  test_extension_wgpu (no WebGPU adapter)"
   else echo "FAIL  test_extension_wgpu"; grep -v '^Warning' build/test/test_extension_wgpu.log; fail=1; fi
+  if [ -f build/test/exttab/exttab_wgpu.c ]; then
+    "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_extension_batch.c \
+      build/test/exttab/exttab_gl.c build/test/exttab/exttab_wgpu.c build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn \
+      -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_batch_wgpu
+    set +e; ./build/test/test_extension_batch_wgpu > build/test/test_extension_batch_wgpu.log 2>&1; st=$?; set -e
+    if [ $st = 0 ]; then echo "ok    test_extension_batch_wgpu"; elif [ $st = 77 ]; then echo "skip  test_extension_batch_wgpu (no WebGPU adapter)"
+    else echo "FAIL  test_extension_batch_wgpu"; grep -v '^Warning' build/test/test_extension_batch_wgpu.log; fail=1; fi
+  fi
   # ... and on a compatibility-mode device (as wasmcart gives carts): a texture binds only with the view dimension it was made with
   set +e; ./build/test/test_extension_wgpu compat > build/test/test_extension_wgpu_compat.log 2>&1; st=$?; set -e
   if [ $st = 0 ]; then echo "ok    test_extension_wgpu_compat"; elif [ $st = 77 ]; then echo "skip  test_extension_wgpu_compat (no WebGPU adapter)"

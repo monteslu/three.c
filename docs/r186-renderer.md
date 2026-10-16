@@ -214,7 +214,10 @@ that fills it:
 - A draw whose extension has no hook, or whose hook left a texture unset, is
   skipped, counted in `info.skipped` and named in the renderer's error.
 - Meshes with an extension are not auto-instanced: each object is its own
-  draw, so its values are its own.
+  draw, so its values are its own. `t3_renderer_set_extension_batching(r,
+  name, true)` says the extension's hook reads nothing of the object (only
+  per-frame values): its meshes are then auto-instanced like any other (the
+  table needs the `+instbig` state too), and the hook runs once a batch.
 - Shadow casters: r186 draws the shadow pass with the material's
   `positionNode` (and its `colorNode`'s alpha), so an extension material
   casts with `depth+x<name>` (`depth+instbig+x<name>` and so on for the
