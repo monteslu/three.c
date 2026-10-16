@@ -477,7 +477,17 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
           float p[16];
           memcpy(p, cam->projection_matrix.e, 64);
           double n = cam->near, f = cam->far;
-          if (cam->base.type == T3_PERSPECTIVE_CAMERA) { p[10] = (float)(-f / (f - n)); p[14] = (float)(-f * n / (f - n)); }
+          if (cam->base.type == T3_PERSPECTIVE_CAMERA) {
+            /* a projection the application edited (an oblique near plane:
+             * r186's ReflectorNode replaces the third row) is not the one
+             * near / far build: remap its z row as clip space does instead,
+             * z' = 0.5 z + 0.5 w, which keeps the edit */
+            if (p[2] == 0 && p[6] == 0 && p[10] == (float)(-(f + n) / (f - n)) && p[14] == (float)(-2 * f * n / (f - n))) {
+              p[10] = (float)(-f / (f - n)); p[14] = (float)(-f * n / (f - n));
+            } else {
+              for (int c = 0; c < 4; c++) p[c * 4 + 2] = 0.5f * p[c * 4 + 2] + 0.5f * p[c * 4 + 3];
+            }
+          }
           else { p[10] = (float)(-1 / (f - n)); p[14] = (float)(-n / (f - n)); }
           memcpy(b, p, 64);
         }
