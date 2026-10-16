@@ -10,6 +10,8 @@ fail=0
 run() { local name=$1; shift; if "$@"; then echo "ok    $name"; else echo "FAIL  $name"; fail=1; fi; }
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_math.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_math
 run test_math ./build/test/test_math
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_attr_locations.c build/native/libthree.a -Wl,--allow-multiple-definition -lEGL -lGLESv2 -lz -lm -o build/test/test_attr_locations
+run test_attr_locations ./build/test/test_attr_locations
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include test/test_no_gl.c build/native/libthree.a -lz -lm -o build/test/test_no_gl
 run test_no_gl ./build/test/test_no_gl
 "$CC" -std=c99 -g -fsanitize=address -D_POSIX_C_SOURCE=200809L -I include -I src test/test_free.c \

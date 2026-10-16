@@ -12,6 +12,7 @@ static int fixed_location(const char *name) {
   if (!strcmp(name, "position")) return A_POSITION;
   if (!strcmp(name, "normal")) return A_NORMAL;
   if (!strcmp(name, "uv")) return A_UV;
+  if (!strcmp(name, "uv1")) return A_UV1;
   if (!strcmp(name, "color")) return A_COLOR;
   if (!strcmp(name, "tangent")) return A_TANGENT;
   if (!strcmp(name, "skinIndex")) return A_SKIN_INDEX;
