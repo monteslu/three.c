@@ -40,7 +40,9 @@ enum {
  * and a binding is visible to both stages), and 16 units on GLES 3. A
  * program with more fails to build and says so. */
 #define T3_GEN_MAX_TEXTURES 16
-#define T3_GEN_MAX_FLIPS 16 /* flipY flags of one extension texture (one per sample) */
+/* flipY flags of one extension texture, one per sample of it: a splat terrain samples
+ * each layer array 24 times (base and overlay, triplanar, near and far) */
+#define T3_GEN_MAX_FLIPS 64
 
 /* What a manifest property is: each path the generator fingerprinted maps to
  * one op the renderer knows how to fill; `idx` is the light index of

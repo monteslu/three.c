@@ -22,15 +22,19 @@ for t in test_backend_seam test_shared_geometry test_instance_color test_gl_tran
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done
-# extension materials auto-instanced (t3_renderer_set_extension_batching): a table of the test's
-# own (the tint example, plain and instanced), captured on the mock GPU
+# extension materials auto-instanced (t3_renderer_set_extension_batching) and a texture sampled 24
+# times: a table of the tests' own (the tint example, plain and instanced; many), captured on the mock GPU
 mkdir -p build/test/exttab
-printf 'standard+map+l1000+xtint\nstandard+map+instbig+l1000+xtint\n' > build/test/exttab/states.txt
+printf 'standard+map+l1000+xtint\nstandard+map+instbig+l1000+xtint\nstandard+xmany\n' > build/test/exttab/states.txt
 if node tools/gen-project-table.mjs --name exttab --out build/test/exttab --states build/test/exttab/states.txt \
-     --cache build/test/exttab/cache --extend tools/extensions/tint.mjs >/dev/null 2>&1; then
+     --cache build/test/exttab/cache --extend tools/extensions/tint.mjs --extend test/extensions/many.mjs >/dev/null 2>&1; then
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_extension_batch.c build/test/exttab/exttab_gl.c \
     build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_batch
   run test_extension_batch env EGL_PLATFORM=surfaceless ./build/test/test_extension_batch
+  # an extension texture sampled 24 times (a splat terrain's layer arrays) still draws on GLES
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_many_samples.c build/test/exttab/exttab_gl.c \
+    build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_many_samples
+  run test_many_samples env EGL_PLATFORM=surfaceless ./build/test/test_many_samples
 else
   echo "FAIL  test_extension_batch (gen-project-table)"; fail=1
 fi
