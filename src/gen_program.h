@@ -157,7 +157,9 @@ typedef struct t3_gen_gl {
    * other program reads none of it. */
   uint16_t ext_id;         /* t3__extension_id(src->extension), 0 = none */
   int n_ext, n_ext_tex;
-  struct { const char *name; int8_t group; uint16_t off, len; bool mat3; } ext[16];
+  /* the extension's own uniforms: a stack of shading parts on one material has
+   * dozens (a splat terrain under clustered lights and cascades: 21) */
+  struct { const char *name; int8_t group; uint16_t off, len; bool mat3; } ext[64];
   /* an extension texture and its flipY flags: one per sample of it in the
    * program (a texture read at several places has several), n_flip of them */
   struct { const char *name; t3_texture *tex; uint8_t n_flip; int8_t flip_group[T3_GEN_MAX_FLIPS]; uint16_t flip_off[T3_GEN_MAX_FLIPS]; } ext_tex[T3_GEN_MAX_TEXTURES];

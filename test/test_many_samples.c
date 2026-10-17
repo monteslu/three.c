@@ -1,10 +1,13 @@
-/* An extension texture sampled at many places (test/extensions/many.mjs: 24
- * samples, as a splat terrain samples its layer arrays) draws: its GL program
- * has a flipY flag per sample, and each must find a slot. Before 0.186.16 a
- * texture had room for 16 flags, so the program was refused as incomplete
+/* An extension as large as a stack of shading parts draws
+ * (test/extensions/many.mjs): a texture sampled at 24 places, as a splat
+ * terrain samples its layer arrays (its GL program has a flipY flag per
+ * sample, and each must find a slot), and 40 uniforms of its own. Before
+ * 0.186.16 a texture had room for 16 flags, and before 0.186.17 a program for
+ * 16 extension uniforms; past either the program was refused as incomplete
  * and every mesh carrying it was silently not drawn (Terrain3D's near
- * patches). Checks: the draw happens (one call, none skipped, no error) and
- * the plane shows white texels where it covers the frame; the control, the
+ * patches; the terrain under clustered lights and cascades, 21 uniforms).
+ * Checks: the draw happens (one call, none skipped, no error) and the plane
+ * shows white texels where it covers the frame; the control, the
  * same scene without the plane, must leave those texels at the clear colour.
  *
  * Built and run by test/run.sh on GLES (build/test/exttab: standard+xmany). */
@@ -43,6 +46,12 @@ static t3_texture *many_map;
 static void fill(t3_extension_ctx *c, void *user) {
   (void)user;
   t3_extension_set_texture(c, "manyMap", many_map);
+  static const float one = 1;
+  for (int i = 0; i < 40; i++) {
+    char name[16];
+    snprintf(name, sizeof name, "many%d", i);
+    t3_extension_set_uniform(c, name, &one, 1);
+  }
 }
 
 int main(void) {
@@ -81,6 +90,6 @@ int main(void) {
   int lit0 = 0;
   for (int i = 0; i < W * H; i++) lit0 += px[i * 4] > 200;
   if (lit0) { fprintf(stderr, "FAIL CONTROL: %d white texels with no plane: the check sees nothing\n", lit0); failures++; }
-  printf("test_many_samples: a texture sampled 24 times draws (%d white texels; %d without the plane)%s\n", lit, lit0, failures ? "" : ", ok");
+  printf("test_many_samples: a texture sampled 24 times and 40 uniforms draw (%d white texels; %d without the plane)%s\n", lit, lit0, failures ? "" : ", ok");
   return failures ? 1 : 0;
 }
