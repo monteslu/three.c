@@ -65,7 +65,9 @@ Bone / Skeleton, morph targets (positions and normals), render targets
 tone mapping (Linear, Reinhard, Cineon, ACESFilmic, AgX, Neutral),
 environment maps (PMREM cube-UV for Standard / Physical, cube reflection and
 refraction for Basic / Lambert / Phong), PMREMGenerator (fromCubemap,
-fromEquirectangular, fromScene), scene backgrounds and scene.environment,
+fromEquirectangular, fromScene with its size, position and renderTarget
+options, each able to draw into a target it made before, as a reflection
+probe refreshed every few frames does), scene backgrounds and scene.environment,
 Sprite and Points, Line, LOD, Raycaster, curves, AnimationMixer, a glTF 2.0
 loader (cgltf + stb_image: PBR materials, skins, morph targets, animations)
 and BufferGeometryLoader. Header-only bridges to Box2D v3 (`three_box2d.h`)
@@ -73,12 +75,17 @@ and Box3D (`three_box3d.h`).
 
 For embedders: `t3_set_allocator`, world matrices the embedder owns
 (`t3_object_set_matrix_world`), per-render GPU timing, the shadow caster pass
-into any target (`t3_renderer_render_depth`, GLES), and GL / WebGPU hooks to
-draw into the embedder's own framebuffer, command encoder and swapchain view.
-Custom shading is written as r186 TSL in a generator extension, captured into
-a program table like any other state, and filled at run time from a C hook
-(`t3_material_set_extension`, `t3_renderer_set_extension`; see
-docs/r186-renderer.md, "Extension programs").
+into any target (`t3_renderer_render_depth`, GLES), the opaque queue alone
+(`t3_renderer_render_opaque`, alpha-tested cutouts included) and a depth
+prepass of it that writes no colour and skips the background and output pass
+(`t3_renderer_render_prepass`, GLES), and GL / WebGPU hooks to draw into the
+embedder's own framebuffer, command encoder and swapchain view. Custom
+shading is written as r186 TSL in a generator extension, captured into a
+program table like any other state, and filled at run time from a C hook
+(`t3_material_set_extension`, `t3_renderer_set_extension`, and
+`t3_renderer_set_extension_batching` to auto-instance an extension whose hook
+reads only per-frame values; see docs/r186-renderer.md, "Extension
+programs").
 
 Not covered yet: wireframe, premultipliedAlpha, dithering, mirrored repeat
 on a map, a texture's `channel` (a second UV set), an equirectangular
@@ -180,10 +187,17 @@ What makes it fast:
 
 - automatic instancing: opaque meshes that share a geometry and a material
   are drawn as one instanced draw with r186's instanced program
+- an InstancedMesh's changed instance data goes to the GPU, on GLES, as new
+  buffer storage for the instances drawn (`glBufferData`, not an update in
+  place), so the upload never waits for the GPU to finish reading the
+  previous frame's copy
 - per-draw uniform blocks are streamed from one buffer per frame (one upload
   on GLES, dynamic offsets on WebGPU); per-frame uniforms are filled once per
   program; GL state, pipelines and bind groups are cached
 - the scene is flattened and culled in one pass, with a stable merge sort
+  (`t3_renderer_set_sort_bounds` sorts opaque meshes by their world bounding
+  sphere's centre instead of their origin, for geometry built far from its
+  object's origin, such as merged world-space chunks and instanced scenery)
 - SIMD matrix math, LTO, no per-frame allocation
 
 ## Build

@@ -10,6 +10,16 @@ fail=0
 run() { local name=$1; shift; if "$@"; then echo "ok    $name"; else echo "FAIL  $name"; fail=1; fi; }
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_math.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_math
 run test_math ./build/test/test_math
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -ffunction-sections -fdata-sections -I include -I src \
+  test/test_shadow_cache.c -Wl,--gc-sections -lGLESv2 -lm -o build/test/test_shadow_cache
+run test_shadow_cache ./build/test/test_shadow_cache
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -ffunction-sections -fdata-sections -I include -I src test/test_instance_stream.c -Wl,--gc-sections -lGLESv2 -lm -o build/test/test_instance_stream
+run test_instance_stream ./build/test/test_instance_stream
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -ffunction-sections -fdata-sections -I include -I src test/test_prepass_mask.c -Wl,--gc-sections -lGLESv2 -lm -o build/test/test_prepass_mask
+run test_prepass_mask ./build/test/test_prepass_mask
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -ffunction-sections -fdata-sections -I include -I src \
+  test/test_scene_sort.c build/native/libthree.a -Wl,--gc-sections -lGLESv2 -lm -o build/test/test_scene_sort
+run test_scene_sort ./build/test/test_scene_sort
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_attr_locations.c build/native/libthree.a -Wl,--allow-multiple-definition -lEGL -lGLESv2 -lz -lm -o build/test/test_attr_locations
 run test_attr_locations ./build/test/test_attr_locations
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include test/test_no_gl.c build/native/libthree.a -lz -lm -o build/test/test_no_gl

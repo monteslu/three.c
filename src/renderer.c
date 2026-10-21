@@ -143,6 +143,8 @@ struct t3_renderer {
   void *pm186;            /* r186's PMREM generator state (renderer_env.inc) */
   t3_scene *env_scene;    /* the scene being rendered (its environment intensity / rotation) */
 
+  bool opaque_only; /* scoped by t3_renderer_render_opaque */
+  bool depth_prepass; /* suppress colour output and background for GLES prepass */
   render_list opaque, transparent, scratch;
   /* transmission (r186): double-sided transmissive items, drawn back faces
    * first; and per render, the framebuffer copied once for each side at its
@@ -170,6 +172,7 @@ struct t3_renderer {
    * instance attribute. Same pixels as drawing them one by one (r186's
    * instanced program), a fraction of the draw calls. */
   bool auto_instancing;
+  bool sort_bounds;
   /* antialias: the canvas is multisampled; here a
    * multisampled framebuffer resolved into the default one after a render */
   int msaa_samples, msaa_w, msaa_h;
@@ -273,7 +276,7 @@ struct t3_renderer {
     const struct t3_texture *pm_src;   /* a PMREM pass's source */
     float pm_rough, pm_mip, pm_sigma;
   } aux;
-  struct gen_shadow { const t3_light *l; GLuint fbo, tex; int w, h; bool cube; bool rendered; void *wg; } gen_sh[16];
+  struct gen_shadow { const t3_light *l; uint32_t light_id; GLuint fbo, tex; int w, h; bool cube; bool rendered; void *wg; } gen_sh[16];
   int gen_sh_n;
   char *gen_missing;      /* table states the scenes asked for and the table lacks, one per line */
   /* every draw's per-draw block of the frame, packed at the uniform-buffer
@@ -467,6 +470,7 @@ bool t3_renderer_get_shadow_map(const t3_renderer *r, t3_shadow_map_type *type) 
 }
 int t3_renderer_get_antialias(const t3_renderer *r) { return r->msaa_samples; }
 void t3_renderer_set_auto_clear(t3_renderer *r, bool on) { r->auto_clear = on; }
+void t3_renderer_set_sort_bounds(t3_renderer *r, bool on) { r->sort_bounds = on; }
 void t3_renderer_set_antialias(t3_renderer *r, int samples) { r->msaa_samples = samples; }
 void t3_renderer_set_framebuffer(t3_renderer *r, unsigned fbo) {
   r->has_ext_target = false; /* the GL-era call: a plain fbo, the renderer's own clear rules */
@@ -835,21 +839,18 @@ static GLuint attribute_buffer(t3_attribute *a, GLenum target) {
   return ag->buffer;
 }
 
-/* An instanced mesh's per-instance attribute, refreshed for the instances
- * drawn: the first n items. A mesh that draws fewer instances than it has
- * room for (count below the capacity) re-uploads only those when its data
- * changes, not the whole buffer; items past n are sent once they are drawn. */
+/* Stream the visible instance prefix into replacement storage. Updating or
+ * extending a buffer in place may wait for a previous frame's GPU reads. */
 static void instance_buffer(t3_attribute *a, int n) {
   attribute_gl *ag = a->_gl;
-  GLsizeiptr full = (GLsizeiptr)a->count * a->item_size * 4;
   if (n > a->count) n = a->count;
-  if (n < 0) n = 0;
-  if (!ag || !ag->size || ag->size != full) { attribute_buffer(a, GL_ARRAY_BUFFER); return; }
+  if (n <= 0) return;
+  if (!ag || !ag->size) { attribute_buffer(a, GL_ARRAY_BUFFER); return; }
   if (ag->version == a->version && n <= ag->items_valid) return;
-  int from = ag->version == a->version ? ag->items_valid : 0;
-  size_t item = (size_t)a->item_size * 4;
+  GLsizeiptr bytes = (GLsizeiptr)n * a->item_size * 4;
   glBindBuffer(GL_ARRAY_BUFFER, ag->buffer);
-  glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)(from * item), (GLsizeiptr)((size_t)(n - from) * item), (const uint8_t *)a->array + from * item);
+  glBufferData(GL_ARRAY_BUFFER, bytes, a->array, a->usage);
+  ag->size = bytes;
   ag->version = a->version;
   ag->items_valid = n;
 }
@@ -1600,7 +1601,7 @@ static void set_material_state(t3_renderer *r, const t3_material *m) {
     }
     r->cur_blend = bl;
   }
-  set_color_mask(r, m->color_write);
+  set_color_mask(r, m->color_write && !r->depth_prepass);
 }
 
 /* ── render list ─────────────────────────────────────────────────── */
@@ -1636,7 +1637,11 @@ static void batch_add(t3_renderer *r, t3_object *o, t3_geometry *g, t3_material 
 
 /* The projected depth three.js sorts by: the object's origin through
  * projection * view. */
-static float item_z(const t3_renderer *r, const t3_object *o) {
+static float item_z(const t3_renderer *r, t3_object *o, t3_geometry *g, bool opaque) {
+  if (r->sort_bounds && opaque && (o->type == T3_MESH || o->type == T3_INSTANCED_MESH)) {
+    const float *s = t3__world_sphere(o, g);
+    return t3_vec3_apply_mat4(t3_v3(s[0], s[1], s[2]), &r->proj_screen).z;
+  }
   const float *e = o->matrix_world.e;
   return t3_vec3_apply_mat4(t3_v3(e[12], e[13], e[14]), &r->proj_screen).z;
 }
@@ -1657,7 +1662,7 @@ T3_HOT static void push_mesh_item(t3_renderer *r, t3_object *o, t3_geometry *g, 
   /* (an extension program's hook fills each object's values: its meshes draw one by one,
    * unless the extension said its hook reads nothing of the object) */
   if (can_batch && !tr && (!m->extension || ext_batches(r, m->extension))) { batch_add(r, o, g, m, grp); return; }
-  render_item it = { o, g, m, grp, item_z(r, o), o->render_order, 0, 0 };
+  render_item it = { o, g, m, grp, item_z(r, o, g, !tr), o->render_order, 0, 0 };
   list_push(tr ? &r->transparent : &r->opaque, it);
 }
 
@@ -2041,7 +2046,7 @@ static void finish_batches(t3_renderer *r) {
   for (int bi = 0; bi < r->batch_n; bi++) {
     struct batch_entry *e = &r->batches[bi];
     t3_object *first = r->mobj[e->head];
-    render_item it = { first, e->geometry, e->material, e->group, item_z(r, first), e->render_order, 0, 0 };
+    render_item it = { first, e->geometry, e->material, e->group, item_z(r, first, e->geometry, true), e->render_order, 0, 0 };
     if (e->count == 1) {
       /* a lone mesh: an instanced draw of one costs more than a plain draw */
       list_push(&r->opaque, it);
@@ -2325,6 +2330,23 @@ void t3_renderer_compile(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   t3_object_traverse(scene, compile_object, r);
 }
 
+void t3_renderer_render_prepass(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
+#ifdef T3_WGPU
+  if (r->wgpu) return; /* GLES embedder API */
+#endif
+  bool previous = r->depth_prepass;
+  r->depth_prepass = true;
+  t3_renderer_render_opaque(r, scene, cam);
+  r->depth_prepass = previous;
+}
+
+void t3_renderer_render_opaque(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
+  bool previous = r->opaque_only;
+  r->opaque_only = true;
+  t3_renderer_render(r, scene, cam);
+  r->opaque_only = previous;
+}
+
 void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   draw_epoch++;
   r->stamp++;
@@ -2352,6 +2374,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
 
   finish_batches(r);
   sort_items(&r->opaque, &r->scratch, painter_sort);
+  if (r->opaque_only) r->transparent.n = 0;
   sort_items(&r->transparent, &r->scratch, reverse_painter_sort);
   /* r186 _renderTransparents: double-sided transmissive objects draw their back
    * faces first (material.side set to BackSide, then FrontSide for the
@@ -2412,7 +2435,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   }
   backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r186's do) */
   gen_prepare(r, cam);
-  gen_background(r, scene, cam);
+  if (!r->depth_prepass) gen_background(r, scene, cam);
 
   for (int i = 0; i < r->opaque.n; i++) draw_item(r, &r->opaque.items[i], cam);
   if (r->backpass.n) {
@@ -2423,10 +2446,10 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   for (int i = 0; i < r->transparent.n; i++) draw_item(r, &r->transparent.items[i], cam);
   backpass_side(r, T3_DOUBLE_SIDE);
 
-  if (!r->target) count_output_pass(r);
+  if (!r->depth_prepass && !r->target) count_output_pass(r);
   if (r->target) {
     rt_finish(r, r->target);
-  } else if (r->out_on && r->cur_fbo == r->out_fbo) {
+  } else if (!r->depth_prepass && r->out_on && r->cur_fbo == r->out_fbo) {
     gen_output_pass(r);
   } else if (own_msaa(r)) {
     /* resolve what this render drew (the scissor still applies to the blit) */

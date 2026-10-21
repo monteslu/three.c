@@ -210,14 +210,28 @@ that fills it:
   for a draw (GLES fills the frame's per-draw blocks before drawing), so it
   only sets values. Uniforms land where the manifest put them; textures bind
   with the program's other textures, and a texture's `flipY` flag follows
-  the texture (`gpu_made`).
+  the texture (`gpu_made`). r186 gives each sample of a texture its own
+  `flipY` flag on GLES, and every one is filled.
+- A DepthTexture the extension samples with compare (r186's
+  `texture(depth).compare(ref)`) gets a LessEqual comparison sampler on
+  WebGPU, linear unless the texture is nearest filtered; on GLES the GL
+  texture's own compare mode applies.
+- TSL that reads a second UV set (`uv(1)`) reads the geometry's `T3_ATTR_UV1`
+  attribute, at its own fixed location on GLES.
+- Limits: an extension program holds up to 64 uniforms of its own, and an
+  extension texture may be sampled up to 64 times in it; a renderer holds
+  hooks for up to 64 extensions. A program past a limit is refused as
+  incomplete: its draws are skipped and the renderer's error says which
+  ("too many extension uniforms", "sampled too many times").
 - A draw whose extension has no hook, or whose hook left a texture unset, is
   skipped, counted in `info.skipped` and named in the renderer's error.
 - Meshes with an extension are not auto-instanced: each object is its own
   draw, so its values are its own. `t3_renderer_set_extension_batching(r,
   name, true)` says the extension's hook reads nothing of the object (only
   per-frame values): its meshes are then auto-instanced like any other (the
-  table needs the `+instbig` state too), and the hook runs once a batch.
+  table needs the `+instbig` state too), and the hook runs once a batch,
+  with the batch's first mesh. Batching is off by default; it is three.c's
+  own (three.js renders each mesh on its own).
 - Shadow casters: r186 draws the shadow pass with the material's
   `positionNode` (and its `colorNode`'s alpha), so an extension material
   casts with `depth+x<name>` (`depth+instbig+x<name>` and so on for the
@@ -266,6 +280,15 @@ object, the scene and the light counts, and looks it up. If there is no exact
 light vector, a captured program whose counts cover the scene's is used and
 the unused light slots are left empty.
 
+Draws are sorted as r186 sorts them: render order, then opaque front to back
+and transparent back to front by the projected depth of the object's origin.
+`t3_renderer_set_sort_bounds(r, true)` (three.c's own, off by default) sorts
+opaque meshes and instanced meshes by the centre of their cached world
+bounding sphere instead, which is what geometry built far from its object's
+origin (merged world-space chunks, instanced scenery) needs for front to
+back order to hold. Render order, transparent objects and skinned meshes keep
+r186's order. `test/test_scene_sort.c` checks it.
+
 `src/gen_program.c` reads the manifest into a list of fill operations, one
 per property, and splits them into per-frame operations (camera, lights, fog)
 and per-draw ones (matrices, material values). Per-draw uniform blocks for
@@ -278,6 +301,33 @@ On GLES the GLSL is compiled with fixed attribute locations. In the default
 fast path the program also gets an epilogue that encodes sRGB, so it can
 draw straight to the screen. `t3_renderer_set_exact_output` turns that off.
 
+On GLES an InstancedMesh's instance matrices and colours are uploaded when
+their version changes or more instances are drawn than were sent: the drawn
+instances (the first `count`) go into new storage for the buffer
+(`glBufferData`), not into the old storage in place, which could wait for
+the GPU to finish the previous frame's reads. Drawing fewer instances, with
+nothing changed, uploads nothing. `test/test_instance_stream.c` checks it.
+
+## Embedder passes
+
+For an embedder that composes three.c's drawing with its own:
+
+- `t3_renderer_render_opaque(r, scene, camera)` renders the opaque queue
+  only, alpha-tested cutouts included; transparent and transmissive
+  materials are left out. Shadows and the rest of the scene setup run as in
+  `t3_renderer_render`, and no material is changed, so the next ordinary
+  render draws the transparents again.
+- `t3_renderer_render_prepass(r, scene, camera)` (GLES; does nothing on
+  WebGPU) is a depth prepass into the embedder's scene framebuffer: the
+  opaque queue with colour writes off whatever the materials say, alpha
+  discard and vertex displacement kept, and no background or output pass.
+  The usual clearing and render target rules apply, and colour writes are
+  back on when it returns. `test/test_prepass_mask.c` checks that no
+  material turns colour writes back on during it.
+- `t3_renderer_render_depth` (GLES) and `t3_renderer_render_depth_to` (both
+  backends, into a rect of a depth-only target) draw the shadow caster pass
+  from any camera, for the embedder's own shadow maps.
+
 Several pieces follow r186's own code:
 
 - **Output pass:** r186's generated output program (tone mapping and colour
@@ -285,8 +335,21 @@ Several pieces follow r186's own code:
 - **Environment maps:** r186's PMREM generator (`src/renderer_env.inc`). It
   converts a cube or equirectangular map to cube-UV, blurs scene captures,
   and builds the GGX mip chain, all with r186's own generated programs.
+  fromScene takes r186's options (`t3_pmrem_from_scene_ex`: the face size,
+  the position the cube camera renders from, and a target to draw into
+  again), and `t3_pmrem_from_cubemap_into` / `_equirectangular_into` are
+  fromCubemap / fromEquirectangular's target argument, so a reflection probe
+  refreshed every few frames keeps one target. The `r11-pmrem-probe` scene
+  checks it.
 - **Shadows:** depth maps drawn with the captured caster programs.
   Point lights use a cube map with r186's face directions for each backend.
+  A renderer keeps depth maps for up to 16 shadow-casting lights at a time.
+  The map of a light that no longer casts in the render (removed or
+  destroyed) is reused by the next new caster, so a scene that adds and
+  removes lights does not run out of maps. A map belongs to a light by
+  address and id together, so a new light that a reused allocation puts at
+  a destroyed light's address never gets that light's stale map.
+  `test/test_shadow_cache.c` checks both.
 
 ## WebGPU
 
@@ -309,6 +372,11 @@ What else it does:
 - **Embedder hooks:** an embedder can pass its own command encoder
   (`t3_renderer_wgpu_set_encoder`) and swapchain view
   (`t3_renderer_wgpu_set_output`).
+- **Projection:** three.js builds WebGPU's projection z row from near and far.
+  three.c does that for the usual projection, and a projection the
+  application edited (an oblique near plane, as r186's Reflector and
+  Refractor set to clip at the mirror plane) keeps its edit, its z row
+  remapped to WebGPU's clip space (z' = 0.5 z + 0.5 w).
 
 **Compatibility mode** (no `core-features-and-limits`, which is what
 wasmcart gives carts) needs a few things, and the renderer handles them:

@@ -314,7 +314,9 @@ static inline float *t3_attribute_f32(t3_attribute *a) { return (float *)a->arra
 /* BufferAttribute.addUpdateRange, in items (three.js counts components): the
  * next upload after a version bump sends only these items (ranges added
  * before it are merged into the one span that covers them all) when the GPU
- * buffer already holds the rest; otherwise, or with no range, all of it. */
+ * buffer already holds the rest; otherwise, or with no range, all of it.
+ * An InstancedMesh's instance attributes on GLES ignore it: a change sends
+ * the instances drawn, whole, into new buffer storage. */
 void t3_attribute_add_update_range(t3_attribute *a, int start, int count);
 /* BufferAttribute.clearUpdateRanges: the next upload sends the whole array. */
 static inline void t3_attribute_clear_update_ranges(t3_attribute *a) { a->update_start = a->update_count = 0; }
@@ -987,6 +989,10 @@ void t3_renderer_set_tone_mapping(t3_renderer *r, t3_tone_mapping tm, float expo
 /* Draw opaque meshes that share geometry, material and group as one
  * instanced draw (default on). Same pixels, far fewer draw calls. */
 void t3_renderer_set_auto_instancing(t3_renderer *r, bool on);
+/* Opt-in opaque sorting by cached world bounds instead of object pivots.
+ * Useful for merged world-space geometry and instanced scenery. Explicit
+ * render_order and transparent/skinned object ordering are preserved. */
+void t3_renderer_set_sort_bounds(t3_renderer *r, bool on);
 /* Forget cached GL state (three.js renderer.resetState()): call after
  * issuing GL calls of your own between renders. */
 void t3_renderer_reset_state(t3_renderer *r);
@@ -1029,6 +1035,16 @@ bool t3_renderer_clears_target(const t3_renderer *r);
 void t3_renderer_set_render_target(t3_renderer *r, t3_render_target *rt);
 t3_render_target *t3_renderer_get_render_target(const t3_renderer *r);
 void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *camera);
+/* Render the opaque queue only, including alpha-tested cutouts. Transparent
+ * and transmissive materials are excluded; shadows and normal scene setup
+ * are preserved. Useful for an embedder's prepass; ordinary render calls
+ * afterward include transparents again. Does not change material properties. */
+void t3_renderer_render_opaque(t3_renderer *r, t3_scene *scene, t3_camera *camera);
+/* GLES prepass for an embedder scene framebuffer. Opaque material shaders
+ * preserve alpha discard/displacement, but write no colour. Skips sky/output
+ * conversion; normal clearing/target rules apply. Restores colour writes on
+ * return. No-op on WebGPU. */
+void t3_renderer_render_prepass(t3_renderer *r, t3_scene *scene, t3_camera *camera);
 /* renderer.compile( scene, camera ): builds the programs the scene's
  * materials need, without drawing */
 void t3_renderer_compile(t3_renderer *r, t3_scene *scene, t3_camera *camera);

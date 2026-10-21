@@ -789,11 +789,28 @@ static GLuint gen_dfg_texture(t3_renderer *r) {
  * camera, sampled by receivers with a LEQUAL comparison (hardware PCF:
  * linear filtering for PCFShadowMap) ── */
 static struct gen_shadow *gen_shadow_of(t3_renderer *r, const t3_light *l, bool make) {
-  for (int i = 0; i < r->gen_sh_n; i++) if (r->gen_sh[i].l == l) return &r->gen_sh[i];
-  if (!make || r->gen_sh_n == (int)(sizeof r->gen_sh / sizeof r->gen_sh[0])) return NULL;
+  for (int i = 0; i < r->gen_sh_n; i++)
+    if (r->gen_sh[i].l == l && r->gen_sh[i].light_id == l->base.id) return &r->gen_sh[i];
+  if (!make) return NULL;
+  /* Scene changes destroy lights, but their depth storage can be reused.
+   * Keep every caster in this render, including ones not processed yet.
+   * Compare ids too: allocators can reuse a destroyed light's address. */
+  for (int i = 0; i < r->gen_sh_n; i++) {
+    struct gen_shadow *s = &r->gen_sh[i];
+    bool live = false;
+    for (int j = 0; j < r->caster_count; j++)
+      if (s->l == r->casters[j] && s->light_id == r->casters[j]->base.id) { live = true; break; }
+    if (live) continue;
+    s->l = l;
+    s->light_id = l->base.id;
+    s->rendered = false;
+    return s;
+  }
+  if (r->gen_sh_n == (int)(sizeof r->gen_sh / sizeof r->gen_sh[0])) return NULL;
   struct gen_shadow *s = &r->gen_sh[r->gen_sh_n++];
   memset(s, 0, sizeof *s);
   s->l = l;
+  s->light_id = l->base.id;
   return s;
 }
 /* a 2D depth texture, or for a point light a cube one (r186 CubeDepthTexture) */
