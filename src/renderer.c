@@ -1590,6 +1590,9 @@ static void set_material_state(t3_renderer *r, const t3_material *m) {
     glDepthMask(dw ? GL_TRUE : GL_FALSE);
     r->cur_depth_write = dw;
   }
+#ifndef GL_SAMPLE_ALPHA_TO_COVERAGE
+#define GL_SAMPLE_ALPHA_TO_COVERAGE 0x809E /* a GL header without it (wasmcart's imports) */
+#endif
   int a2c = m->alpha_to_coverage ? 1 : 0;
   if (a2c != r->cur_a2c) {
     if (a2c) glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
