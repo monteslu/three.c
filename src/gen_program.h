@@ -42,7 +42,7 @@ enum {
 #define T3_GEN_MAX_TEXTURES 16
 /* flipY flags of one extension texture, one per sample of it: a splat terrain samples
  * each layer array 24 times (base and overlay, triplanar, near and far) */
-#define T3_GEN_MAX_FLIPS 64
+#define T3_GEN_MAX_FLIPS 128
 
 /* What a manifest property is: each path the generator fingerprinted maps to
  * one op the renderer knows how to fill; `idx` is the light index of
