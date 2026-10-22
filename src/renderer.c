@@ -226,7 +226,7 @@ struct t3_renderer {
   bool shadow_units_bound;
   float clear_v[4];
   GLuint cur_program, cur_vao;
-  int cur_cull, cur_depth_test, cur_depth_write, cur_blend; /* -1 = unknown */
+  int cur_cull, cur_depth_test, cur_depth_write, cur_blend, cur_a2c; /* -1 = unknown */
   uint32_t vao_epoch;    /* vao_epoch when cur_vao was bound */
   bool blend_func_set;   /* glBlendFunc / glBlendEquation issued since the last reset */
   int cur_color_mask;     /* glColorMask, all four the same (1 until a material writes no colour) */
@@ -385,7 +385,7 @@ t3_renderer *t3_renderer_new(int width, int height) {
   r->tone_mapping_exposure = 1;
   r->shadow_map_type = T3_PCF_SHADOW_MAP;
   t3__gl_release = gl_release;
-  r->cur_cull = r->cur_depth_test = r->cur_depth_write = r->cur_blend = -1;
+  r->cur_cull = r->cur_depth_test = r->cur_depth_write = r->cur_blend = r->cur_a2c = -1;
   r->cur_color_mask = 1;
   r->auto_instancing = true;
   r->auto_clear = true;
@@ -685,7 +685,7 @@ void t3_renderer_forget(t3_renderer *r, unsigned what) {
   if (what & T3_FORGET_TEXTURES) { tu_forget_all(); r->shadow_units_bound = false; }
   else if (what & T3_FORGET_UNIT) tu_forget_active();
   if (what & T3_FORGET_CAPS) {
-    r->cur_cull = r->cur_depth_test = r->cur_depth_write = r->cur_blend = -1;
+    r->cur_cull = r->cur_depth_test = r->cur_depth_write = r->cur_blend = r->cur_a2c = -1;
     r->blend_func_set = false;
   }
   if (what & T3_FORGET_SCISSOR) r->cur_scissor = -1;
@@ -705,7 +705,7 @@ void t3_renderer_reset_bindings(t3_renderer *r) {
   r->shadow_units_bound = false;
   tu_forget_all();
   r->cur_program = r->cur_vao = 0;
-  r->cur_cull = r->cur_depth_test = r->cur_depth_write = r->cur_blend = -1;
+  r->cur_cull = r->cur_depth_test = r->cur_depth_write = r->cur_blend = r->cur_a2c = -1;
 }
 
 void t3_renderer_reset_state(t3_renderer *r) {
@@ -1589,6 +1589,12 @@ static void set_material_state(t3_renderer *r, const t3_material *m) {
   if (dw != r->cur_depth_write) {
     glDepthMask(dw ? GL_TRUE : GL_FALSE);
     r->cur_depth_write = dw;
+  }
+  int a2c = m->alpha_to_coverage ? 1 : 0;
+  if (a2c != r->cur_a2c) {
+    if (a2c) glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+    else glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+    r->cur_a2c = a2c;
   }
   int bl = blend_key(m);
   if (bl != r->cur_blend) {

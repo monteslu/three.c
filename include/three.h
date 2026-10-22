@@ -433,6 +433,10 @@ typedef struct t3_material {
   t3_side side;
   bool transparent, depth_test, depth_write, vertex_colors, flat_shading, wireframe, visible, fog;
   float alpha_test;
+  /* material.alphaToCoverage: on a multisampled target the fragment's alpha
+   * becomes its sample coverage (soft alpha-tested edges: foliage cards). GL
+   * only; WebGPU draws it as plain alpha test. */
+  bool alpha_to_coverage;
   /* material.blending (NoBlending 0, NormalBlending 1, AdditiveBlending 2,
    * SubtractiveBlending 3, MultiplyBlending 4, CustomBlending 5),
    * premultipliedAlpha, the CustomBlending factors and equations (the alpha
