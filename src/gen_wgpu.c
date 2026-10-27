@@ -1123,15 +1123,21 @@ WGPUTextureView t3_wgpu_data_texture(t3_wgpu *w, void **slot, int width, int hei
 WGPUSampler t3_wgpu_sampler(t3_wgpu *w, const t3_texture *t, bool cmp) {
   int ws = t ? t->wrap_s : T3_CLAMP_TO_EDGE, wt = t ? t->wrap_t : T3_CLAMP_TO_EDGE;
   int mag = t ? t->mag_filter : T3_LINEAR, min = t ? t->min_filter : T3_LINEAR;
-  uint32_t key = (uint32_t)(ws - 1000) | (uint32_t)(wt - 1000) << 2 | (uint32_t)(mag - 1003) << 4 | (uint32_t)(min - 1003) << 7 | (uint32_t)cmp << 10;
-  for (int i = 0; i < w->n_samplers; i++) if (w->samplers[i].key == key) return w->samplers[i].s;
   static const WGPUAddressMode am[3] = { WGPUAddressMode_Repeat, WGPUAddressMode_ClampToEdge, WGPUAddressMode_MirrorRepeat };
   bool mag_lin = mag != T3_NEAREST, min_lin = min == T3_LINEAR || min == T3_LINEAR_MIPMAP_NEAREST || min == T3_LINEAR_MIPMAP_LINEAR;
   bool mip_lin = min == T3_NEAREST_MIPMAP_LINEAR || min == T3_LINEAR_MIPMAP_LINEAR;
+  /* r186 WebGPUTextureUtils: texture.anisotropy when every filter is linear
+   * (WebGPU allows no other); the device clamps it to what it supports, as
+   * the GL backend's min(anisotropy, MAX_TEXTURE_MAX_ANISOTROPY) */
+  uint32_t aniso = 1;
+  if (t && !cmp && mag_lin && min_lin && mip_lin && t->anisotropy > 1) aniso = t->anisotropy >= 16 ? 16 : (uint32_t)t->anisotropy;
+  uint32_t key = (uint32_t)(ws - 1000) | (uint32_t)(wt - 1000) << 2 | (uint32_t)(mag - 1003) << 4 | (uint32_t)(min - 1003) << 7 | (uint32_t)cmp << 10
+               | (aniso - 1) << 11;
+  for (int i = 0; i < w->n_samplers; i++) if (w->samplers[i].key == key) return w->samplers[i].s;
   WGPUSamplerDescriptor d = { .addressModeU = am[(ws - 1000) % 3], .addressModeV = am[(wt - 1000) % 3], .addressModeW = WGPUAddressMode_ClampToEdge,
     .magFilter = mag_lin ? WGPUFilterMode_Linear : WGPUFilterMode_Nearest, .minFilter = min_lin ? WGPUFilterMode_Linear : WGPUFilterMode_Nearest,
     .mipmapFilter = mip_lin ? WGPUMipmapFilterMode_Linear : WGPUMipmapFilterMode_Nearest, .lodMinClamp = 0, .lodMaxClamp = 32,
-    .compare = cmp ? WGPUCompareFunction_LessEqual : WGPUCompareFunction_Undefined, .maxAnisotropy = 1 };
+    .compare = cmp ? WGPUCompareFunction_LessEqual : WGPUCompareFunction_Undefined, .maxAnisotropy = (uint16_t)aniso };
   WGPUSampler s = wgpuDeviceCreateSampler(w->dev, &d);
   if (w->n_samplers < 64) w->samplers[w->n_samplers++] = (struct sampler_entry){ key, s };
   return s;

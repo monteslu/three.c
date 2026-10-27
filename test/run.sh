@@ -105,6 +105,12 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
   set +e; ./build/test/test_wgpu_external > build/test/test_wgpu_external.log 2>&1; st=$?; set -e
   if [ $st = 0 ]; then echo "ok    test_wgpu_external"; elif [ $st = 77 ]; then echo "skip  test_wgpu_external (no WebGPU adapter)"
   else echo "FAIL  test_wgpu_external"; grep -v '^Warning' build/test/test_wgpu_external.log; fail=1; fi
+  # texture sampling (mipmaps, anisotropy, sampler fields changed after the upload): GLES and WebGPU draw the same
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_texture_parity.c \
+    build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_texture_parity
+  set +e; EGL_PLATFORM=surfaceless ./build/test/test_texture_parity > build/test/test_texture_parity.log 2>&1; st=$?; set -e
+  if [ $st = 0 ]; then echo "ok    test_texture_parity"; elif [ $st = 77 ]; then echo "skip  test_texture_parity (no GLES context or WebGPU adapter)"
+  else echo "FAIL  test_texture_parity"; grep -v '^Warning' build/test/test_texture_parity.log; fail=1; fi
   # an extension program filled at run time, on WebGPU (the GLES run is in the loop above)
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_extension.c \
     build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_wgpu
