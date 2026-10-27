@@ -49,7 +49,7 @@ three.c needs neither Node nor three.js.
 
 A backend's shaders differ by a few lines per feature, so a table stores its
 distinct lines once and each shader as the list of its lines, deflated
-together (about 0.2 MB per backend for the full table's 321 states). The
+together (about 0.2 MB per backend for the full table's 325 states). The
 first program built from a table inflates its text (kept for the table's
 other programs) with stb_image's inflater, which three.c already carries for
 PNG. A full-table wasm cart is about 1.25 MB (0.9 MB with the core table).
@@ -219,7 +219,7 @@ that fills it:
 - TSL that reads a second UV set (`uv(1)`) reads the geometry's `T3_ATTR_UV1`
   attribute, at its own fixed location on GLES.
 - Limits: an extension program holds up to 64 uniforms of its own, and an
-  extension texture may be sampled up to 64 times in it; a renderer holds
+  extension texture may be sampled up to 128 times in it; a renderer holds
   hooks for up to 64 extensions. A program past a limit is refused as
   incomplete: its draws are skipped and the renderer's error says which
   ("too many extension uniforms", "sampled too many times").
@@ -371,7 +371,12 @@ What else it does:
   `t3_renderer_wgpu_submit` sends it.
 - **Embedder hooks:** an embedder can pass its own command encoder
   (`t3_renderer_wgpu_set_encoder`) and swapchain view
-  (`t3_renderer_wgpu_set_output`).
+  (`t3_renderer_wgpu_set_output`). An external target
+  (`t3_renderer_set_external_target`) may set a viewport depth range
+  (`depth_min`, `depth_max`; both 0 means 0..1): a pass squeezed into the
+  near end (0 to 0.02, say) draws over a depth buffer the embedder keeps,
+  as a first person weapon drawn after the world does. GLES ignores the
+  fields (`glDepthRangef` does the same there).
 - **Projection:** three.js builds WebGPU's projection z row from near and far.
   three.c does that for the usual projection, and a projection the
   application edited (an oblique near plane, as r186's Reflector and

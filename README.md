@@ -56,7 +56,7 @@ Normal materials (Physical with clearcoat and its normal map, sheen,
 iridescence, anisotropy, transmission with thickness and attenuation, ior
 and specular intensity / colour) with map, normalMap (tangent space, vertex
 tangents), aoMap, emissiveMap, roughnessMap, metalnessMap, alphaMap and
-lightMap, vertex colours, transparency, alphaTest, flat shading, double and
+lightMap, vertex colours (rgb, or rgba with the alpha ignored), transparency, alphaTest, flat shading, double and
 back sides, Texture / DataTexture / CubeTexture / DepthTexture, Box / Plane
 / Sphere / Cylinder / Cone / Torus / TorusKnot / Circle / Ring / Polyhedron
 / Icosahedron geometry, InstancedMesh (with instance colours), SkinnedMesh /
@@ -79,7 +79,8 @@ into any target (`t3_renderer_render_depth`, GLES), the opaque queue alone
 (`t3_renderer_render_opaque`, alpha-tested cutouts included) and a depth
 prepass of it that writes no colour and skips the background and output pass
 (`t3_renderer_render_prepass`, GLES), and GL / WebGPU hooks to draw into the
-embedder's own framebuffer, command encoder and swapchain view. Custom
+embedder's own framebuffer, command encoder and swapchain view (on WebGPU
+with a viewport depth range of its choice: `depth_min` / `depth_max`). Custom
 shading is written as r186 TSL in a generator extension, captured into a
 program table like any other state, and filled at run time from a C hook
 (`t3_material_set_extension`, `t3_renderer_set_extension`, and
