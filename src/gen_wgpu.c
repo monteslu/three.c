@@ -529,7 +529,7 @@ void t3_wgpu_begin_pass(t3_wgpu *w, const t3_wgpu_pass *p) {
   }
   WGPURenderPassDescriptor d = { .colorAttachmentCount = p->color ? 1 : 0, .colorAttachments = &ca, .depthStencilAttachment = p->depth ? &da : NULL };
   w->pass = wgpuCommandEncoderBeginRenderPass(w->enc, &d);
-  if (p->vw > 0) wgpuRenderPassEncoderSetViewport(w->pass, (float)p->vx, (float)p->vy, (float)p->vw, (float)p->vh, 0, 1);
+  if (p->vw > 0) wgpuRenderPassEncoderSetViewport(w->pass, (float)p->vx, (float)p->vy, (float)p->vw, (float)p->vh, p->dmax > 0 ? p->dmin : 0, p->dmax > 0 ? p->dmax : 1);
   if (p->scissor) wgpuRenderPassEncoderSetScissorRect(w->pass, (uint32_t)p->sx, (uint32_t)p->sy, (uint32_t)p->sw, (uint32_t)p->sh);
 }
 WGPURenderPassEncoder t3_wgpu_pass_encoder(t3_wgpu *w) { return w->pass; }

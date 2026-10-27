@@ -388,6 +388,7 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
     if (!bg_color) memcpy(P.clear, et->clear_rgba, sizeof P.clear);
     P.depth_clear_set = true; P.clear_depth = et->clear_depth;
     P.stencil = depth_has_stencil(et->depth_format); P.clear_stencil = (uint32_t)et->clear_stencil;
+    P.dmin = et->depth_min; P.dmax = et->depth_max;
   }
   const t3_render_target *rt = r->target;
   if (rt) {

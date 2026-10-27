@@ -1213,6 +1213,10 @@ typedef struct t3_external_target {
    * face for every draw into them, and x, y, w, h count y from the bottom
    * row, as on GLES. GLES: ignored. */
   bool flip_y;
+  /* WebGPU: the viewport's depth range; both 0 = 0..1. An embedder squeezes a pass into the near end
+   * (0, 0.02, say) to draw something over a depth buffer it keeps (a first person weapon). GLES: ignored
+   * (glDepthRangef does it). */
+  float depth_min, depth_max;
 } t3_external_target;
 /* Render into t until set back with NULL (the renderer's own screen target,
  * framebuffer 0 on GLES). On GLES this is t3_renderer_set_framebuffer plus the

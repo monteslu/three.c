@@ -48,6 +48,7 @@ typedef struct {
   bool depth_clear_set; float clear_depth;   /* else depth clears to 1 */
   bool stencil; uint32_t clear_stencil;     /* the depth view has a stencil aspect */
   int vx, vy, vw, vh;         /* viewport (top-left origin, as WebGPU) */
+  float dmin, dmax;           /* its depth range (both 0 = 0..1) */
   bool scissor; int sx, sy, sw, sh;
 } t3_wgpu_pass;
 void t3_wgpu_begin_frame(t3_wgpu *w, size_t stream_estimate);
