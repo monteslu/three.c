@@ -485,6 +485,9 @@ typedef struct t3_material {
   /* the generator extension the material's program carries (an id from
    * t3_material_set_extension; 0 = none) */
   uint16_t extension;
+  /* material.name (not owned; GLTFLoader sets the glTF material's name, owned
+   * by the t3_gltf; Material.clone keeps it) */
+  const char *name;
 } t3_material;
 enum { T3_MULTIPLY_OPERATION = 0, T3_MIX_OPERATION = 1, T3_ADD_OPERATION = 2 };
 
@@ -595,6 +598,10 @@ typedef struct t3_mesh {
   t3_material **materials; int material_count; /* retained; one, or one per group */
   float *morph_influences;        /* mesh.morphTargetInfluences (t3_mesh_update_morph_targets) */
   int morph_influence_count;
+  /* mesh.morphTargetDictionary as an array: the name of each morph target, by
+   * index (GLTFLoader: the glTF mesh's extras.targetNames; owned by the
+   * t3_gltf), or NULL. t3_mesh_get_morph_target_index looks one up. */
+  const char *const *morph_target_names;
 } t3_mesh;
 
 /* Skeleton: bones (retained) with their inverse bind matrices; the bone
@@ -726,6 +733,9 @@ t3_skeleton *t3_skeleton_new(t3_object *const *bones, int count, const t3_mat4 *
 void t3_skeleton_update(t3_skeleton *sk);
 /* Mesh.updateMorphTargets: one influence per morph target of the geometry */
 void t3_mesh_update_morph_targets(t3_mesh *m);
+/* mesh.morphTargetDictionary[name]: the morph target's index, or -1 when the
+ * mesh has no target of that name */
+int t3_mesh_get_morph_target_index(const t3_mesh *m, const char *name);
 /* Object3D.getObjectByName, depth first */
 t3_object *t3_object_get_by_name(t3_object *root, const char *name);
 void t3_instanced_mesh_set_matrix_at(t3_instanced_mesh *im, int i, const t3_mat4 *m);
@@ -833,6 +843,7 @@ typedef struct t3_gltf {
   struct t3_animation_clip **animations;
   int animation_count;
   char **names; int name_count;
+  void **_owned; int _owned_count;   /* material names, morph target name lists */
 } t3_gltf;
 t3_gltf *t3_gltf_parse(const void *data, size_t len, t3_gltf_read_fn read, void *ctx);
 

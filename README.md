@@ -69,7 +69,10 @@ fromEquirectangular, fromScene with its size, position and renderTarget
 options, each able to draw into a target it made before, as a reflection
 probe refreshed every few frames does), scene backgrounds and scene.environment,
 Sprite and Points, Line, LOD, Raycaster, curves, AnimationMixer, a glTF 2.0
-loader (cgltf + stb_image: PBR materials, skins, morph targets, animations)
+loader (cgltf + stb_image: PBR materials with their names and the factors of
+KHR_materials_sheen / clearcoat / specular / ior / transmission / volume /
+emissive_strength / iridescence / anisotropy, skins, morph targets with
+their names (morphTargetDictionary), animations)
 and BufferGeometryLoader. Header-only bridges to Box2D v3 (`three_box2d.h`)
 and Box3D (`three_box3d.h`).
 

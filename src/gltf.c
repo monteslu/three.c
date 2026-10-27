@@ -48,6 +48,10 @@ typedef struct {
   t3_object **mesh_objects;  /* first instance of each mesh */
   /* every name handed out, owned by the t3_gltf */
   char **names; int name_n, name_cap;
+  /* other allocations the t3_gltf owns (material names, morph target name lists) */
+  void **owned; int owned_n, owned_cap;
+  /* per glTF mesh: its extras.targetNames, NULL when it has none */
+  const char ***target_names;
   t3_material *default_material;
   /* assignFinalMaterial's clone cache: (material, variant bits) -> clone */
   struct { t3_material *src; int bits; t3_material *clone; } *clones;
@@ -67,6 +71,22 @@ static const char *keep_name(loader *L, const char *s) {
   memcpy(c, s, n);
   L->names[L->name_n++] = c;
   return c;
+}
+static void *keep_owned(loader *L, void *p) {
+  if (L->owned_n == L->owned_cap) {
+    L->owned_cap = L->owned_cap ? L->owned_cap * 2 : 16;
+    L->owned = realloc(L->owned, (size_t)L->owned_cap * sizeof *L->owned);
+    T3_CHECK_ALLOC(L->owned);
+  }
+  L->owned[L->owned_n++] = p;
+  return p;
+}
+static const char *keep_string(loader *L, const char *s) {
+  size_t n = strlen(s) + 1;
+  char *c = malloc(n);
+  T3_CHECK_ALLOC(c);
+  memcpy(c, s, n);
+  return keep_owned(L, c);
 }
 static bool name_used(loader *L, const char *s) {
   for (int i = 0; i < L->name_n; i++)
@@ -282,14 +302,66 @@ static t3_texture *load_texture(loader *L, const cgltf_texture *tx) {
 }
 
 /* ── materials ───────────────────────────────────────────────────── */
+/* r186 GLTFLoader's material extensions: KHR_materials_emissive_strength,
+ * clearcoat, sheen, transmission, volume, ior, specular, iridescence and
+ * anisotropy. Their factors (and the clearcoat normal texture) are read; the
+ * extensions' other textures are not (t3_material has no slot for them). */
+static void load_physical(loader *L, const cgltf_material *md, t3_material *m) {
+  if (md->has_emissive_strength) m->emissive_intensity = md->emissive_strength.emissive_strength;
+  if (m->type != T3_MESH_PHYSICAL_MATERIAL) return;
+  if (md->has_clearcoat) {
+    const cgltf_clearcoat *e = &md->clearcoat;
+    m->clearcoat = e->clearcoat_factor;
+    m->clearcoat_roughness = e->clearcoat_roughness_factor;
+    if (e->clearcoat_normal_texture.texture) {
+      t3_material_set_texture(m, T3_CLEARCOAT_NORMAL_MAP, load_texture(L, e->clearcoat_normal_texture.texture));
+      m->clearcoat_normal_scale.x = m->clearcoat_normal_scale.y = e->clearcoat_normal_texture.scale;
+    }
+  }
+  if (md->has_sheen) {
+    const cgltf_sheen *e = &md->sheen;
+    /* GLTFMaterialsSheenExtension: sheen 1, the colour and roughness from the factors */
+    m->sheen = 1;
+    m->sheen_color = (t3_color){ e->sheen_color_factor[0], e->sheen_color_factor[1], e->sheen_color_factor[2] };
+    m->sheen_roughness = e->sheen_roughness_factor;
+  }
+  if (md->has_transmission) m->transmission = md->transmission.transmission_factor;
+  if (md->has_volume) {
+    const cgltf_volume *e = &md->volume;
+    m->thickness = e->thickness_factor;
+    m->attenuation_distance = e->attenuation_distance > 0 ? e->attenuation_distance : INFINITY;
+    m->attenuation_color = (t3_color){ e->attenuation_color[0], e->attenuation_color[1], e->attenuation_color[2] };
+  }
+  if (md->has_ior) m->ior = md->ior.ior;
+  if (md->has_specular) {
+    const cgltf_specular *e = &md->specular;
+    m->specular_intensity = e->specular_factor;
+    m->specular_color = (t3_color){ e->specular_color_factor[0], e->specular_color_factor[1], e->specular_color_factor[2] };
+  }
+  if (md->has_iridescence) {
+    const cgltf_iridescence *e = &md->iridescence;
+    m->iridescence = e->iridescence_factor;
+    m->iridescence_ior = e->iridescence_ior;
+    m->iridescence_thickness_range[0] = e->iridescence_thickness_min;
+    m->iridescence_thickness_range[1] = e->iridescence_thickness_max;
+  }
+  if (md->has_anisotropy) {
+    m->anisotropy = md->anisotropy.anisotropy_strength;
+    m->anisotropy_rotation = md->anisotropy.anisotropy_rotation;
+  }
+}
+
 static t3_material *load_material(loader *L, const cgltf_material *md) {
   cgltf_size mi = cgltf_material_index(L->d, md);
   if (L->materials[mi]) return L->materials[mi];
   t3_material *m;
+  /* GLTFLoader.getMaterialType: the extensions MeshPhysicalMaterial reads */
+  bool physical = md->has_clearcoat || md->has_sheen || md->has_transmission || md->has_volume || md->has_ior ||
+                  md->has_specular || md->has_iridescence || md->has_anisotropy;
   if (md->unlit) {
     m = t3_material_new(T3_MESH_BASIC_MATERIAL);
   } else {
-    m = t3_material_new(T3_MESH_STANDARD_MATERIAL);
+    m = t3_material_new(physical ? T3_MESH_PHYSICAL_MATERIAL : T3_MESH_STANDARD_MATERIAL);
     m->metalness = 1;
     m->roughness = 1;
   }
@@ -334,6 +406,8 @@ static t3_material *load_material(loader *L, const cgltf_material *md) {
     m->emissive.b = md->emissive_factor[2];
     if (md->emissive_texture.texture) t3_material_set_texture(m, T3_EMISSIVE_MAP, load_texture(L, md->emissive_texture.texture));
   }
+  if (!md->unlit) load_physical(L, md, m);
+  if (md->name) m->name = keep_string(L, md->name);
   /* baseColorTexture and emissiveTexture are sRGB */
   if (m->map) m->map->color_space = T3_SRGB_COLOR_SPACE;
   if (m->emissive_map) m->emissive_map->color_space = T3_SRGB_COLOR_SPACE;
@@ -356,7 +430,7 @@ static t3_material *final_material(loader *L, t3_mesh *mesh, t3_material *m) {
   t3_material *c = t3_material_clone(m);
   if (colors) c->vertex_colors = true;
   if (flat) c->flat_shading = true;
-  if (derivative) c->normal_scale.y *= -1;
+  if (derivative) { c->normal_scale.y *= -1; c->clearcoat_normal_scale.y *= -1; }
   if (L->clone_n == L->clone_cap) {
     L->clone_cap = L->clone_cap ? L->clone_cap * 2 : 16;
     L->clones = realloc(L->clones, (size_t)L->clone_cap * sizeof *L->clones);
@@ -380,6 +454,19 @@ static void normalize_skin_weights(t3_geometry *g) {
     else { p[0] = 1; p[1] = p[2] = p[3] = 0; }
   }
   w->version++;
+}
+
+/* GLTFLoader updateMorphTargets: mesh.morphTargetDictionary from the mesh's
+ * extras.targetNames (when it names every target) */
+static const char *const *mesh_target_names(loader *L, const cgltf_mesh *md, int mesh_index, int count) {
+  if (!md->target_names_count || (int)md->target_names_count != count) return NULL;
+  if (!L->target_names[mesh_index]) {
+    const char **a = keep_owned(L, malloc((size_t)count * sizeof *a));
+    T3_CHECK_ALLOC(a);
+    for (int i = 0; i < count; i++) a[i] = md->target_names[i] ? keep_string(L, md->target_names[i]) : "";
+    L->target_names[mesh_index] = a;
+  }
+  return L->target_names[mesh_index];
 }
 
 /* loadMesh: one Mesh per primitive (SkinnedMesh when a skinned node uses the
@@ -409,6 +496,7 @@ static t3_object *load_mesh(loader *L, const cgltf_mesh *md, int mesh_index) {
       t3_mesh_update_morph_targets(mesh);
       for (cgltf_size w = 0; w < md->weights_count && (int)w < mesh->morph_influence_count; w++)
         mesh->morph_influences[w] = md->weights[w];
+      mesh->morph_target_names = mesh_target_names(L, md, mesh_index, mesh->morph_influence_count);
     }
     char def[32];
     snprintf(def, sizeof def, "mesh_%d", mesh_index);
@@ -442,6 +530,7 @@ static t3_object *clone_mesh_object(loader *L, t3_object *src) {
     if (sm->morph_influence_count) {
       t3_mesh_update_morph_targets(m);
       memcpy(m->morph_influences, sm->morph_influences, (size_t)sm->morph_influence_count * sizeof(float));
+      m->morph_target_names = sm->morph_target_names;
     }
     o = &m->base;
   } else {
@@ -619,6 +708,8 @@ static void gltf_destroy(void *p) {
   free(g->animations);
   for (int i = 0; i < g->name_count; i++) free(g->names[i]);
   free(g->names);
+  for (int i = 0; i < g->_owned_count; i++) free(g->_owned[i]);
+  free(g->_owned);
 }
 
 t3_gltf *t3_gltf_parse(const void *data, size_t len, t3_gltf_read_fn read, void *ctx) {
@@ -653,6 +744,7 @@ t3_gltf *t3_gltf_parse(const void *data, size_t len, t3_gltf_read_fn read, void 
   L.mesh_skinned = calloc(d->meshes_count + 1, sizeof *L.mesh_skinned);
   L.mesh_uses = calloc(d->meshes_count + 1, sizeof *L.mesh_uses);
   L.mesh_objects = calloc(d->meshes_count + 1, sizeof *L.mesh_objects);
+  L.target_names = calloc(d->meshes_count + 1, sizeof *L.target_names);
   /* createDefaultMaterial */
   L.default_material = t3_mesh_standard_material_new(0xffffff);
   L.default_material->metalness = 1;
@@ -686,8 +778,10 @@ t3_gltf *t3_gltf_parse(const void *data, size_t len, t3_gltf_read_fn read, void 
   for (cgltf_size i = 0; i < d->nodes_count; i++) t3_release(L.nodes[i]);
   g->names = L.names;
   g->name_count = L.name_n;
+  g->_owned = L.owned;
+  g->_owned_count = L.owned_n;
   free(L.textures); free(L.texture_tried); free(L.materials); free(L.nodes); free(L.is_bone);
-  free(L.mesh_skinned); free(L.mesh_uses); free(L.mesh_objects); free(L.clones);
+  free(L.mesh_skinned); free(L.mesh_uses); free(L.mesh_objects); free(L.clones); free(L.target_names);
   cgltf_free(d);
   return g;
 }

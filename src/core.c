@@ -819,6 +819,13 @@ void t3_mesh_update_morph_targets(t3_mesh *m) {
   m->morph_influence_count = n;
 }
 
+int t3_mesh_get_morph_target_index(const t3_mesh *m, const char *name) {
+  if (!m || !name || !m->morph_target_names) return -1;
+  for (int i = 0; i < m->morph_influence_count; i++)
+    if (m->morph_target_names[i] && !strcmp(m->morph_target_names[i], name)) return i;
+  return -1;
+}
+
 t3_object *t3_object_get_by_name(t3_object *o, const char *name) {
   if (o->name && !strcmp(o->name, name)) return o;
   for (int i = 0; i < o->child_count; i++) {

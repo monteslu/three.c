@@ -24,6 +24,10 @@ run test_scene_sort ./build/test/test_scene_sort
 run test_attr_locations ./build/test/test_attr_locations
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include test/test_no_gl.c build/native/libthree.a -lz -lm -o build/test/test_no_gl
 run test_no_gl ./build/test/test_no_gl
+# GLTFLoader material names, KHR_materials_* and morph target names; the control renames the extensions (must fail)
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include test/test_gltf_materials.c build/native/libthree.a -lz -lm -o build/test/test_gltf_materials
+run test_gltf_materials ./build/test/test_gltf_materials
+run test_gltf_materials_control sh -c "! T3_TEST_CONTROL=1 ./build/test/test_gltf_materials 2>/dev/null"
 "$CC" -std=c99 -g -fsanitize=address -D_POSIX_C_SOURCE=200809L -I include -I src test/test_free.c \
   src/{math,core,geometry,curves,animation,raycaster,loaders,gltf,renderer,backend_gles,gen_program}.c \
   src/gen/programs_gl.c src/gen/programs_dfg.c -w -lGLESv2 -lm -o build/test/test_free
