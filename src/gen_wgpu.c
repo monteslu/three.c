@@ -1142,7 +1142,11 @@ WGPUTextureView t3_wgpu_array_texture(t3_wgpu *w, void **slot, uint32_t version,
   if (x && x->version == version && x->w == width && x->h == height) return x->sample;
   if (x) { wgpuTextureViewRelease(x->sample); wgpuTextureRelease(x->t); view_epoch++; }
   else { x = calloc(1, sizeof *x); T3_CHECK_ALLOC(x); *slot = x; }
-  WGPUTextureDescriptor d = { .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst, .dimension = WGPUTextureDimension_2D,
+  /* compatibility mode binds a texture with the view dimension named at creation: a one-layer
+   * array (a mesh with one morph target) would default to 2D and fail its 2D-array binding */
+  WGPUTextureBindingViewDimension bvd = { .chain = { .sType = WGPUSType_TextureBindingViewDimension },
+                                          .textureBindingViewDimension = WGPUTextureViewDimension_2DArray };
+  WGPUTextureDescriptor d = { .nextInChain = &bvd.chain, .usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst, .dimension = WGPUTextureDimension_2D,
     .size = { (uint32_t)width, (uint32_t)height, (uint32_t)layers }, .format = WGPUTextureFormat_RGBA32Float, .mipLevelCount = 1, .sampleCount = 1 };
   x->t = wgpuDeviceCreateTexture(w->dev, &d);
   WGPUTextureViewDescriptor v = { .format = WGPUTextureFormat_RGBA32Float, .dimension = WGPUTextureViewDimension_2DArray,
