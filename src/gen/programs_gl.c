@@ -637,15 +637,15 @@ static const t3_gen_property p_bgpmrem[] = {
   { "scene.backgroundRotationT", 0, 16, 64, false },
   { "camera.matrixWorldInverse", 0, 144, 64, false },
   { "camera.projectionMatrix", 0, 80, 64, false },
-  { "background.flipY", 1, 140, 4, false },
+  { "background.flipY", 1, 136, 4, false },
+  { "background.flipY#1", 1, 140, 4, false },
 };
-static const uint8_t kb_bgpmrem[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_bgpmrem[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_bgpmrem[] = {
   { 1, 16, 64, kb_bgpmrem + 0 },
   { 1, 80, 48, kb_bgpmrem + 64 },
-  { 1, 136, 4, kb_bgpmrem + 112 },
-  { 1, 144, 4, kb_bgpmrem + 116 },
-  { 1, 160, 64, kb_bgpmrem + 120 },
+  { 1, 144, 4, kb_bgpmrem + 112 },
+  { 1, 160, 64, kb_bgpmrem + 116 },
 };
 static const t3_gen_attribute a_bgpmrem[] = {
   { "normal", "vec3", 0, false },
@@ -1422,15 +1422,15 @@ static const t3_gen_property p_lambert_instbig_shadow_l1110_s011[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "point[0].shadow.matrix", 0, 320, 64, false },
   { "spot[0].shadow.matrix", 0, 448, 64, false },
-  { "shadow:spot[0].flipY", 1, 160, 4, false },
+  { "shadow:spot[0].flipY", 1, 144, 4, false },
+  { "shadow:spot[0].flipY#1", 1, 148, 4, false },
+  { "shadow:spot[0].flipY#2", 1, 152, 4, false },
+  { "shadow:spot[0].flipY#3", 1, 156, 4, false },
+  { "shadow:spot[0].flipY#4", 1, 160, 4, false },
 };
-static const uint8_t kb_lambert_instbig_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_lambert_instbig_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_lambert_instbig_shadow_l1110_s011[] = {
   { 0, 384, 4, kb_lambert_instbig_shadow_l1110_s011 + 0 },
-  { 1, 144, 4, kb_lambert_instbig_shadow_l1110_s011 + 4 },
-  { 1, 148, 4, kb_lambert_instbig_shadow_l1110_s011 + 8 },
-  { 1, 152, 4, kb_lambert_instbig_shadow_l1110_s011 + 12 },
-  { 1, 156, 4, kb_lambert_instbig_shadow_l1110_s011 + 16 },
 };
 static const t3_gen_attribute a_lambert_instbig_shadow_l1110_s011[] = {
   { "position", "vec3", 0, false },
@@ -1958,15 +1958,15 @@ static const t3_gen_property p_lambert_shadow[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "point[0].shadow.matrix", 0, 352, 64, false },
-  { "shadow:directional[0].flipY", 1, 160, 4, false },
+  { "shadow:directional[0].flipY", 1, 144, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 148, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 152, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 156, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 160, 4, false },
 };
-static const uint8_t kb_lambert_shadow[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_lambert_shadow[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_lambert_shadow[] = {
   { 0, 416, 4, kb_lambert_shadow + 0 },
-  { 1, 144, 4, kb_lambert_shadow + 4 },
-  { 1, 148, 4, kb_lambert_shadow + 8 },
-  { 1, 152, 4, kb_lambert_shadow + 12 },
-  { 1, 156, 4, kb_lambert_shadow + 16 },
 };
 static const t3_gen_attribute a_lambert_shadow[] = {
   { "normal", "vec3", 0, false },
@@ -2000,14 +2000,11 @@ static const t3_gen_property p_lambert_shadow_l1000[] = {
   { "object.normalMatrix", 1, 32, 44, true },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 192, 64, false },
-  { "shadow:directional[0].flipY", 1, 160, 4, false },
-};
-static const uint8_t kb_lambert_shadow_l1000[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_lambert_shadow_l1000[] = {
-  { 1, 144, 4, kb_lambert_shadow_l1000 + 0 },
-  { 1, 148, 4, kb_lambert_shadow_l1000 + 4 },
-  { 1, 152, 4, kb_lambert_shadow_l1000 + 8 },
-  { 1, 156, 4, kb_lambert_shadow_l1000 + 12 },
+  { "shadow:directional[0].flipY", 1, 144, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 148, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 152, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 156, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 160, 4, false },
 };
 static const t3_gen_attribute a_lambert_shadow_l1000[] = {
   { "normal", "vec3", 0, false },
@@ -2062,15 +2059,15 @@ static const t3_gen_property p_lambert_shadow_l1110_s011[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "point[0].shadow.matrix", 0, 320, 64, false },
   { "spot[0].shadow.matrix", 0, 448, 64, false },
-  { "shadow:spot[0].flipY", 1, 160, 4, false },
+  { "shadow:spot[0].flipY", 1, 144, 4, false },
+  { "shadow:spot[0].flipY#1", 1, 148, 4, false },
+  { "shadow:spot[0].flipY#2", 1, 152, 4, false },
+  { "shadow:spot[0].flipY#3", 1, 156, 4, false },
+  { "shadow:spot[0].flipY#4", 1, 160, 4, false },
 };
-static const uint8_t kb_lambert_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_lambert_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_lambert_shadow_l1110_s011[] = {
   { 0, 384, 4, kb_lambert_shadow_l1110_s011 + 0 },
-  { 1, 144, 4, kb_lambert_shadow_l1110_s011 + 4 },
-  { 1, 148, 4, kb_lambert_shadow_l1110_s011 + 8 },
-  { 1, 152, 4, kb_lambert_shadow_l1110_s011 + 12 },
-  { 1, 156, 4, kb_lambert_shadow_l1110_s011 + 16 },
 };
 static const t3_gen_attribute a_lambert_shadow_l1110_s011[] = {
   { "normal", "vec3", 0, false },
@@ -3334,15 +3331,15 @@ static const t3_gen_property p_phong_instbig_shadow_l1110_s011[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "point[0].shadow.matrix", 0, 320, 64, false },
   { "spot[0].shadow.matrix", 0, 448, 64, false },
-  { "shadow:spot[0].flipY", 1, 192, 4, false },
+  { "shadow:spot[0].flipY", 1, 176, 4, false },
+  { "shadow:spot[0].flipY#1", 1, 180, 4, false },
+  { "shadow:spot[0].flipY#2", 1, 184, 4, false },
+  { "shadow:spot[0].flipY#3", 1, 188, 4, false },
+  { "shadow:spot[0].flipY#4", 1, 192, 4, false },
 };
-static const uint8_t kb_phong_instbig_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_phong_instbig_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_phong_instbig_shadow_l1110_s011[] = {
   { 0, 384, 4, kb_phong_instbig_shadow_l1110_s011 + 0 },
-  { 1, 176, 4, kb_phong_instbig_shadow_l1110_s011 + 4 },
-  { 1, 180, 4, kb_phong_instbig_shadow_l1110_s011 + 8 },
-  { 1, 184, 4, kb_phong_instbig_shadow_l1110_s011 + 12 },
-  { 1, 188, 4, kb_phong_instbig_shadow_l1110_s011 + 16 },
 };
 static const t3_gen_attribute a_phong_instbig_shadow_l1110_s011[] = {
   { "position", "vec3", 0, false },
@@ -3869,15 +3866,15 @@ static const t3_gen_property p_phong_shadow[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "point[0].shadow.matrix", 0, 352, 64, false },
-  { "shadow:directional[0].flipY", 1, 192, 4, false },
+  { "shadow:directional[0].flipY", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 180, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 184, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 188, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 192, 4, false },
 };
-static const uint8_t kb_phong_shadow[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_phong_shadow[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_phong_shadow[] = {
   { 0, 416, 4, kb_phong_shadow + 0 },
-  { 1, 176, 4, kb_phong_shadow + 4 },
-  { 1, 180, 4, kb_phong_shadow + 8 },
-  { 1, 184, 4, kb_phong_shadow + 12 },
-  { 1, 188, 4, kb_phong_shadow + 16 },
 };
 static const t3_gen_attribute a_phong_shadow[] = {
   { "normal", "vec3", 0, false },
@@ -3913,14 +3910,11 @@ static const t3_gen_property p_phong_shadow_l1000[] = {
   { "object.normalMatrix", 1, 64, 44, true },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 192, 64, false },
-  { "shadow:directional[0].flipY", 1, 192, 4, false },
-};
-static const uint8_t kb_phong_shadow_l1000[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_phong_shadow_l1000[] = {
-  { 1, 176, 4, kb_phong_shadow_l1000 + 0 },
-  { 1, 180, 4, kb_phong_shadow_l1000 + 4 },
-  { 1, 184, 4, kb_phong_shadow_l1000 + 8 },
-  { 1, 188, 4, kb_phong_shadow_l1000 + 12 },
+  { "shadow:directional[0].flipY", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 180, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 184, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 188, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 192, 4, false },
 };
 static const t3_gen_attribute a_phong_shadow_l1000[] = {
   { "normal", "vec3", 0, false },
@@ -3977,15 +3971,15 @@ static const t3_gen_property p_phong_shadow_l1110_s011[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "point[0].shadow.matrix", 0, 320, 64, false },
   { "spot[0].shadow.matrix", 0, 448, 64, false },
-  { "shadow:spot[0].flipY", 1, 192, 4, false },
+  { "shadow:spot[0].flipY", 1, 176, 4, false },
+  { "shadow:spot[0].flipY#1", 1, 180, 4, false },
+  { "shadow:spot[0].flipY#2", 1, 184, 4, false },
+  { "shadow:spot[0].flipY#3", 1, 188, 4, false },
+  { "shadow:spot[0].flipY#4", 1, 192, 4, false },
 };
-static const uint8_t kb_phong_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_phong_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_phong_shadow_l1110_s011[] = {
   { 0, 384, 4, kb_phong_shadow_l1110_s011 + 0 },
-  { 1, 176, 4, kb_phong_shadow_l1110_s011 + 4 },
-  { 1, 180, 4, kb_phong_shadow_l1110_s011 + 8 },
-  { 1, 184, 4, kb_phong_shadow_l1110_s011 + 12 },
-  { 1, 188, 4, kb_phong_shadow_l1110_s011 + 16 },
 };
 static const t3_gen_attribute a_phong_shadow_l1110_s011[] = {
   { "normal", "vec3", 0, false },
@@ -4308,11 +4302,8 @@ static const t3_gen_property p_physical_cc[] = {
   { "object.normalMatrix", 1, 32, 44, true },
   { "point[0].position", 0, 224, 12, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
-  { "dfg_lut.flipY", 1, 212, 4, false },
-};
-static const uint8_t kb_physical_cc[] = {0x00, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc[] = {
-  { 1, 208, 4, kb_physical_cc + 0 },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "dfg_lut.flipY#1", 1, 212, 4, false },
 };
 static const t3_gen_attribute a_physical_cc[] = {
   { "normal", "vec3", 0, false },
@@ -4353,12 +4344,9 @@ static const t3_gen_property p_physical_cc_ccn[] = {
   { "point[0].position", 0, 224, 12, false },
   { "clearcoatNormalMap.matrix", 1, 224, 44, true },
   { "camera.projectionMatrix", 0, 0, 64, false },
-  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "dfg_lut.flipY", 1, 208, 4, false },
   { "clearcoatNormalMap.flipY", 1, 272, 4, false },
-};
-static const uint8_t kb_physical_cc_ccn[] = {0x00, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_ccn[] = {
-  { 1, 208, 4, kb_physical_cc_ccn + 0 },
+  { "dfg_lut.flipY#1", 1, 288, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_ccn[] = {
   { "normal", "vec3", 0, false },
@@ -4414,23 +4402,20 @@ static const t3_gen_property p_physical_cc_ccn_instbig_icol_shadow_senv_l1001[] 
   { "scene.environmentRotation", 1, 320, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 420, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
   { "clearcoatNormalMap.flipY", 1, 288, 4, false },
-  { "environment.flipY", 1, 416, 4, false },
-};
-static const uint8_t kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_ccn_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 392, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 396, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 404, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 408, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 412, 4, kb_physical_cc_ccn_instbig_icol_shadow_senv_l1001 + 36 },
+  { "environment.flipY", 1, 392, 4, false },
+  { "environment.flipY#1", 1, 396, 4, false },
+  { "environment.flipY#2", 1, 404, 4, false },
+  { "environment.flipY#3", 1, 408, 4, false },
+  { "environment.flipY#4", 1, 412, 4, false },
+  { "environment.flipY#5", 1, 416, 4, false },
+  { "dfg_lut.flipY#1", 1, 420, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_ccn_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -4491,23 +4476,20 @@ static const t3_gen_property p_physical_cc_ccn_instbig_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 320, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 420, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
   { "clearcoatNormalMap.flipY", 1, 288, 4, false },
-  { "environment.flipY", 1, 416, 4, false },
-};
-static const uint8_t kb_physical_cc_ccn_instbig_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_ccn_instbig_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 16 },
-  { 1, 392, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 20 },
-  { 1, 396, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 24 },
-  { 1, 404, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 28 },
-  { 1, 408, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 32 },
-  { 1, 412, 4, kb_physical_cc_ccn_instbig_shadow_senv_l1001 + 36 },
+  { "environment.flipY", 1, 392, 4, false },
+  { "environment.flipY#1", 1, 396, 4, false },
+  { "environment.flipY#2", 1, 404, 4, false },
+  { "environment.flipY#3", 1, 408, 4, false },
+  { "environment.flipY#4", 1, 412, 4, false },
+  { "environment.flipY#5", 1, 416, 4, false },
+  { "dfg_lut.flipY#1", 1, 420, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_ccn_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -4567,23 +4549,20 @@ static const t3_gen_property p_physical_cc_ccn_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 320, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 420, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
   { "clearcoatNormalMap.flipY", 1, 288, 4, false },
-  { "environment.flipY", 1, 416, 4, false },
-};
-static const uint8_t kb_physical_cc_ccn_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_ccn_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 16 },
-  { 1, 392, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 20 },
-  { 1, 396, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 24 },
-  { 1, 404, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 28 },
-  { 1, 408, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 32 },
-  { 1, 412, 4, kb_physical_cc_ccn_shadow_senv_l1001 + 36 },
+  { "environment.flipY", 1, 392, 4, false },
+  { "environment.flipY#1", 1, 396, 4, false },
+  { "environment.flipY#2", 1, 404, 4, false },
+  { "environment.flipY#3", 1, 408, 4, false },
+  { "environment.flipY#4", 1, 412, 4, false },
+  { "environment.flipY#5", 1, 416, 4, false },
+  { "dfg_lut.flipY#1", 1, 420, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_ccn_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -4639,23 +4618,20 @@ static const t3_gen_property p_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1
   { "scene.environmentRotation", 1, 320, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 420, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
   { "clearcoatNormalMap.flipY", 1, 288, 4, false },
-  { "environment.flipY", 1, 416, 4, false },
-};
-static const uint8_t kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 392, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 396, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 404, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 408, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 412, 4, kb_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001 + 36 },
+  { "environment.flipY", 1, 392, 4, false },
+  { "environment.flipY#1", 1, 396, 4, false },
+  { "environment.flipY#2", 1, 404, 4, false },
+  { "environment.flipY#3", 1, 408, 4, false },
+  { "environment.flipY#4", 1, 412, 4, false },
+  { "environment.flipY#5", 1, 416, 4, false },
+  { "dfg_lut.flipY#1", 1, 420, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -4716,23 +4692,20 @@ static const t3_gen_property p_physical_cc_ccn_trans_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 320, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 420, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
   { "clearcoatNormalMap.flipY", 1, 288, 4, false },
-  { "environment.flipY", 1, 416, 4, false },
-};
-static const uint8_t kb_physical_cc_ccn_trans_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_ccn_trans_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 16 },
-  { 1, 392, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 20 },
-  { 1, 396, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 24 },
-  { 1, 404, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 28 },
-  { 1, 408, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 32 },
-  { 1, 412, 4, kb_physical_cc_ccn_trans_shadow_senv_l1001 + 36 },
+  { "environment.flipY", 1, 392, 4, false },
+  { "environment.flipY#1", 1, 396, 4, false },
+  { "environment.flipY#2", 1, 404, 4, false },
+  { "environment.flipY#3", 1, 408, 4, false },
+  { "environment.flipY#4", 1, 412, 4, false },
+  { "environment.flipY#5", 1, 416, 4, false },
+  { "dfg_lut.flipY#1", 1, 420, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_ccn_trans_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -4785,22 +4758,19 @@ static const t3_gen_property p_physical_cc_instbig_icol_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 240, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 340, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 336, 4, false },
-};
-static const uint8_t kb_physical_cc_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 312, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 316, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 324, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_cc_instbig_icol_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
+  { "environment.flipY#4", 1, 332, 4, false },
+  { "environment.flipY#5", 1, 336, 4, false },
+  { "dfg_lut.flipY#1", 1, 340, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -4857,22 +4827,19 @@ static const t3_gen_property p_physical_cc_instbig_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 240, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 340, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 336, 4, false },
-};
-static const uint8_t kb_physical_cc_instbig_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_instbig_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 16 },
-  { 1, 312, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 20 },
-  { 1, 316, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 24 },
-  { 1, 324, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_cc_instbig_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
+  { "environment.flipY#4", 1, 332, 4, false },
+  { "environment.flipY#5", 1, 336, 4, false },
+  { "dfg_lut.flipY#1", 1, 340, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -4928,22 +4895,19 @@ static const t3_gen_property p_physical_cc_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 240, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 340, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 336, 4, false },
-};
-static const uint8_t kb_physical_cc_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_shadow_senv_l1001 + 16 },
-  { 1, 312, 4, kb_physical_cc_shadow_senv_l1001 + 20 },
-  { 1, 316, 4, kb_physical_cc_shadow_senv_l1001 + 24 },
-  { 1, 324, 4, kb_physical_cc_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_cc_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_cc_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
+  { "environment.flipY#4", 1, 332, 4, false },
+  { "environment.flipY#5", 1, 336, 4, false },
+  { "dfg_lut.flipY#1", 1, 340, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -4987,11 +4951,8 @@ static const t3_gen_property p_physical_cc_sheen_irid[] = {
   { "object.normalMatrix", 1, 32, 44, true },
   { "point[0].position", 0, 224, 12, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
-  { "dfg_lut.flipY", 1, 244, 4, false },
-};
-static const uint8_t kb_physical_cc_sheen_irid[] = {0x00, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_sheen_irid[] = {
-  { 1, 240, 4, kb_physical_cc_sheen_irid + 0 },
+  { "dfg_lut.flipY", 1, 240, 4, false },
+  { "dfg_lut.flipY#1", 1, 244, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_sheen_irid[] = {
   { "normal", "vec3", 0, false },
@@ -5049,22 +5010,19 @@ static const t3_gen_property p_physical_cc_sheen_irid_instbig_icol_shadow_senv_l
   { "scene.environmentRotation", 1, 272, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 372, 4, false },
-  { "shadow:directional[0].flipY", 1, 260, 4, false },
-  { "environment.flipY", 1, 368, 4, false },
-};
-static const uint8_t kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 240, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 244, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 248, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 252, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 256, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 344, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 348, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 356, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 360, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 364, 4, kb_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 240, 4, false },
+  { "shadow:directional[0].flipY", 1, 244, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 248, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 252, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 256, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 260, 4, false },
+  { "environment.flipY", 1, 344, 4, false },
+  { "environment.flipY#1", 1, 348, 4, false },
+  { "environment.flipY#2", 1, 356, 4, false },
+  { "environment.flipY#3", 1, 360, 4, false },
+  { "environment.flipY#4", 1, 364, 4, false },
+  { "environment.flipY#5", 1, 368, 4, false },
+  { "dfg_lut.flipY#1", 1, 372, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -5127,22 +5085,19 @@ static const t3_gen_property p_physical_cc_sheen_irid_instbig_shadow_senv_l1001[
   { "scene.environmentRotation", 1, 272, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 372, 4, false },
-  { "shadow:directional[0].flipY", 1, 260, 4, false },
-  { "environment.flipY", 1, 368, 4, false },
-};
-static const uint8_t kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_sheen_irid_instbig_shadow_senv_l1001[] = {
-  { 1, 240, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 0 },
-  { 1, 244, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 4 },
-  { 1, 248, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 8 },
-  { 1, 252, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 12 },
-  { 1, 256, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 16 },
-  { 1, 344, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 20 },
-  { 1, 348, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 24 },
-  { 1, 356, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 28 },
-  { 1, 360, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 32 },
-  { 1, 364, 4, kb_physical_cc_sheen_irid_instbig_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 240, 4, false },
+  { "shadow:directional[0].flipY", 1, 244, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 248, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 252, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 256, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 260, 4, false },
+  { "environment.flipY", 1, 344, 4, false },
+  { "environment.flipY#1", 1, 348, 4, false },
+  { "environment.flipY#2", 1, 356, 4, false },
+  { "environment.flipY#3", 1, 360, 4, false },
+  { "environment.flipY#4", 1, 364, 4, false },
+  { "environment.flipY#5", 1, 368, 4, false },
+  { "dfg_lut.flipY#1", 1, 372, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_sheen_irid_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -5204,22 +5159,19 @@ static const t3_gen_property p_physical_cc_sheen_irid_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 272, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 372, 4, false },
-  { "shadow:directional[0].flipY", 1, 260, 4, false },
-  { "environment.flipY", 1, 368, 4, false },
-};
-static const uint8_t kb_physical_cc_sheen_irid_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_sheen_irid_shadow_senv_l1001[] = {
-  { 1, 240, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 0 },
-  { 1, 244, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 4 },
-  { 1, 248, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 8 },
-  { 1, 252, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 12 },
-  { 1, 256, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 16 },
-  { 1, 344, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 20 },
-  { 1, 348, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 24 },
-  { 1, 356, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 28 },
-  { 1, 360, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 32 },
-  { 1, 364, 4, kb_physical_cc_sheen_irid_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 240, 4, false },
+  { "shadow:directional[0].flipY", 1, 244, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 248, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 252, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 256, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 260, 4, false },
+  { "environment.flipY", 1, 344, 4, false },
+  { "environment.flipY#1", 1, 348, 4, false },
+  { "environment.flipY#2", 1, 356, 4, false },
+  { "environment.flipY#3", 1, 360, 4, false },
+  { "environment.flipY#4", 1, 364, 4, false },
+  { "environment.flipY#5", 1, 368, 4, false },
+  { "dfg_lut.flipY#1", 1, 372, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_sheen_irid_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -5277,22 +5229,19 @@ static const t3_gen_property p_physical_cc_sheen_irid_trans_instbig_icol_shadow_
   { "scene.environmentRotation", 1, 272, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 372, 4, false },
-  { "shadow:directional[0].flipY", 1, 260, 4, false },
-  { "environment.flipY", 1, 368, 4, false },
-};
-static const uint8_t kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 240, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 244, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 248, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 252, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 256, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 344, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 348, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 356, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 360, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 364, 4, kb_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 240, 4, false },
+  { "shadow:directional[0].flipY", 1, 244, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 248, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 252, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 256, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 260, 4, false },
+  { "environment.flipY", 1, 344, 4, false },
+  { "environment.flipY#1", 1, 348, 4, false },
+  { "environment.flipY#2", 1, 356, 4, false },
+  { "environment.flipY#3", 1, 360, 4, false },
+  { "environment.flipY#4", 1, 364, 4, false },
+  { "environment.flipY#5", 1, 368, 4, false },
+  { "dfg_lut.flipY#1", 1, 372, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -5355,22 +5304,19 @@ static const t3_gen_property p_physical_cc_sheen_irid_trans_shadow_senv_l1001[] 
   { "scene.environmentRotation", 1, 272, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 372, 4, false },
-  { "shadow:directional[0].flipY", 1, 260, 4, false },
-  { "environment.flipY", 1, 368, 4, false },
-};
-static const uint8_t kb_physical_cc_sheen_irid_trans_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_sheen_irid_trans_shadow_senv_l1001[] = {
-  { 1, 240, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 0 },
-  { 1, 244, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 4 },
-  { 1, 248, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 8 },
-  { 1, 252, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 12 },
-  { 1, 256, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 16 },
-  { 1, 344, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 20 },
-  { 1, 348, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 24 },
-  { 1, 356, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 28 },
-  { 1, 360, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 32 },
-  { 1, 364, 4, kb_physical_cc_sheen_irid_trans_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 240, 4, false },
+  { "shadow:directional[0].flipY", 1, 244, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 248, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 252, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 256, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 260, 4, false },
+  { "environment.flipY", 1, 344, 4, false },
+  { "environment.flipY#1", 1, 348, 4, false },
+  { "environment.flipY#2", 1, 356, 4, false },
+  { "environment.flipY#3", 1, 360, 4, false },
+  { "environment.flipY#4", 1, 364, 4, false },
+  { "environment.flipY#5", 1, 368, 4, false },
+  { "dfg_lut.flipY#1", 1, 372, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_sheen_irid_trans_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -5422,22 +5368,19 @@ static const t3_gen_property p_physical_cc_trans_instbig_icol_shadow_senv_l1001[
   { "scene.environmentRotation", 1, 240, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 340, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 336, 4, false },
-};
-static const uint8_t kb_physical_cc_trans_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_trans_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 312, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 316, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 324, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_cc_trans_instbig_icol_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
+  { "environment.flipY#4", 1, 332, 4, false },
+  { "environment.flipY#5", 1, 336, 4, false },
+  { "dfg_lut.flipY#1", 1, 340, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_trans_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -5494,22 +5437,19 @@ static const t3_gen_property p_physical_cc_trans_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 240, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
-  { "dfg_lut.flipY", 1, 340, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 336, 4, false },
-};
-static const uint8_t kb_physical_cc_trans_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_cc_trans_shadow_senv_l1001[] = {
-  { 1, 208, 4, kb_physical_cc_trans_shadow_senv_l1001 + 0 },
-  { 1, 212, 4, kb_physical_cc_trans_shadow_senv_l1001 + 4 },
-  { 1, 216, 4, kb_physical_cc_trans_shadow_senv_l1001 + 8 },
-  { 1, 220, 4, kb_physical_cc_trans_shadow_senv_l1001 + 12 },
-  { 1, 224, 4, kb_physical_cc_trans_shadow_senv_l1001 + 16 },
-  { 1, 312, 4, kb_physical_cc_trans_shadow_senv_l1001 + 20 },
-  { 1, 316, 4, kb_physical_cc_trans_shadow_senv_l1001 + 24 },
-  { 1, 324, 4, kb_physical_cc_trans_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_cc_trans_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_cc_trans_shadow_senv_l1001 + 36 },
+  { "dfg_lut.flipY", 1, 208, 4, false },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
+  { "environment.flipY#4", 1, 332, 4, false },
+  { "environment.flipY#5", 1, 336, 4, false },
+  { "dfg_lut.flipY#1", 1, 340, 4, false },
 };
 static const t3_gen_attribute a_physical_cc_trans_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -5629,13 +5569,10 @@ static const t3_gen_property p_physical_env[] = {
   { "material.envMapRotation", 1, 208, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "dfg_lut.flipY", 1, 192, 4, false },
-  { "envMap.flipY", 1, 296, 4, false },
-};
-static const uint8_t kb_physical_env[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_env[] = {
-  { 1, 280, 4, kb_physical_env + 0 },
-  { 1, 284, 4, kb_physical_env + 4 },
-  { 1, 292, 4, kb_physical_env + 8 },
+  { "envMap.flipY", 1, 280, 4, false },
+  { "envMap.flipY#1", 1, 284, 4, false },
+  { "envMap.flipY#2", 1, 292, 4, false },
+  { "envMap.flipY#3", 1, 296, 4, false },
 };
 static const t3_gen_attribute a_physical_env[] = {
   { "normal", "vec3", 0, false },
@@ -5879,18 +5816,15 @@ static const t3_gen_property p_physical_instbig_icol_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 192, 4, false },
-  { "shadow:directional[0].flipY", 1, 212, 4, false },
-  { "environment.flipY", 1, 312, 4, false },
-};
-static const uint8_t kb_physical_instbig_icol_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 196, 4, kb_physical_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 200, 4, kb_physical_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 204, 4, kb_physical_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 208, 4, kb_physical_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 296, 4, kb_physical_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 300, 4, kb_physical_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 308, 4, kb_physical_instbig_icol_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 196, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 200, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 204, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 208, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 212, 4, false },
+  { "environment.flipY", 1, 296, 4, false },
+  { "environment.flipY#1", 1, 300, 4, false },
+  { "environment.flipY#2", 1, 308, 4, false },
+  { "environment.flipY#3", 1, 312, 4, false },
 };
 static const t3_gen_attribute a_physical_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -5946,18 +5880,15 @@ static const t3_gen_property p_physical_instbig_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 192, 4, false },
-  { "shadow:directional[0].flipY", 1, 212, 4, false },
-  { "environment.flipY", 1, 312, 4, false },
-};
-static const uint8_t kb_physical_instbig_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_instbig_shadow_senv_l1001[] = {
-  { 1, 196, 4, kb_physical_instbig_shadow_senv_l1001 + 0 },
-  { 1, 200, 4, kb_physical_instbig_shadow_senv_l1001 + 4 },
-  { 1, 204, 4, kb_physical_instbig_shadow_senv_l1001 + 8 },
-  { 1, 208, 4, kb_physical_instbig_shadow_senv_l1001 + 12 },
-  { 1, 296, 4, kb_physical_instbig_shadow_senv_l1001 + 16 },
-  { 1, 300, 4, kb_physical_instbig_shadow_senv_l1001 + 20 },
-  { 1, 308, 4, kb_physical_instbig_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 196, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 200, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 204, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 208, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 212, 4, false },
+  { "environment.flipY", 1, 296, 4, false },
+  { "environment.flipY#1", 1, 300, 4, false },
+  { "environment.flipY#2", 1, 308, 4, false },
+  { "environment.flipY#3", 1, 312, 4, false },
 };
 static const t3_gen_attribute a_physical_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -6054,18 +5985,15 @@ static const t3_gen_property p_physical_irid_instbig_icol_shadow_senv_l1001[] = 
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 208, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 328, 4, false },
-};
-static const uint8_t kb_physical_irid_instbig_icol_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_irid_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 212, 4, kb_physical_irid_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 216, 4, kb_physical_irid_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 220, 4, kb_physical_irid_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 224, 4, kb_physical_irid_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 312, 4, kb_physical_irid_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 316, 4, kb_physical_irid_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 324, 4, kb_physical_irid_instbig_icol_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
 };
 static const t3_gen_attribute a_physical_irid_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -6124,18 +6052,15 @@ static const t3_gen_property p_physical_irid_instbig_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 208, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 328, 4, false },
-};
-static const uint8_t kb_physical_irid_instbig_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_irid_instbig_shadow_senv_l1001[] = {
-  { 1, 212, 4, kb_physical_irid_instbig_shadow_senv_l1001 + 0 },
-  { 1, 216, 4, kb_physical_irid_instbig_shadow_senv_l1001 + 4 },
-  { 1, 220, 4, kb_physical_irid_instbig_shadow_senv_l1001 + 8 },
-  { 1, 224, 4, kb_physical_irid_instbig_shadow_senv_l1001 + 12 },
-  { 1, 312, 4, kb_physical_irid_instbig_shadow_senv_l1001 + 16 },
-  { 1, 316, 4, kb_physical_irid_instbig_shadow_senv_l1001 + 20 },
-  { 1, 324, 4, kb_physical_irid_instbig_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
 };
 static const t3_gen_attribute a_physical_irid_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -6193,18 +6118,15 @@ static const t3_gen_property p_physical_irid_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 208, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 328, 4, false },
-};
-static const uint8_t kb_physical_irid_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_irid_shadow_senv_l1001[] = {
-  { 1, 212, 4, kb_physical_irid_shadow_senv_l1001 + 0 },
-  { 1, 216, 4, kb_physical_irid_shadow_senv_l1001 + 4 },
-  { 1, 220, 4, kb_physical_irid_shadow_senv_l1001 + 8 },
-  { 1, 224, 4, kb_physical_irid_shadow_senv_l1001 + 12 },
-  { 1, 312, 4, kb_physical_irid_shadow_senv_l1001 + 16 },
-  { 1, 316, 4, kb_physical_irid_shadow_senv_l1001 + 20 },
-  { 1, 324, 4, kb_physical_irid_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
 };
 static const t3_gen_attribute a_physical_irid_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -6258,18 +6180,15 @@ static const t3_gen_property p_physical_irid_trans_instbig_icol_shadow_senv_l100
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 208, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 328, 4, false },
-};
-static const uint8_t kb_physical_irid_trans_instbig_icol_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_irid_trans_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 212, 4, kb_physical_irid_trans_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 216, 4, kb_physical_irid_trans_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 220, 4, kb_physical_irid_trans_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 224, 4, kb_physical_irid_trans_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 312, 4, kb_physical_irid_trans_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 316, 4, kb_physical_irid_trans_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 324, 4, kb_physical_irid_trans_instbig_icol_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
 };
 static const t3_gen_attribute a_physical_irid_trans_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -6328,18 +6247,15 @@ static const t3_gen_property p_physical_irid_trans_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 208, 4, false },
-  { "shadow:directional[0].flipY", 1, 228, 4, false },
-  { "environment.flipY", 1, 328, 4, false },
-};
-static const uint8_t kb_physical_irid_trans_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_irid_trans_shadow_senv_l1001[] = {
-  { 1, 212, 4, kb_physical_irid_trans_shadow_senv_l1001 + 0 },
-  { 1, 216, 4, kb_physical_irid_trans_shadow_senv_l1001 + 4 },
-  { 1, 220, 4, kb_physical_irid_trans_shadow_senv_l1001 + 8 },
-  { 1, 224, 4, kb_physical_irid_trans_shadow_senv_l1001 + 12 },
-  { 1, 312, 4, kb_physical_irid_trans_shadow_senv_l1001 + 16 },
-  { 1, 316, 4, kb_physical_irid_trans_shadow_senv_l1001 + 20 },
-  { 1, 324, 4, kb_physical_irid_trans_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 216, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 220, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 224, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 228, 4, false },
+  { "environment.flipY", 1, 312, 4, false },
+  { "environment.flipY#1", 1, 316, 4, false },
+  { "environment.flipY#2", 1, 324, 4, false },
+  { "environment.flipY#3", 1, 328, 4, false },
 };
 static const t3_gen_attribute a_physical_irid_trans_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -6843,28 +6759,25 @@ static const t3_gen_property p_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_i
   { "aoMap.flipY", 1, 128, 4, false },
   { "roughnessMap.flipY", 1, 192, 4, false },
   { "normalMap.flipY", 1, 448, 4, false },
-  { "dfg_lut.flipY", 1, 564, 4, false },
-  { "viewport.flipY", 1, 560, 4, false },
-  { "shadow:directional[0].flipY", 1, 584, 4, false },
-  { "environment.flipY", 1, 680, 4, false },
-};
-static const uint8_t kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 528, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 532, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 536, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 540, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 544, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 548, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 552, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 556, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 568, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 572, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 36 },
-  { 1, 576, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 40 },
-  { 1, 580, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 44 },
-  { 1, 664, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 48 },
-  { 1, 668, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 52 },
-  { 1, 676, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 528, 4, false },
+  { "viewport.flipY", 1, 532, 4, false },
+  { "viewport.flipY#1", 1, 536, 4, false },
+  { "viewport.flipY#2", 1, 540, 4, false },
+  { "viewport.flipY#3", 1, 544, 4, false },
+  { "viewport.flipY#4", 1, 548, 4, false },
+  { "viewport.flipY#5", 1, 552, 4, false },
+  { "viewport.flipY#6", 1, 556, 4, false },
+  { "viewport.flipY#7", 1, 560, 4, false },
+  { "dfg_lut.flipY#1", 1, 564, 4, false },
+  { "shadow:directional[0].flipY", 1, 568, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 572, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 576, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 580, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 584, 4, false },
+  { "environment.flipY", 1, 664, 4, false },
+  { "environment.flipY#1", 1, 668, 4, false },
+  { "environment.flipY#2", 1, 676, 4, false },
+  { "environment.flipY#3", 1, 680, 4, false },
 };
 static const t3_gen_attribute a_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -6941,28 +6854,25 @@ static const t3_gen_property p_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_s
   { "aoMap.flipY", 1, 128, 4, false },
   { "roughnessMap.flipY", 1, 192, 4, false },
   { "normalMap.flipY", 1, 448, 4, false },
-  { "dfg_lut.flipY", 1, 564, 4, false },
-  { "viewport.flipY", 1, 560, 4, false },
-  { "shadow:directional[0].flipY", 1, 584, 4, false },
-  { "environment.flipY", 1, 680, 4, false },
-};
-static const uint8_t kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001[] = {
-  { 1, 528, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 0 },
-  { 1, 532, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 4 },
-  { 1, 536, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 8 },
-  { 1, 540, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 12 },
-  { 1, 544, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 16 },
-  { 1, 548, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 20 },
-  { 1, 552, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 24 },
-  { 1, 556, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 28 },
-  { 1, 568, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 32 },
-  { 1, 572, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 36 },
-  { 1, 576, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 40 },
-  { 1, 580, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 44 },
-  { 1, 664, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 48 },
-  { 1, 668, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 52 },
-  { 1, 676, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 528, 4, false },
+  { "viewport.flipY", 1, 532, 4, false },
+  { "viewport.flipY#1", 1, 536, 4, false },
+  { "viewport.flipY#2", 1, 540, 4, false },
+  { "viewport.flipY#3", 1, 544, 4, false },
+  { "viewport.flipY#4", 1, 548, 4, false },
+  { "viewport.flipY#5", 1, 552, 4, false },
+  { "viewport.flipY#6", 1, 556, 4, false },
+  { "viewport.flipY#7", 1, 560, 4, false },
+  { "dfg_lut.flipY#1", 1, 564, 4, false },
+  { "shadow:directional[0].flipY", 1, 568, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 572, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 576, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 580, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 584, 4, false },
+  { "environment.flipY", 1, 664, 4, false },
+  { "environment.flipY#1", 1, 668, 4, false },
+  { "environment.flipY#2", 1, 676, 4, false },
+  { "environment.flipY#3", 1, 680, 4, false },
 };
 static const t3_gen_attribute a_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -7038,28 +6948,25 @@ static const t3_gen_property p_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_se
   { "aoMap.flipY", 1, 128, 4, false },
   { "roughnessMap.flipY", 1, 192, 4, false },
   { "normalMap.flipY", 1, 448, 4, false },
-  { "dfg_lut.flipY", 1, 564, 4, false },
-  { "viewport.flipY", 1, 560, 4, false },
-  { "shadow:directional[0].flipY", 1, 584, 4, false },
-  { "environment.flipY", 1, 680, 4, false },
-};
-static const uint8_t kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001[] = {
-  { 1, 528, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 0 },
-  { 1, 532, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 4 },
-  { 1, 536, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 8 },
-  { 1, 540, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 12 },
-  { 1, 544, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 16 },
-  { 1, 548, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 20 },
-  { 1, 552, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 24 },
-  { 1, 556, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 28 },
-  { 1, 568, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 32 },
-  { 1, 572, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 36 },
-  { 1, 576, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 40 },
-  { 1, 580, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 44 },
-  { 1, 664, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 48 },
-  { 1, 668, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 52 },
-  { 1, 676, 4, kb_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 528, 4, false },
+  { "viewport.flipY", 1, 532, 4, false },
+  { "viewport.flipY#1", 1, 536, 4, false },
+  { "viewport.flipY#2", 1, 540, 4, false },
+  { "viewport.flipY#3", 1, 544, 4, false },
+  { "viewport.flipY#4", 1, 548, 4, false },
+  { "viewport.flipY#5", 1, 552, 4, false },
+  { "viewport.flipY#6", 1, 556, 4, false },
+  { "viewport.flipY#7", 1, 560, 4, false },
+  { "dfg_lut.flipY#1", 1, 564, 4, false },
+  { "shadow:directional[0].flipY", 1, 568, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 572, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 576, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 580, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 584, 4, false },
+  { "environment.flipY", 1, 664, 4, false },
+  { "environment.flipY#1", 1, 668, 4, false },
+  { "environment.flipY#2", 1, 676, 4, false },
+  { "environment.flipY#3", 1, 680, 4, false },
 };
 static const t3_gen_attribute a_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001[] = {
   { "uv", "vec2", 0, false },
@@ -7131,28 +7038,25 @@ static const t3_gen_property p_physical_map_rep_nmap_ao_rmap_transm_instbig_icol
   { "aoMap.flipY", 1, 128, 4, false },
   { "roughnessMap.flipY", 1, 192, 4, false },
   { "normalMap.flipY", 1, 448, 4, false },
-  { "dfg_lut.flipY", 1, 564, 4, false },
-  { "viewport.flipY", 1, 560, 4, false },
-  { "shadow:directional[0].flipY", 1, 584, 4, false },
-  { "environment.flipY", 1, 680, 4, false },
-};
-static const uint8_t kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 528, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 532, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 536, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 540, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 544, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 548, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 552, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 556, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 568, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 572, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 36 },
-  { 1, 576, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 40 },
-  { 1, 580, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 44 },
-  { 1, 664, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 48 },
-  { 1, 668, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 52 },
-  { 1, 676, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 528, 4, false },
+  { "viewport.flipY", 1, 532, 4, false },
+  { "viewport.flipY#1", 1, 536, 4, false },
+  { "viewport.flipY#2", 1, 540, 4, false },
+  { "viewport.flipY#3", 1, 544, 4, false },
+  { "viewport.flipY#4", 1, 548, 4, false },
+  { "viewport.flipY#5", 1, 552, 4, false },
+  { "viewport.flipY#6", 1, 556, 4, false },
+  { "viewport.flipY#7", 1, 560, 4, false },
+  { "dfg_lut.flipY#1", 1, 564, 4, false },
+  { "shadow:directional[0].flipY", 1, 568, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 572, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 576, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 580, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 584, 4, false },
+  { "environment.flipY", 1, 664, 4, false },
+  { "environment.flipY#1", 1, 668, 4, false },
+  { "environment.flipY#2", 1, 676, 4, false },
+  { "environment.flipY#3", 1, 680, 4, false },
 };
 static const t3_gen_attribute a_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -7229,28 +7133,25 @@ static const t3_gen_property p_physical_map_rep_nmap_ao_rmap_transm_instbig_shad
   { "aoMap.flipY", 1, 128, 4, false },
   { "roughnessMap.flipY", 1, 192, 4, false },
   { "normalMap.flipY", 1, 448, 4, false },
-  { "dfg_lut.flipY", 1, 564, 4, false },
-  { "viewport.flipY", 1, 560, 4, false },
-  { "shadow:directional[0].flipY", 1, 584, 4, false },
-  { "environment.flipY", 1, 680, 4, false },
-};
-static const uint8_t kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001[] = {
-  { 1, 528, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 0 },
-  { 1, 532, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 4 },
-  { 1, 536, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 8 },
-  { 1, 540, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 12 },
-  { 1, 544, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 16 },
-  { 1, 548, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 20 },
-  { 1, 552, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 24 },
-  { 1, 556, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 28 },
-  { 1, 568, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 32 },
-  { 1, 572, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 36 },
-  { 1, 576, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 40 },
-  { 1, 580, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 44 },
-  { 1, 664, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 48 },
-  { 1, 668, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 52 },
-  { 1, 676, 4, kb_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 528, 4, false },
+  { "viewport.flipY", 1, 532, 4, false },
+  { "viewport.flipY#1", 1, 536, 4, false },
+  { "viewport.flipY#2", 1, 540, 4, false },
+  { "viewport.flipY#3", 1, 544, 4, false },
+  { "viewport.flipY#4", 1, 548, 4, false },
+  { "viewport.flipY#5", 1, 552, 4, false },
+  { "viewport.flipY#6", 1, 556, 4, false },
+  { "viewport.flipY#7", 1, 560, 4, false },
+  { "dfg_lut.flipY#1", 1, 564, 4, false },
+  { "shadow:directional[0].flipY", 1, 568, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 572, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 576, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 580, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 584, 4, false },
+  { "environment.flipY", 1, 664, 4, false },
+  { "environment.flipY#1", 1, 668, 4, false },
+  { "environment.flipY#2", 1, 676, 4, false },
+  { "environment.flipY#3", 1, 680, 4, false },
 };
 static const t3_gen_attribute a_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -7326,28 +7227,25 @@ static const t3_gen_property p_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_
   { "aoMap.flipY", 1, 128, 4, false },
   { "roughnessMap.flipY", 1, 192, 4, false },
   { "normalMap.flipY", 1, 448, 4, false },
-  { "dfg_lut.flipY", 1, 564, 4, false },
-  { "viewport.flipY", 1, 560, 4, false },
-  { "shadow:directional[0].flipY", 1, 584, 4, false },
-  { "environment.flipY", 1, 680, 4, false },
-};
-static const uint8_t kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001[] = {
-  { 1, 528, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 0 },
-  { 1, 532, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 4 },
-  { 1, 536, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 8 },
-  { 1, 540, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 12 },
-  { 1, 544, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 16 },
-  { 1, 548, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 20 },
-  { 1, 552, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 24 },
-  { 1, 556, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 28 },
-  { 1, 568, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 32 },
-  { 1, 572, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 36 },
-  { 1, 576, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 40 },
-  { 1, 580, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 44 },
-  { 1, 664, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 48 },
-  { 1, 668, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 52 },
-  { 1, 676, 4, kb_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 528, 4, false },
+  { "viewport.flipY", 1, 532, 4, false },
+  { "viewport.flipY#1", 1, 536, 4, false },
+  { "viewport.flipY#2", 1, 540, 4, false },
+  { "viewport.flipY#3", 1, 544, 4, false },
+  { "viewport.flipY#4", 1, 548, 4, false },
+  { "viewport.flipY#5", 1, 552, 4, false },
+  { "viewport.flipY#6", 1, 556, 4, false },
+  { "viewport.flipY#7", 1, 560, 4, false },
+  { "dfg_lut.flipY#1", 1, 564, 4, false },
+  { "shadow:directional[0].flipY", 1, 568, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 572, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 576, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 580, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 584, 4, false },
+  { "environment.flipY", 1, 664, 4, false },
+  { "environment.flipY#1", 1, 668, 4, false },
+  { "environment.flipY#2", 1, 676, 4, false },
+  { "environment.flipY#3", 1, 680, 4, false },
 };
 static const t3_gen_attribute a_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001[] = {
   { "uv", "vec2", 0, false },
@@ -7557,13 +7455,10 @@ static const t3_gen_property p_physical_senv[] = {
   { "scene.environmentRotation", 1, 208, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "dfg_lut.flipY", 1, 192, 4, false },
-  { "environment.flipY", 1, 296, 4, false },
-};
-static const uint8_t kb_physical_senv[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_senv[] = {
-  { 1, 280, 4, kb_physical_senv + 0 },
-  { 1, 284, 4, kb_physical_senv + 4 },
-  { 1, 292, 4, kb_physical_senv + 8 },
+  { "environment.flipY", 1, 280, 4, false },
+  { "environment.flipY#1", 1, 284, 4, false },
+  { "environment.flipY#2", 1, 292, 4, false },
+  { "environment.flipY#3", 1, 296, 4, false },
 };
 static const t3_gen_attribute a_physical_senv[] = {
   { "normal", "vec3", 0, false },
@@ -7617,15 +7512,15 @@ static const t3_gen_property p_physical_shadow[] = {
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "point[0].shadow.matrix", 0, 352, 64, false },
   { "dfg_lut.flipY", 1, 192, 4, false },
-  { "shadow:directional[0].flipY", 1, 212, 4, false },
+  { "shadow:directional[0].flipY", 1, 196, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 200, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 204, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 208, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 212, 4, false },
 };
-static const uint8_t kb_physical_shadow[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_physical_shadow[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_physical_shadow[] = {
   { 0, 416, 4, kb_physical_shadow + 0 },
-  { 1, 196, 4, kb_physical_shadow + 4 },
-  { 1, 200, 4, kb_physical_shadow + 8 },
-  { 1, 204, 4, kb_physical_shadow + 12 },
-  { 1, 208, 4, kb_physical_shadow + 16 },
 };
 static const t3_gen_attribute a_physical_shadow[] = {
   { "normal", "vec3", 0, false },
@@ -7676,18 +7571,15 @@ static const t3_gen_property p_physical_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 192, 4, false },
-  { "shadow:directional[0].flipY", 1, 212, 4, false },
-  { "environment.flipY", 1, 312, 4, false },
-};
-static const uint8_t kb_physical_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_shadow_senv_l1001[] = {
-  { 1, 196, 4, kb_physical_shadow_senv_l1001 + 0 },
-  { 1, 200, 4, kb_physical_shadow_senv_l1001 + 4 },
-  { 1, 204, 4, kb_physical_shadow_senv_l1001 + 8 },
-  { 1, 208, 4, kb_physical_shadow_senv_l1001 + 12 },
-  { 1, 296, 4, kb_physical_shadow_senv_l1001 + 16 },
-  { 1, 300, 4, kb_physical_shadow_senv_l1001 + 20 },
-  { 1, 308, 4, kb_physical_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 196, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 200, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 204, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 208, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 212, 4, false },
+  { "environment.flipY", 1, 296, 4, false },
+  { "environment.flipY#1", 1, 300, 4, false },
+  { "environment.flipY#2", 1, 308, 4, false },
+  { "environment.flipY#3", 1, 312, 4, false },
 };
 static const t3_gen_attribute a_physical_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -7780,18 +7672,15 @@ static const t3_gen_property p_physical_sheen_instbig_icol_shadow_senv_l1001[] =
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 224, 4, false },
-  { "shadow:directional[0].flipY", 1, 244, 4, false },
-  { "environment.flipY", 1, 344, 4, false },
-};
-static const uint8_t kb_physical_sheen_instbig_icol_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_sheen_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 228, 4, kb_physical_sheen_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 232, 4, kb_physical_sheen_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 236, 4, kb_physical_sheen_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 240, 4, kb_physical_sheen_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 328, 4, kb_physical_sheen_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 332, 4, kb_physical_sheen_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 340, 4, kb_physical_sheen_instbig_icol_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 232, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 236, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 240, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 244, 4, false },
+  { "environment.flipY", 1, 328, 4, false },
+  { "environment.flipY#1", 1, 332, 4, false },
+  { "environment.flipY#2", 1, 340, 4, false },
+  { "environment.flipY#3", 1, 344, 4, false },
 };
 static const t3_gen_attribute a_physical_sheen_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -7850,18 +7739,15 @@ static const t3_gen_property p_physical_sheen_instbig_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 224, 4, false },
-  { "shadow:directional[0].flipY", 1, 244, 4, false },
-  { "environment.flipY", 1, 344, 4, false },
-};
-static const uint8_t kb_physical_sheen_instbig_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_sheen_instbig_shadow_senv_l1001[] = {
-  { 1, 228, 4, kb_physical_sheen_instbig_shadow_senv_l1001 + 0 },
-  { 1, 232, 4, kb_physical_sheen_instbig_shadow_senv_l1001 + 4 },
-  { 1, 236, 4, kb_physical_sheen_instbig_shadow_senv_l1001 + 8 },
-  { 1, 240, 4, kb_physical_sheen_instbig_shadow_senv_l1001 + 12 },
-  { 1, 328, 4, kb_physical_sheen_instbig_shadow_senv_l1001 + 16 },
-  { 1, 332, 4, kb_physical_sheen_instbig_shadow_senv_l1001 + 20 },
-  { 1, 340, 4, kb_physical_sheen_instbig_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 232, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 236, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 240, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 244, 4, false },
+  { "environment.flipY", 1, 328, 4, false },
+  { "environment.flipY#1", 1, 332, 4, false },
+  { "environment.flipY#2", 1, 340, 4, false },
+  { "environment.flipY#3", 1, 344, 4, false },
 };
 static const t3_gen_attribute a_physical_sheen_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -7919,18 +7805,15 @@ static const t3_gen_property p_physical_sheen_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 224, 4, false },
-  { "shadow:directional[0].flipY", 1, 244, 4, false },
-  { "environment.flipY", 1, 344, 4, false },
-};
-static const uint8_t kb_physical_sheen_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_sheen_shadow_senv_l1001[] = {
-  { 1, 228, 4, kb_physical_sheen_shadow_senv_l1001 + 0 },
-  { 1, 232, 4, kb_physical_sheen_shadow_senv_l1001 + 4 },
-  { 1, 236, 4, kb_physical_sheen_shadow_senv_l1001 + 8 },
-  { 1, 240, 4, kb_physical_sheen_shadow_senv_l1001 + 12 },
-  { 1, 328, 4, kb_physical_sheen_shadow_senv_l1001 + 16 },
-  { 1, 332, 4, kb_physical_sheen_shadow_senv_l1001 + 20 },
-  { 1, 340, 4, kb_physical_sheen_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 232, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 236, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 240, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 244, 4, false },
+  { "environment.flipY", 1, 328, 4, false },
+  { "environment.flipY#1", 1, 332, 4, false },
+  { "environment.flipY#2", 1, 340, 4, false },
+  { "environment.flipY#3", 1, 344, 4, false },
 };
 static const t3_gen_attribute a_physical_sheen_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -7984,18 +7867,15 @@ static const t3_gen_property p_physical_sheen_trans_instbig_icol_shadow_senv_l10
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 224, 4, false },
-  { "shadow:directional[0].flipY", 1, 244, 4, false },
-  { "environment.flipY", 1, 344, 4, false },
-};
-static const uint8_t kb_physical_sheen_trans_instbig_icol_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_sheen_trans_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 228, 4, kb_physical_sheen_trans_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 232, 4, kb_physical_sheen_trans_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 236, 4, kb_physical_sheen_trans_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 240, 4, kb_physical_sheen_trans_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 328, 4, kb_physical_sheen_trans_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 332, 4, kb_physical_sheen_trans_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 340, 4, kb_physical_sheen_trans_instbig_icol_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 232, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 236, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 240, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 244, 4, false },
+  { "environment.flipY", 1, 328, 4, false },
+  { "environment.flipY#1", 1, 332, 4, false },
+  { "environment.flipY#2", 1, 340, 4, false },
+  { "environment.flipY#3", 1, 344, 4, false },
 };
 static const t3_gen_attribute a_physical_sheen_trans_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -8054,18 +7934,15 @@ static const t3_gen_property p_physical_sheen_trans_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 224, 4, false },
-  { "shadow:directional[0].flipY", 1, 244, 4, false },
-  { "environment.flipY", 1, 344, 4, false },
-};
-static const uint8_t kb_physical_sheen_trans_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_sheen_trans_shadow_senv_l1001[] = {
-  { 1, 228, 4, kb_physical_sheen_trans_shadow_senv_l1001 + 0 },
-  { 1, 232, 4, kb_physical_sheen_trans_shadow_senv_l1001 + 4 },
-  { 1, 236, 4, kb_physical_sheen_trans_shadow_senv_l1001 + 8 },
-  { 1, 240, 4, kb_physical_sheen_trans_shadow_senv_l1001 + 12 },
-  { 1, 328, 4, kb_physical_sheen_trans_shadow_senv_l1001 + 16 },
-  { 1, 332, 4, kb_physical_sheen_trans_shadow_senv_l1001 + 20 },
-  { 1, 340, 4, kb_physical_sheen_trans_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 228, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 232, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 236, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 240, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 244, 4, false },
+  { "environment.flipY", 1, 328, 4, false },
+  { "environment.flipY#1", 1, 332, 4, false },
+  { "environment.flipY#2", 1, 340, 4, false },
+  { "environment.flipY#3", 1, 344, 4, false },
 };
 static const t3_gen_attribute a_physical_sheen_trans_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -8152,18 +8029,15 @@ static const t3_gen_property p_physical_trans_instbig_icol_shadow_senv_l1001[] =
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 192, 4, false },
-  { "shadow:directional[0].flipY", 1, 212, 4, false },
-  { "environment.flipY", 1, 312, 4, false },
-};
-static const uint8_t kb_physical_trans_instbig_icol_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_trans_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 196, 4, kb_physical_trans_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 200, 4, kb_physical_trans_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 204, 4, kb_physical_trans_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 208, 4, kb_physical_trans_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 296, 4, kb_physical_trans_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 300, 4, kb_physical_trans_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 308, 4, kb_physical_trans_instbig_icol_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 196, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 200, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 204, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 208, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 212, 4, false },
+  { "environment.flipY", 1, 296, 4, false },
+  { "environment.flipY#1", 1, 300, 4, false },
+  { "environment.flipY#2", 1, 308, 4, false },
+  { "environment.flipY#3", 1, 312, 4, false },
 };
 static const t3_gen_attribute a_physical_trans_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -8219,18 +8093,15 @@ static const t3_gen_property p_physical_trans_shadow_senv_l1001[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "dfg_lut.flipY", 1, 192, 4, false },
-  { "shadow:directional[0].flipY", 1, 212, 4, false },
-  { "environment.flipY", 1, 312, 4, false },
-};
-static const uint8_t kb_physical_trans_shadow_senv_l1001[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_trans_shadow_senv_l1001[] = {
-  { 1, 196, 4, kb_physical_trans_shadow_senv_l1001 + 0 },
-  { 1, 200, 4, kb_physical_trans_shadow_senv_l1001 + 4 },
-  { 1, 204, 4, kb_physical_trans_shadow_senv_l1001 + 8 },
-  { 1, 208, 4, kb_physical_trans_shadow_senv_l1001 + 12 },
-  { 1, 296, 4, kb_physical_trans_shadow_senv_l1001 + 16 },
-  { 1, 300, 4, kb_physical_trans_shadow_senv_l1001 + 20 },
-  { 1, 308, 4, kb_physical_trans_shadow_senv_l1001 + 24 },
+  { "shadow:directional[0].flipY", 1, 196, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 200, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 204, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 208, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 212, 4, false },
+  { "environment.flipY", 1, 296, 4, false },
+  { "environment.flipY#1", 1, 300, 4, false },
+  { "environment.flipY#2", 1, 308, 4, false },
+  { "environment.flipY#3", 1, 312, 4, false },
 };
 static const t3_gen_attribute a_physical_trans_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -8274,19 +8145,16 @@ static const t3_gen_property p_physical_transm[] = {
   { "object.normalMatrix", 1, 32, 44, true },
   { "point[0].position", 0, 224, 12, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
-  { "dfg_lut.flipY", 1, 324, 4, false },
-  { "viewport.flipY", 1, 320, 4, false },
-};
-static const uint8_t kb_physical_transm[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_transm[] = {
-  { 1, 288, 4, kb_physical_transm + 0 },
-  { 1, 292, 4, kb_physical_transm + 4 },
-  { 1, 296, 4, kb_physical_transm + 8 },
-  { 1, 300, 4, kb_physical_transm + 12 },
-  { 1, 304, 4, kb_physical_transm + 16 },
-  { 1, 308, 4, kb_physical_transm + 20 },
-  { 1, 312, 4, kb_physical_transm + 24 },
-  { 1, 316, 4, kb_physical_transm + 28 },
+  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "viewport.flipY", 1, 292, 4, false },
+  { "viewport.flipY#1", 1, 296, 4, false },
+  { "viewport.flipY#2", 1, 300, 4, false },
+  { "viewport.flipY#3", 1, 304, 4, false },
+  { "viewport.flipY#4", 1, 308, 4, false },
+  { "viewport.flipY#5", 1, 312, 4, false },
+  { "viewport.flipY#6", 1, 316, 4, false },
+  { "viewport.flipY#7", 1, 320, 4, false },
+  { "dfg_lut.flipY#1", 1, 324, 4, false },
 };
 static const t3_gen_attribute a_physical_transm[] = {
   { "normal", "vec3", 0, false },
@@ -8330,19 +8198,16 @@ static const t3_gen_property p_physical_transm_bs[] = {
   { "object.normalMatrix", 1, 32, 44, true },
   { "point[0].position", 0, 224, 12, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
-  { "dfg_lut.flipY", 1, 324, 4, false },
-  { "viewport.flipY", 1, 320, 4, false },
-};
-static const uint8_t kb_physical_transm_bs[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_transm_bs[] = {
-  { 1, 288, 4, kb_physical_transm_bs + 0 },
-  { 1, 292, 4, kb_physical_transm_bs + 4 },
-  { 1, 296, 4, kb_physical_transm_bs + 8 },
-  { 1, 300, 4, kb_physical_transm_bs + 12 },
-  { 1, 304, 4, kb_physical_transm_bs + 16 },
-  { 1, 308, 4, kb_physical_transm_bs + 20 },
-  { 1, 312, 4, kb_physical_transm_bs + 24 },
-  { 1, 316, 4, kb_physical_transm_bs + 28 },
+  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "viewport.flipY", 1, 292, 4, false },
+  { "viewport.flipY#1", 1, 296, 4, false },
+  { "viewport.flipY#2", 1, 300, 4, false },
+  { "viewport.flipY#3", 1, 304, 4, false },
+  { "viewport.flipY#4", 1, 308, 4, false },
+  { "viewport.flipY#5", 1, 312, 4, false },
+  { "viewport.flipY#6", 1, 316, 4, false },
+  { "viewport.flipY#7", 1, 320, 4, false },
+  { "dfg_lut.flipY#1", 1, 324, 4, false },
 };
 static const t3_gen_attribute a_physical_transm_bs[] = {
   { "normal", "vec3", 0, false },
@@ -8399,28 +8264,25 @@ static const t3_gen_property p_physical_transm_bs_instbig_icol_shadow_senv_l1001
   { "scene.environmentRotation", 1, 352, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 272, 64, false },
-  { "dfg_lut.flipY", 1, 324, 4, false },
-  { "viewport.flipY", 1, 320, 4, false },
-  { "shadow:directional[0].flipY", 1, 344, 4, false },
-  { "environment.flipY", 1, 440, 4, false },
-};
-static const uint8_t kb_physical_transm_bs_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_transm_bs_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 288, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 292, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 296, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 300, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 304, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 308, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 312, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 316, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 36 },
-  { 1, 336, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 40 },
-  { 1, 340, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 44 },
-  { 1, 424, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 48 },
-  { 1, 428, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 52 },
-  { 1, 436, 4, kb_physical_transm_bs_instbig_icol_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "viewport.flipY", 1, 292, 4, false },
+  { "viewport.flipY#1", 1, 296, 4, false },
+  { "viewport.flipY#2", 1, 300, 4, false },
+  { "viewport.flipY#3", 1, 304, 4, false },
+  { "viewport.flipY#4", 1, 308, 4, false },
+  { "viewport.flipY#5", 1, 312, 4, false },
+  { "viewport.flipY#6", 1, 316, 4, false },
+  { "viewport.flipY#7", 1, 320, 4, false },
+  { "dfg_lut.flipY#1", 1, 324, 4, false },
+  { "shadow:directional[0].flipY", 1, 328, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 332, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 336, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 340, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 344, 4, false },
+  { "environment.flipY", 1, 424, 4, false },
+  { "environment.flipY#1", 1, 428, 4, false },
+  { "environment.flipY#2", 1, 436, 4, false },
+  { "environment.flipY#3", 1, 440, 4, false },
 };
 static const t3_gen_attribute a_physical_transm_bs_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -8482,28 +8344,25 @@ static const t3_gen_property p_physical_transm_bs_instbig_shadow_senv_l1001[] = 
   { "scene.environmentRotation", 1, 352, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 272, 64, false },
-  { "dfg_lut.flipY", 1, 324, 4, false },
-  { "viewport.flipY", 1, 320, 4, false },
-  { "shadow:directional[0].flipY", 1, 344, 4, false },
-  { "environment.flipY", 1, 440, 4, false },
-};
-static const uint8_t kb_physical_transm_bs_instbig_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_transm_bs_instbig_shadow_senv_l1001[] = {
-  { 1, 288, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 0 },
-  { 1, 292, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 4 },
-  { 1, 296, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 8 },
-  { 1, 300, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 12 },
-  { 1, 304, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 16 },
-  { 1, 308, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 20 },
-  { 1, 312, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 24 },
-  { 1, 316, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 36 },
-  { 1, 336, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 40 },
-  { 1, 340, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 44 },
-  { 1, 424, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 48 },
-  { 1, 428, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 52 },
-  { 1, 436, 4, kb_physical_transm_bs_instbig_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "viewport.flipY", 1, 292, 4, false },
+  { "viewport.flipY#1", 1, 296, 4, false },
+  { "viewport.flipY#2", 1, 300, 4, false },
+  { "viewport.flipY#3", 1, 304, 4, false },
+  { "viewport.flipY#4", 1, 308, 4, false },
+  { "viewport.flipY#5", 1, 312, 4, false },
+  { "viewport.flipY#6", 1, 316, 4, false },
+  { "viewport.flipY#7", 1, 320, 4, false },
+  { "dfg_lut.flipY#1", 1, 324, 4, false },
+  { "shadow:directional[0].flipY", 1, 328, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 332, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 336, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 340, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 344, 4, false },
+  { "environment.flipY", 1, 424, 4, false },
+  { "environment.flipY#1", 1, 428, 4, false },
+  { "environment.flipY#2", 1, 436, 4, false },
+  { "environment.flipY#3", 1, 440, 4, false },
 };
 static const t3_gen_attribute a_physical_transm_bs_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -8564,28 +8423,25 @@ static const t3_gen_property p_physical_transm_bs_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 352, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 272, 64, false },
-  { "dfg_lut.flipY", 1, 324, 4, false },
-  { "viewport.flipY", 1, 320, 4, false },
-  { "shadow:directional[0].flipY", 1, 344, 4, false },
-  { "environment.flipY", 1, 440, 4, false },
-};
-static const uint8_t kb_physical_transm_bs_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_transm_bs_shadow_senv_l1001[] = {
-  { 1, 288, 4, kb_physical_transm_bs_shadow_senv_l1001 + 0 },
-  { 1, 292, 4, kb_physical_transm_bs_shadow_senv_l1001 + 4 },
-  { 1, 296, 4, kb_physical_transm_bs_shadow_senv_l1001 + 8 },
-  { 1, 300, 4, kb_physical_transm_bs_shadow_senv_l1001 + 12 },
-  { 1, 304, 4, kb_physical_transm_bs_shadow_senv_l1001 + 16 },
-  { 1, 308, 4, kb_physical_transm_bs_shadow_senv_l1001 + 20 },
-  { 1, 312, 4, kb_physical_transm_bs_shadow_senv_l1001 + 24 },
-  { 1, 316, 4, kb_physical_transm_bs_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_transm_bs_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_transm_bs_shadow_senv_l1001 + 36 },
-  { 1, 336, 4, kb_physical_transm_bs_shadow_senv_l1001 + 40 },
-  { 1, 340, 4, kb_physical_transm_bs_shadow_senv_l1001 + 44 },
-  { 1, 424, 4, kb_physical_transm_bs_shadow_senv_l1001 + 48 },
-  { 1, 428, 4, kb_physical_transm_bs_shadow_senv_l1001 + 52 },
-  { 1, 436, 4, kb_physical_transm_bs_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "viewport.flipY", 1, 292, 4, false },
+  { "viewport.flipY#1", 1, 296, 4, false },
+  { "viewport.flipY#2", 1, 300, 4, false },
+  { "viewport.flipY#3", 1, 304, 4, false },
+  { "viewport.flipY#4", 1, 308, 4, false },
+  { "viewport.flipY#5", 1, 312, 4, false },
+  { "viewport.flipY#6", 1, 316, 4, false },
+  { "viewport.flipY#7", 1, 320, 4, false },
+  { "dfg_lut.flipY#1", 1, 324, 4, false },
+  { "shadow:directional[0].flipY", 1, 328, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 332, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 336, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 340, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 344, 4, false },
+  { "environment.flipY", 1, 424, 4, false },
+  { "environment.flipY#1", 1, 428, 4, false },
+  { "environment.flipY#2", 1, 436, 4, false },
+  { "environment.flipY#3", 1, 440, 4, false },
 };
 static const t3_gen_attribute a_physical_transm_bs_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -8642,28 +8498,25 @@ static const t3_gen_property p_physical_transm_instbig_icol_shadow_senv_l1001[] 
   { "scene.environmentRotation", 1, 352, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 272, 64, false },
-  { "dfg_lut.flipY", 1, 324, 4, false },
-  { "viewport.flipY", 1, 320, 4, false },
-  { "shadow:directional[0].flipY", 1, 344, 4, false },
-  { "environment.flipY", 1, 440, 4, false },
-};
-static const uint8_t kb_physical_transm_instbig_icol_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_transm_instbig_icol_shadow_senv_l1001[] = {
-  { 1, 288, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 0 },
-  { 1, 292, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 4 },
-  { 1, 296, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 8 },
-  { 1, 300, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 12 },
-  { 1, 304, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 16 },
-  { 1, 308, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 20 },
-  { 1, 312, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 24 },
-  { 1, 316, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 36 },
-  { 1, 336, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 40 },
-  { 1, 340, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 44 },
-  { 1, 424, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 48 },
-  { 1, 428, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 52 },
-  { 1, 436, 4, kb_physical_transm_instbig_icol_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "viewport.flipY", 1, 292, 4, false },
+  { "viewport.flipY#1", 1, 296, 4, false },
+  { "viewport.flipY#2", 1, 300, 4, false },
+  { "viewport.flipY#3", 1, 304, 4, false },
+  { "viewport.flipY#4", 1, 308, 4, false },
+  { "viewport.flipY#5", 1, 312, 4, false },
+  { "viewport.flipY#6", 1, 316, 4, false },
+  { "viewport.flipY#7", 1, 320, 4, false },
+  { "dfg_lut.flipY#1", 1, 324, 4, false },
+  { "shadow:directional[0].flipY", 1, 328, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 332, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 336, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 340, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 344, 4, false },
+  { "environment.flipY", 1, 424, 4, false },
+  { "environment.flipY#1", 1, 428, 4, false },
+  { "environment.flipY#2", 1, 436, 4, false },
+  { "environment.flipY#3", 1, 440, 4, false },
 };
 static const t3_gen_attribute a_physical_transm_instbig_icol_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -8725,28 +8578,25 @@ static const t3_gen_property p_physical_transm_instbig_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 352, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 272, 64, false },
-  { "dfg_lut.flipY", 1, 324, 4, false },
-  { "viewport.flipY", 1, 320, 4, false },
-  { "shadow:directional[0].flipY", 1, 344, 4, false },
-  { "environment.flipY", 1, 440, 4, false },
-};
-static const uint8_t kb_physical_transm_instbig_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_transm_instbig_shadow_senv_l1001[] = {
-  { 1, 288, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 0 },
-  { 1, 292, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 4 },
-  { 1, 296, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 8 },
-  { 1, 300, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 12 },
-  { 1, 304, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 16 },
-  { 1, 308, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 20 },
-  { 1, 312, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 24 },
-  { 1, 316, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 36 },
-  { 1, 336, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 40 },
-  { 1, 340, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 44 },
-  { 1, 424, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 48 },
-  { 1, 428, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 52 },
-  { 1, 436, 4, kb_physical_transm_instbig_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "viewport.flipY", 1, 292, 4, false },
+  { "viewport.flipY#1", 1, 296, 4, false },
+  { "viewport.flipY#2", 1, 300, 4, false },
+  { "viewport.flipY#3", 1, 304, 4, false },
+  { "viewport.flipY#4", 1, 308, 4, false },
+  { "viewport.flipY#5", 1, 312, 4, false },
+  { "viewport.flipY#6", 1, 316, 4, false },
+  { "viewport.flipY#7", 1, 320, 4, false },
+  { "dfg_lut.flipY#1", 1, 324, 4, false },
+  { "shadow:directional[0].flipY", 1, 328, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 332, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 336, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 340, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 344, 4, false },
+  { "environment.flipY", 1, 424, 4, false },
+  { "environment.flipY#1", 1, 428, 4, false },
+  { "environment.flipY#2", 1, 436, 4, false },
+  { "environment.flipY#3", 1, 440, 4, false },
 };
 static const t3_gen_attribute a_physical_transm_instbig_shadow_senv_l1001[] = {
   { "position", "vec3", 0, false },
@@ -8807,28 +8657,25 @@ static const t3_gen_property p_physical_transm_shadow_senv_l1001[] = {
   { "scene.environmentRotation", 1, 352, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 272, 64, false },
-  { "dfg_lut.flipY", 1, 324, 4, false },
-  { "viewport.flipY", 1, 320, 4, false },
-  { "shadow:directional[0].flipY", 1, 344, 4, false },
-  { "environment.flipY", 1, 440, 4, false },
-};
-static const uint8_t kb_physical_transm_shadow_senv_l1001[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_physical_transm_shadow_senv_l1001[] = {
-  { 1, 288, 4, kb_physical_transm_shadow_senv_l1001 + 0 },
-  { 1, 292, 4, kb_physical_transm_shadow_senv_l1001 + 4 },
-  { 1, 296, 4, kb_physical_transm_shadow_senv_l1001 + 8 },
-  { 1, 300, 4, kb_physical_transm_shadow_senv_l1001 + 12 },
-  { 1, 304, 4, kb_physical_transm_shadow_senv_l1001 + 16 },
-  { 1, 308, 4, kb_physical_transm_shadow_senv_l1001 + 20 },
-  { 1, 312, 4, kb_physical_transm_shadow_senv_l1001 + 24 },
-  { 1, 316, 4, kb_physical_transm_shadow_senv_l1001 + 28 },
-  { 1, 328, 4, kb_physical_transm_shadow_senv_l1001 + 32 },
-  { 1, 332, 4, kb_physical_transm_shadow_senv_l1001 + 36 },
-  { 1, 336, 4, kb_physical_transm_shadow_senv_l1001 + 40 },
-  { 1, 340, 4, kb_physical_transm_shadow_senv_l1001 + 44 },
-  { 1, 424, 4, kb_physical_transm_shadow_senv_l1001 + 48 },
-  { 1, 428, 4, kb_physical_transm_shadow_senv_l1001 + 52 },
-  { 1, 436, 4, kb_physical_transm_shadow_senv_l1001 + 56 },
+  { "dfg_lut.flipY", 1, 288, 4, false },
+  { "viewport.flipY", 1, 292, 4, false },
+  { "viewport.flipY#1", 1, 296, 4, false },
+  { "viewport.flipY#2", 1, 300, 4, false },
+  { "viewport.flipY#3", 1, 304, 4, false },
+  { "viewport.flipY#4", 1, 308, 4, false },
+  { "viewport.flipY#5", 1, 312, 4, false },
+  { "viewport.flipY#6", 1, 316, 4, false },
+  { "viewport.flipY#7", 1, 320, 4, false },
+  { "dfg_lut.flipY#1", 1, 324, 4, false },
+  { "shadow:directional[0].flipY", 1, 328, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 332, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 336, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 340, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 344, 4, false },
+  { "environment.flipY", 1, 424, 4, false },
+  { "environment.flipY#1", 1, 428, 4, false },
+  { "environment.flipY#2", 1, 436, 4, false },
+  { "environment.flipY#3", 1, 440, 4, false },
 };
 static const t3_gen_attribute a_physical_transm_shadow_senv_l1001[] = {
   { "normal", "vec3", 0, false },
@@ -8882,14 +8729,14 @@ static const t3_bk_group_layout *const groups_pmremblur_z10[] = { &g_pmremblur_z
 static const t3_gen_property p_pmremblur_z10[] = {
   { "pmrem.sigma", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremblur_z10[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremblur_z10[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremblur_z10[] = {
   { 0, 0, 64, kb_pmremblur_z10 + 0 },
   { 0, 64, 64, kb_pmremblur_z10 + 64 },
-  { 1, 8, 4, kb_pmremblur_z10 + 128 },
-  { 1, 16, 64, kb_pmremblur_z10 + 132 },
+  { 1, 16, 64, kb_pmremblur_z10 + 128 },
 };
 static const t3_gen_attribute a_pmremblur_z10[] = {
   { "outputDirection", "vec3", 0, false },
@@ -8906,14 +8753,14 @@ static const t3_bk_group_layout *const groups_pmremblur_z4[] = { &g_pmremblur_z4
 static const t3_gen_property p_pmremblur_z4[] = {
   { "pmrem.sigma", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremblur_z4[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremblur_z4[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremblur_z4[] = {
   { 0, 0, 64, kb_pmremblur_z4 + 0 },
   { 0, 64, 64, kb_pmremblur_z4 + 64 },
-  { 1, 8, 4, kb_pmremblur_z4 + 128 },
-  { 1, 16, 64, kb_pmremblur_z4 + 132 },
+  { 1, 16, 64, kb_pmremblur_z4 + 128 },
 };
 static const t3_gen_attribute a_pmremblur_z4[] = {
   { "outputDirection", "vec3", 0, false },
@@ -8930,14 +8777,14 @@ static const t3_bk_group_layout *const groups_pmremblur_z5[] = { &g_pmremblur_z5
 static const t3_gen_property p_pmremblur_z5[] = {
   { "pmrem.sigma", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremblur_z5[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremblur_z5[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremblur_z5[] = {
   { 0, 0, 64, kb_pmremblur_z5 + 0 },
   { 0, 64, 64, kb_pmremblur_z5 + 64 },
-  { 1, 8, 4, kb_pmremblur_z5 + 128 },
-  { 1, 16, 64, kb_pmremblur_z5 + 132 },
+  { 1, 16, 64, kb_pmremblur_z5 + 128 },
 };
 static const t3_gen_attribute a_pmremblur_z5[] = {
   { "outputDirection", "vec3", 0, false },
@@ -8954,14 +8801,14 @@ static const t3_bk_group_layout *const groups_pmremblur_z6[] = { &g_pmremblur_z6
 static const t3_gen_property p_pmremblur_z6[] = {
   { "pmrem.sigma", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremblur_z6[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremblur_z6[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremblur_z6[] = {
   { 0, 0, 64, kb_pmremblur_z6 + 0 },
   { 0, 64, 64, kb_pmremblur_z6 + 64 },
-  { 1, 8, 4, kb_pmremblur_z6 + 128 },
-  { 1, 16, 64, kb_pmremblur_z6 + 132 },
+  { 1, 16, 64, kb_pmremblur_z6 + 128 },
 };
 static const t3_gen_attribute a_pmremblur_z6[] = {
   { "outputDirection", "vec3", 0, false },
@@ -8978,14 +8825,14 @@ static const t3_bk_group_layout *const groups_pmremblur_z7[] = { &g_pmremblur_z7
 static const t3_gen_property p_pmremblur_z7[] = {
   { "pmrem.sigma", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremblur_z7[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremblur_z7[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremblur_z7[] = {
   { 0, 0, 64, kb_pmremblur_z7 + 0 },
   { 0, 64, 64, kb_pmremblur_z7 + 64 },
-  { 1, 8, 4, kb_pmremblur_z7 + 128 },
-  { 1, 16, 64, kb_pmremblur_z7 + 132 },
+  { 1, 16, 64, kb_pmremblur_z7 + 128 },
 };
 static const t3_gen_attribute a_pmremblur_z7[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9002,14 +8849,14 @@ static const t3_bk_group_layout *const groups_pmremblur_z8[] = { &g_pmremblur_z8
 static const t3_gen_property p_pmremblur_z8[] = {
   { "pmrem.sigma", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremblur_z8[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremblur_z8[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremblur_z8[] = {
   { 0, 0, 64, kb_pmremblur_z8 + 0 },
   { 0, 64, 64, kb_pmremblur_z8 + 64 },
-  { 1, 8, 4, kb_pmremblur_z8 + 128 },
-  { 1, 16, 64, kb_pmremblur_z8 + 132 },
+  { 1, 16, 64, kb_pmremblur_z8 + 128 },
 };
 static const t3_gen_attribute a_pmremblur_z8[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9026,14 +8873,14 @@ static const t3_bk_group_layout *const groups_pmremblur_z9[] = { &g_pmremblur_z9
 static const t3_gen_property p_pmremblur_z9[] = {
   { "pmrem.sigma", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremblur_z9[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremblur_z9[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremblur_z9[] = {
   { 0, 0, 64, kb_pmremblur_z9 + 0 },
   { 0, 64, 64, kb_pmremblur_z9 + 64 },
-  { 1, 8, 4, kb_pmremblur_z9 + 128 },
-  { 1, 16, 64, kb_pmremblur_z9 + 132 },
+  { 1, 16, 64, kb_pmremblur_z9 + 128 },
 };
 static const t3_gen_attribute a_pmremblur_z9[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9092,14 +8939,14 @@ static const t3_bk_group_layout *const groups_pmremggx_z10[] = { &g_pmremggx_z10
 static const t3_gen_property p_pmremggx_z10[] = {
   { "pmrem.roughness", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremggx_z10[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremggx_z10[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremggx_z10[] = {
   { 0, 0, 64, kb_pmremggx_z10 + 0 },
   { 0, 64, 64, kb_pmremggx_z10 + 64 },
-  { 1, 8, 4, kb_pmremggx_z10 + 128 },
-  { 1, 16, 64, kb_pmremggx_z10 + 132 },
+  { 1, 16, 64, kb_pmremggx_z10 + 128 },
 };
 static const t3_gen_attribute a_pmremggx_z10[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9116,14 +8963,14 @@ static const t3_bk_group_layout *const groups_pmremggx_z4[] = { &g_pmremggx_z4_r
 static const t3_gen_property p_pmremggx_z4[] = {
   { "pmrem.roughness", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremggx_z4[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremggx_z4[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremggx_z4[] = {
   { 0, 0, 64, kb_pmremggx_z4 + 0 },
   { 0, 64, 64, kb_pmremggx_z4 + 64 },
-  { 1, 8, 4, kb_pmremggx_z4 + 128 },
-  { 1, 16, 64, kb_pmremggx_z4 + 132 },
+  { 1, 16, 64, kb_pmremggx_z4 + 128 },
 };
 static const t3_gen_attribute a_pmremggx_z4[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9140,14 +8987,14 @@ static const t3_bk_group_layout *const groups_pmremggx_z5[] = { &g_pmremggx_z5_r
 static const t3_gen_property p_pmremggx_z5[] = {
   { "pmrem.roughness", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremggx_z5[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremggx_z5[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremggx_z5[] = {
   { 0, 0, 64, kb_pmremggx_z5 + 0 },
   { 0, 64, 64, kb_pmremggx_z5 + 64 },
-  { 1, 8, 4, kb_pmremggx_z5 + 128 },
-  { 1, 16, 64, kb_pmremggx_z5 + 132 },
+  { 1, 16, 64, kb_pmremggx_z5 + 128 },
 };
 static const t3_gen_attribute a_pmremggx_z5[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9164,14 +9011,14 @@ static const t3_bk_group_layout *const groups_pmremggx_z6[] = { &g_pmremggx_z6_r
 static const t3_gen_property p_pmremggx_z6[] = {
   { "pmrem.roughness", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremggx_z6[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremggx_z6[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremggx_z6[] = {
   { 0, 0, 64, kb_pmremggx_z6 + 0 },
   { 0, 64, 64, kb_pmremggx_z6 + 64 },
-  { 1, 8, 4, kb_pmremggx_z6 + 128 },
-  { 1, 16, 64, kb_pmremggx_z6 + 132 },
+  { 1, 16, 64, kb_pmremggx_z6 + 128 },
 };
 static const t3_gen_attribute a_pmremggx_z6[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9188,14 +9035,14 @@ static const t3_bk_group_layout *const groups_pmremggx_z7[] = { &g_pmremggx_z7_r
 static const t3_gen_property p_pmremggx_z7[] = {
   { "pmrem.roughness", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremggx_z7[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremggx_z7[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremggx_z7[] = {
   { 0, 0, 64, kb_pmremggx_z7 + 0 },
   { 0, 64, 64, kb_pmremggx_z7 + 64 },
-  { 1, 8, 4, kb_pmremggx_z7 + 128 },
-  { 1, 16, 64, kb_pmremggx_z7 + 132 },
+  { 1, 16, 64, kb_pmremggx_z7 + 128 },
 };
 static const t3_gen_attribute a_pmremggx_z7[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9212,14 +9059,14 @@ static const t3_bk_group_layout *const groups_pmremggx_z8[] = { &g_pmremggx_z8_r
 static const t3_gen_property p_pmremggx_z8[] = {
   { "pmrem.roughness", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremggx_z8[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremggx_z8[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremggx_z8[] = {
   { 0, 0, 64, kb_pmremggx_z8 + 0 },
   { 0, 64, 64, kb_pmremggx_z8 + 64 },
-  { 1, 8, 4, kb_pmremggx_z8 + 128 },
-  { 1, 16, 64, kb_pmremggx_z8 + 132 },
+  { 1, 16, 64, kb_pmremggx_z8 + 128 },
 };
 static const t3_gen_attribute a_pmremggx_z8[] = {
   { "outputDirection", "vec3", 0, false },
@@ -9236,14 +9083,14 @@ static const t3_bk_group_layout *const groups_pmremggx_z9[] = { &g_pmremggx_z9_r
 static const t3_gen_property p_pmremggx_z9[] = {
   { "pmrem.roughness", 1, 0, 4, false },
   { "pmrem.mipInt", 1, 4, 4, false },
-  { "pmrem.source.flipY", 1, 12, 4, false },
+  { "pmrem.source.flipY", 1, 8, 4, false },
+  { "pmrem.source.flipY#1", 1, 12, 4, false },
 };
-static const uint8_t kb_pmremggx_z9[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
+static const uint8_t kb_pmremggx_z9[] = {0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f };
 static const t3_gen_constant k_pmremggx_z9[] = {
   { 0, 0, 64, kb_pmremggx_z9 + 0 },
   { 0, 64, 64, kb_pmremggx_z9 + 64 },
-  { 1, 8, 4, kb_pmremggx_z9 + 128 },
-  { 1, 16, 64, kb_pmremggx_z9 + 132 },
+  { 1, 16, 64, kb_pmremggx_z9 + 128 },
 };
 static const t3_gen_attribute a_pmremggx_z9[] = {
   { "outputDirection", "vec3", 0, false },
@@ -10080,13 +9927,10 @@ static const t3_gen_property p_standard_env[] = {
   { "material.envMapRotation", 1, 176, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "envMap.flipY", 1, 264, 4, false },
-};
-static const uint8_t kb_standard_env[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_env[] = {
-  { 1, 248, 4, kb_standard_env + 0 },
-  { 1, 252, 4, kb_standard_env + 4 },
-  { 1, 260, 4, kb_standard_env + 8 },
+  { "envMap.flipY", 1, 248, 4, false },
+  { "envMap.flipY#1", 1, 252, 4, false },
+  { "envMap.flipY#2", 1, 260, 4, false },
+  { "envMap.flipY#3", 1, 264, 4, false },
 };
 static const t3_gen_attribute a_standard_env[] = {
   { "normal", "vec3", 0, false },
@@ -10386,15 +10230,15 @@ static const t3_gen_property p_standard_instbig_icol_shadow[] = {
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "point[0].shadow.matrix", 0, 352, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:directional[0].flipY", 1, 180, 4, false },
+  { "shadow:directional[0].flipY", 1, 164, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 168, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 172, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 180, 4, false },
 };
-static const uint8_t kb_standard_instbig_icol_shadow[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_standard_instbig_icol_shadow[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_standard_instbig_icol_shadow[] = {
   { 0, 416, 4, kb_standard_instbig_icol_shadow + 0 },
-  { 1, 164, 4, kb_standard_instbig_icol_shadow + 4 },
-  { 1, 168, 4, kb_standard_instbig_icol_shadow + 8 },
-  { 1, 172, 4, kb_standard_instbig_icol_shadow + 12 },
-  { 1, 176, 4, kb_standard_instbig_icol_shadow + 16 },
 };
 static const t3_gen_attribute a_standard_instbig_icol_shadow[] = {
   { "position", "vec3", 0, false },
@@ -10437,14 +10281,11 @@ static const t3_gen_property p_standard_instbig_icol_shadow_l1000[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 192, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:directional[0].flipY", 1, 180, 4, false },
-};
-static const uint8_t kb_standard_instbig_icol_shadow_l1000[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_instbig_icol_shadow_l1000[] = {
-  { 1, 164, 4, kb_standard_instbig_icol_shadow_l1000 + 0 },
-  { 1, 168, 4, kb_standard_instbig_icol_shadow_l1000 + 4 },
-  { 1, 172, 4, kb_standard_instbig_icol_shadow_l1000 + 8 },
-  { 1, 176, 4, kb_standard_instbig_icol_shadow_l1000 + 12 },
+  { "shadow:directional[0].flipY", 1, 164, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 168, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 172, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 180, 4, false },
 };
 static const t3_gen_attribute a_standard_instbig_icol_shadow_l1000[] = {
   { "position", "vec3", 0, false },
@@ -10568,14 +10409,11 @@ static const t3_gen_property p_standard_instbig_shadow_l1000[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 192, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:directional[0].flipY", 1, 180, 4, false },
-};
-static const uint8_t kb_standard_instbig_shadow_l1000[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_instbig_shadow_l1000[] = {
-  { 1, 164, 4, kb_standard_instbig_shadow_l1000 + 0 },
-  { 1, 168, 4, kb_standard_instbig_shadow_l1000 + 4 },
-  { 1, 172, 4, kb_standard_instbig_shadow_l1000 + 8 },
-  { 1, 176, 4, kb_standard_instbig_shadow_l1000 + 12 },
+  { "shadow:directional[0].flipY", 1, 164, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 168, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 172, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 180, 4, false },
 };
 static const t3_gen_attribute a_standard_instbig_shadow_l1000[] = {
   { "position", "vec3", 0, false },
@@ -10638,15 +10476,15 @@ static const t3_gen_property p_standard_instbig_shadow_l1110_s011[] = {
   { "point[0].shadow.matrix", 0, 320, 64, false },
   { "spot[0].shadow.matrix", 0, 448, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:spot[0].flipY", 1, 180, 4, false },
+  { "shadow:spot[0].flipY", 1, 164, 4, false },
+  { "shadow:spot[0].flipY#1", 1, 168, 4, false },
+  { "shadow:spot[0].flipY#2", 1, 172, 4, false },
+  { "shadow:spot[0].flipY#3", 1, 176, 4, false },
+  { "shadow:spot[0].flipY#4", 1, 180, 4, false },
 };
-static const uint8_t kb_standard_instbig_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_standard_instbig_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_standard_instbig_shadow_l1110_s011[] = {
   { 0, 384, 4, kb_standard_instbig_shadow_l1110_s011 + 0 },
-  { 1, 164, 4, kb_standard_instbig_shadow_l1110_s011 + 4 },
-  { 1, 168, 4, kb_standard_instbig_shadow_l1110_s011 + 8 },
-  { 1, 172, 4, kb_standard_instbig_shadow_l1110_s011 + 12 },
-  { 1, 176, 4, kb_standard_instbig_shadow_l1110_s011 + 16 },
 };
 static const t3_gen_attribute a_standard_instbig_shadow_l1110_s011[] = {
   { "position", "vec3", 0, false },
@@ -10719,14 +10557,11 @@ static const t3_gen_property p_standard_l0010_shadow[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "spot[0].shadow.matrix", 0, 224, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:spot[0].flipY", 1, 180, 4, false },
-};
-static const uint8_t kb_standard_l0010_shadow[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_l0010_shadow[] = {
-  { 1, 164, 4, kb_standard_l0010_shadow + 0 },
-  { 1, 168, 4, kb_standard_l0010_shadow + 4 },
-  { 1, 172, 4, kb_standard_l0010_shadow + 8 },
-  { 1, 176, 4, kb_standard_l0010_shadow + 12 },
+  { "shadow:spot[0].flipY", 1, 164, 4, false },
+  { "shadow:spot[0].flipY#1", 1, 168, 4, false },
+  { "shadow:spot[0].flipY#2", 1, 172, 4, false },
+  { "shadow:spot[0].flipY#3", 1, 176, 4, false },
+  { "shadow:spot[0].flipY#4", 1, 180, 4, false },
 };
 static const t3_gen_attribute a_standard_l0010_shadow[] = {
   { "normal", "vec3", 0, false },
@@ -11003,21 +10838,21 @@ static const t3_gen_property p_standard_l2200_shadow[] = {
   { "point[0].shadow.matrix", 0, 544, 64, false },
   { "point[1].shadow.matrix", 0, 656, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:directional[0].flipY", 1, 180, 4, false },
-  { "shadow:directional[1].flipY", 1, 200, 4, false },
+  { "shadow:directional[0].flipY", 1, 164, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 168, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 172, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 180, 4, false },
+  { "shadow:directional[1].flipY", 1, 184, 4, false },
+  { "shadow:directional[1].flipY#1", 1, 188, 4, false },
+  { "shadow:directional[1].flipY#2", 1, 192, 4, false },
+  { "shadow:directional[1].flipY#3", 1, 196, 4, false },
+  { "shadow:directional[1].flipY#4", 1, 200, 4, false },
 };
-static const uint8_t kb_standard_l2200_shadow[] = {0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_standard_l2200_shadow[] = {0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_standard_l2200_shadow[] = {
   { 0, 608, 4, kb_standard_l2200_shadow + 0 },
   { 0, 720, 4, kb_standard_l2200_shadow + 4 },
-  { 1, 164, 4, kb_standard_l2200_shadow + 8 },
-  { 1, 168, 4, kb_standard_l2200_shadow + 12 },
-  { 1, 172, 4, kb_standard_l2200_shadow + 16 },
-  { 1, 176, 4, kb_standard_l2200_shadow + 20 },
-  { 1, 184, 4, kb_standard_l2200_shadow + 24 },
-  { 1, 188, 4, kb_standard_l2200_shadow + 28 },
-  { 1, 192, 4, kb_standard_l2200_shadow + 32 },
-  { 1, 196, 4, kb_standard_l2200_shadow + 36 },
 };
 static const t3_gen_attribute a_standard_l2200_shadow[] = {
   { "normal", "vec3", 0, false },
@@ -11235,13 +11070,10 @@ static const t3_gen_property p_standard_map_env[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "map.flipY", 1, 64, 4, false },
   { "dfg_lut.flipY", 1, 208, 4, false },
-  { "envMap.flipY", 1, 312, 4, false },
-};
-static const uint8_t kb_standard_map_env[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_map_env[] = {
-  { 1, 296, 4, kb_standard_map_env + 0 },
-  { 1, 300, 4, kb_standard_map_env + 4 },
-  { 1, 308, 4, kb_standard_map_env + 8 },
+  { "envMap.flipY", 1, 296, 4, false },
+  { "envMap.flipY#1", 1, 300, 4, false },
+  { "envMap.flipY#2", 1, 308, 4, false },
+  { "envMap.flipY#3", 1, 312, 4, false },
 };
 static const t3_gen_attribute a_standard_map_env[] = {
   { "uv", "vec2", 0, false },
@@ -11448,13 +11280,10 @@ static const t3_gen_property p_standard_map_nmap_ao_emap_rmap_mmap_senv[] = {
   { "emissiveMap.flipY", 1, 384, 4, false },
   { "normalMap.flipY", 1, 512, 4, false },
   { "dfg_lut.flipY", 1, 528, 4, false },
-  { "environment.flipY", 1, 632, 4, false },
-};
-static const uint8_t kb_standard_map_nmap_ao_emap_rmap_mmap_senv[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_map_nmap_ao_emap_rmap_mmap_senv[] = {
-  { 1, 616, 4, kb_standard_map_nmap_ao_emap_rmap_mmap_senv + 0 },
-  { 1, 620, 4, kb_standard_map_nmap_ao_emap_rmap_mmap_senv + 4 },
-  { 1, 628, 4, kb_standard_map_nmap_ao_emap_rmap_mmap_senv + 8 },
+  { "environment.flipY", 1, 616, 4, false },
+  { "environment.flipY#1", 1, 620, 4, false },
+  { "environment.flipY#2", 1, 628, 4, false },
+  { "environment.flipY#3", 1, 632, 4, false },
 };
 static const t3_gen_attribute a_standard_map_nmap_ao_emap_rmap_mmap_senv[] = {
   { "uv", "vec2", 0, false },
@@ -12116,13 +11945,10 @@ static const t3_gen_property p_standard_senv[] = {
   { "scene.environmentRotation", 1, 176, 64, false },
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "environment.flipY", 1, 264, 4, false },
-};
-static const uint8_t kb_standard_senv[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_senv[] = {
-  { 1, 248, 4, kb_standard_senv + 0 },
-  { 1, 252, 4, kb_standard_senv + 4 },
-  { 1, 260, 4, kb_standard_senv + 8 },
+  { "environment.flipY", 1, 248, 4, false },
+  { "environment.flipY#1", 1, 252, 4, false },
+  { "environment.flipY#2", 1, 260, 4, false },
+  { "environment.flipY#3", 1, 264, 4, false },
 };
 static const t3_gen_attribute a_standard_senv[] = {
   { "normal", "vec3", 0, false },
@@ -12173,15 +11999,15 @@ static const t3_gen_property p_standard_shadow[] = {
   { "directional[0].shadow.matrix", 0, 240, 64, false },
   { "point[0].shadow.matrix", 0, 352, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:directional[0].flipY", 1, 180, 4, false },
+  { "shadow:directional[0].flipY", 1, 164, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 168, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 172, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 180, 4, false },
 };
-static const uint8_t kb_standard_shadow[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_standard_shadow[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_standard_shadow[] = {
   { 0, 416, 4, kb_standard_shadow + 0 },
-  { 1, 164, 4, kb_standard_shadow + 4 },
-  { 1, 168, 4, kb_standard_shadow + 8 },
-  { 1, 172, 4, kb_standard_shadow + 12 },
-  { 1, 176, 4, kb_standard_shadow + 16 },
 };
 static const t3_gen_attribute a_standard_shadow[] = {
   { "normal", "vec3", 0, false },
@@ -12219,14 +12045,11 @@ static const t3_gen_property p_standard_shadow_l1000[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 192, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:directional[0].flipY", 1, 180, 4, false },
-};
-static const uint8_t kb_standard_shadow_l1000[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_shadow_l1000[] = {
-  { 1, 164, 4, kb_standard_shadow_l1000 + 0 },
-  { 1, 168, 4, kb_standard_shadow_l1000 + 4 },
-  { 1, 172, 4, kb_standard_shadow_l1000 + 8 },
-  { 1, 176, 4, kb_standard_shadow_l1000 + 12 },
+  { "shadow:directional[0].flipY", 1, 164, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 168, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 172, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 180, 4, false },
 };
 static const t3_gen_attribute a_standard_shadow_l1000[] = {
   { "normal", "vec3", 0, false },
@@ -12285,15 +12108,15 @@ static const t3_gen_property p_standard_shadow_l1110_s011[] = {
   { "point[0].shadow.matrix", 0, 320, 64, false },
   { "spot[0].shadow.matrix", 0, 448, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:spot[0].flipY", 1, 180, 4, false },
+  { "shadow:spot[0].flipY", 1, 164, 4, false },
+  { "shadow:spot[0].flipY#1", 1, 168, 4, false },
+  { "shadow:spot[0].flipY#2", 1, 172, 4, false },
+  { "shadow:spot[0].flipY#3", 1, 176, 4, false },
+  { "shadow:spot[0].flipY#4", 1, 180, 4, false },
 };
-static const uint8_t kb_standard_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
+static const uint8_t kb_standard_shadow_l1110_s011[] = {0x00, 0x00, 0x00, 0x3f };
 static const t3_gen_constant k_standard_shadow_l1110_s011[] = {
   { 0, 384, 4, kb_standard_shadow_l1110_s011 + 0 },
-  { 1, 164, 4, kb_standard_shadow_l1110_s011 + 4 },
-  { 1, 168, 4, kb_standard_shadow_l1110_s011 + 8 },
-  { 1, 172, 4, kb_standard_shadow_l1110_s011 + 12 },
-  { 1, 176, 4, kb_standard_shadow_l1110_s011 + 16 },
 };
 static const t3_gen_attribute a_standard_shadow_l1110_s011[] = {
   { "normal", "vec3", 0, false },
@@ -12349,18 +12172,15 @@ static const t3_gen_property p_standard_shadow_senv_l1201_s100[] = {
   { "camera.projectionMatrix", 0, 0, 64, false },
   { "directional[0].shadow.matrix", 0, 336, 64, false },
   { "dfg_lut.flipY", 1, 160, 4, false },
-  { "shadow:directional[0].flipY", 1, 180, 4, false },
-  { "environment.flipY", 1, 280, 4, false },
-};
-static const uint8_t kb_standard_shadow_senv_l1201_s100[] = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-static const t3_gen_constant k_standard_shadow_senv_l1201_s100[] = {
-  { 1, 164, 4, kb_standard_shadow_senv_l1201_s100 + 0 },
-  { 1, 168, 4, kb_standard_shadow_senv_l1201_s100 + 4 },
-  { 1, 172, 4, kb_standard_shadow_senv_l1201_s100 + 8 },
-  { 1, 176, 4, kb_standard_shadow_senv_l1201_s100 + 12 },
-  { 1, 264, 4, kb_standard_shadow_senv_l1201_s100 + 16 },
-  { 1, 268, 4, kb_standard_shadow_senv_l1201_s100 + 20 },
-  { 1, 276, 4, kb_standard_shadow_senv_l1201_s100 + 24 },
+  { "shadow:directional[0].flipY", 1, 164, 4, false },
+  { "shadow:directional[0].flipY#1", 1, 168, 4, false },
+  { "shadow:directional[0].flipY#2", 1, 172, 4, false },
+  { "shadow:directional[0].flipY#3", 1, 176, 4, false },
+  { "shadow:directional[0].flipY#4", 1, 180, 4, false },
+  { "environment.flipY", 1, 264, 4, false },
+  { "environment.flipY#1", 1, 268, 4, false },
+  { "environment.flipY#2", 1, 276, 4, false },
+  { "environment.flipY#3", 1, 280, 4, false },
 };
 static const t3_gen_attribute a_standard_shadow_senv_l1201_s100[] = {
   { "normal", "vec3", 0, false },
@@ -19262,7 +19082,7 @@ static const t3_gen_program programs[] = {
   { "basic+vcol", T3_GEN_BASIC, 2ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_basic_vcol, 2, p_basic_vcol, 5, a_basic_vcol, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 37, 38 },
   { "bg2d", T3_GEN_BG2D, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_bg2d, 2, p_bg2d, 6, a_bg2d, 1, k_bg2d, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 39, 40 },
   { "bgcube", T3_GEN_BGCUBE, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_bgcube, 2, p_bgcube, 4, a_bgcube, 2, k_bgcube, 5, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 41, 42 },
-  { "bgpmrem", T3_GEN_BGPMREM, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_bgpmrem, 2, p_bgpmrem, 9, a_bgpmrem, 2, k_bgpmrem, 5, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 43, 44 },
+  { "bgpmrem", T3_GEN_BGPMREM, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_bgpmrem, 2, p_bgpmrem, 10, a_bgpmrem, 2, k_bgpmrem, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 43, 44 },
   { "depth", T3_GEN_DEPTH, 0ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_depth, 2, p_depth, 3, a_depth, 1, k_depth, 1, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 45, 46 },
   { "depth+inst", T3_GEN_DEPTH, 8ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_depth_inst, 2, p_depth_inst, 3, a_depth_inst, 2, k_depth_inst, 1, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 47, 48 },
   { "depth+instbig", T3_GEN_DEPTH, 256ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_depth_instbig, 2, p_depth_instbig, 3, a_depth_instbig, 6, k_depth_instbig, 1, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 49, 50 },
@@ -19288,7 +19108,7 @@ static const t3_gen_program programs[] = {
   { "lambert+instbig+icol", T3_GEN_LAMBERT, 35184372089088ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_instbig_icol, 2, p_lambert_instbig_icol, 16, a_lambert_instbig_icol, 7, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 86, 87 },
   { "lambert+instbig+l1001", T3_GEN_LAMBERT, 256ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_lambert_instbig_l1001, 2, p_lambert_instbig_l1001, 15, a_lambert_instbig_l1001, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 88, 89 },
   { "lambert+instbig+l1110", T3_GEN_LAMBERT, 256ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_lambert_instbig_l1110, 2, p_lambert_instbig_l1110, 24, a_lambert_instbig_l1110, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 90, 91 },
-  { "lambert+instbig+shadow+l1110+s011", T3_GEN_LAMBERT, 131328ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_lambert_instbig_shadow_l1110_s011, 2, p_lambert_instbig_shadow_l1110_s011, 40, a_lambert_instbig_shadow_l1110_s011, 6, k_lambert_instbig_shadow_l1110_s011, 5, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 92, 93 },
+  { "lambert+instbig+shadow+l1110+s011", T3_GEN_LAMBERT, 131328ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_lambert_instbig_shadow_l1110_s011, 2, p_lambert_instbig_shadow_l1110_s011, 44, a_lambert_instbig_shadow_l1110_s011, 6, k_lambert_instbig_shadow_l1110_s011, 1, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 92, 93 },
   { "lambert+l0000", T3_GEN_LAMBERT, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_l0000, 2, p_lambert_l0000, 8, a_lambert_l0000, 1, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 94, 95 },
   { "lambert+l1000", T3_GEN_LAMBERT, 0ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_l1000, 2, p_lambert_l1000, 12, a_lambert_l1000, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 96, 97 },
   { "lambert+l1111", T3_GEN_LAMBERT, 0ull, { 1, 1, 1, 1 }, NULL, T3_GEN_GL, groups_lambert_l1111, 2, p_lambert_l1111, 27, a_lambert_l1111, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 98, 99 },
@@ -19303,9 +19123,9 @@ static const t3_gen_program programs[] = {
   { "lambert+map+rep+nearest+l1000", T3_GEN_LAMBERT, 193ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_map_rep_nearest_l1000, 2, p_lambert_map_rep_nearest_l1000, 14, a_lambert_map_rep_nearest_l1000, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 111, 112 },
   { "lambert+map+vcol+fog", T3_GEN_LAMBERT, 7ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_map_vcol_fog, 2, p_lambert_map_vcol_fog, 21, a_lambert_map_vcol_fog, 4, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 113, 114 },
   { "lambert+nmap", T3_GEN_LAMBERT, 512ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_nmap, 2, p_lambert_nmap, 19, a_lambert_nmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 115, 116 },
-  { "lambert+shadow", T3_GEN_LAMBERT, 131072ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_shadow, 2, p_lambert_shadow, 32, a_lambert_shadow, 2, k_lambert_shadow, 5, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 117, 118 },
-  { "lambert+shadow+l1000", T3_GEN_LAMBERT, 131072ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_shadow_l1000, 2, p_lambert_shadow_l1000, 20, a_lambert_shadow_l1000, 2, k_lambert_shadow_l1000, 4, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 119, 120 },
-  { "lambert+shadow+l1110+s011", T3_GEN_LAMBERT, 131072ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_lambert_shadow_l1110_s011, 2, p_lambert_shadow_l1110_s011, 40, a_lambert_shadow_l1110_s011, 2, k_lambert_shadow_l1110_s011, 5, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 121, 122 },
+  { "lambert+shadow", T3_GEN_LAMBERT, 131072ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_shadow, 2, p_lambert_shadow, 36, a_lambert_shadow, 2, k_lambert_shadow, 1, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 117, 118 },
+  { "lambert+shadow+l1000", T3_GEN_LAMBERT, 131072ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_shadow_l1000, 2, p_lambert_shadow_l1000, 24, a_lambert_shadow_l1000, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 119, 120 },
+  { "lambert+shadow+l1110+s011", T3_GEN_LAMBERT, 131072ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_lambert_shadow_l1110_s011, 2, p_lambert_shadow_l1110_s011, 44, a_lambert_shadow_l1110_s011, 2, k_lambert_shadow_l1110_s011, 1, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 121, 122 },
   { "lambert+trans", T3_GEN_LAMBERT, 16ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_trans, 2, p_lambert_trans, 16, a_lambert_trans, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 57, 123 },
   { "lambert+vcol", T3_GEN_LAMBERT, 2ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_lambert_vcol, 2, p_lambert_vcol, 16, a_lambert_vcol, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 124, 125 },
   { "line", T3_GEN_LINE, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_line, 2, p_line, 5, a_line, 1, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 0, 1 },
@@ -19353,7 +19173,7 @@ static const t3_gen_program programs[] = {
   { "phong+instbig+icol", T3_GEN_PHONG, 35184372089088ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_instbig_icol, 2, p_phong_instbig_icol, 18, a_phong_instbig_icol, 7, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 184, 185 },
   { "phong+instbig+l1001", T3_GEN_PHONG, 256ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_phong_instbig_l1001, 2, p_phong_instbig_l1001, 17, a_phong_instbig_l1001, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 186, 187 },
   { "phong+instbig+l1110", T3_GEN_PHONG, 256ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_phong_instbig_l1110, 2, p_phong_instbig_l1110, 26, a_phong_instbig_l1110, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 188, 189 },
-  { "phong+instbig+shadow+l1110+s011", T3_GEN_PHONG, 131328ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_phong_instbig_shadow_l1110_s011, 2, p_phong_instbig_shadow_l1110_s011, 42, a_phong_instbig_shadow_l1110_s011, 6, k_phong_instbig_shadow_l1110_s011, 5, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 190, 191 },
+  { "phong+instbig+shadow+l1110+s011", T3_GEN_PHONG, 131328ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_phong_instbig_shadow_l1110_s011, 2, p_phong_instbig_shadow_l1110_s011, 46, a_phong_instbig_shadow_l1110_s011, 6, k_phong_instbig_shadow_l1110_s011, 1, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 190, 191 },
   { "phong+l0000", T3_GEN_PHONG, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_phong_l0000, 2, p_phong_l0000, 10, a_phong_l0000, 1, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 192, 193 },
   { "phong+l1000", T3_GEN_PHONG, 0ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_phong_l1000, 2, p_phong_l1000, 14, a_phong_l1000, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 166, 194 },
   { "phong+l1111", T3_GEN_PHONG, 0ull, { 1, 1, 1, 1 }, NULL, T3_GEN_GL, groups_phong_l1111, 2, p_phong_l1111, 29, a_phong_l1111, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 195, 196 },
@@ -19367,9 +19187,9 @@ static const t3_gen_program programs[] = {
   { "phong+map+rep", T3_GEN_PHONG, 65ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_map_rep, 2, p_phong_map_rep, 20, a_phong_map_rep, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 205, 206 },
   { "phong+map+vcol+fog", T3_GEN_PHONG, 7ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_map_vcol_fog, 2, p_phong_map_vcol_fog, 23, a_phong_map_vcol_fog, 4, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 208, 209 },
   { "phong+nmap", T3_GEN_PHONG, 512ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_nmap, 2, p_phong_nmap, 21, a_phong_nmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 210, 211 },
-  { "phong+shadow", T3_GEN_PHONG, 131072ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_shadow, 2, p_phong_shadow, 34, a_phong_shadow, 2, k_phong_shadow, 5, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 212, 213 },
-  { "phong+shadow+l1000", T3_GEN_PHONG, 131072ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_phong_shadow_l1000, 2, p_phong_shadow_l1000, 22, a_phong_shadow_l1000, 2, k_phong_shadow_l1000, 4, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 214, 215 },
-  { "phong+shadow+l1110+s011", T3_GEN_PHONG, 131072ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_phong_shadow_l1110_s011, 2, p_phong_shadow_l1110_s011, 42, a_phong_shadow_l1110_s011, 2, k_phong_shadow_l1110_s011, 5, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 216, 217 },
+  { "phong+shadow", T3_GEN_PHONG, 131072ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_shadow, 2, p_phong_shadow, 38, a_phong_shadow, 2, k_phong_shadow, 1, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 212, 213 },
+  { "phong+shadow+l1000", T3_GEN_PHONG, 131072ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_phong_shadow_l1000, 2, p_phong_shadow_l1000, 26, a_phong_shadow_l1000, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 214, 215 },
+  { "phong+shadow+l1110+s011", T3_GEN_PHONG, 131072ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_phong_shadow_l1110_s011, 2, p_phong_shadow_l1110_s011, 46, a_phong_shadow_l1110_s011, 2, k_phong_shadow_l1110_s011, 1, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 216, 217 },
   { "phong+spec", T3_GEN_PHONG, 65536ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_spec, 2, p_phong_spec, 20, a_phong_spec, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 218, 219 },
   { "phong+trans", T3_GEN_PHONG, 16ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_trans, 2, p_phong_trans, 18, a_phong_trans, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 151, 220 },
   { "phong+vcol", T3_GEN_PHONG, 2ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_phong_vcol, 2, p_phong_vcol, 18, a_phong_vcol, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 221, 222 },
@@ -19378,40 +19198,40 @@ static const t3_gen_program programs[] = {
   { "physical+aniso", T3_GEN_PHYSICAL, 1125899906842624ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_aniso, 2, p_physical_aniso, 23, a_physical_aniso, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 227, 228 },
   { "physical+ao", T3_GEN_PHYSICAL, 1024ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_ao, 2, p_physical_ao, 25, a_physical_ao, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 229, 230 },
   { "physical+bs", T3_GEN_PHYSICAL, 8796093022208ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_bs, 2, p_physical_bs, 22, a_physical_bs, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 223, 231 },
-  { "physical+cc", T3_GEN_PHYSICAL, 70368744177664ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_cc, 2, p_physical_cc, 24, a_physical_cc, 2, k_physical_cc, 1, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 232, 233 },
-  { "physical+cc+ccn", T3_GEN_PHYSICAL, 211106232532992ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_cc_ccn, 2, p_physical_cc_ccn, 27, a_physical_cc_ccn, 3, k_physical_cc_ccn, 1, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 234, 235 },
-  { "physical+cc+ccn+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 246290606850304ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_ccn_instbig_icol_shadow_senv_l1001, 41, a_physical_cc_ccn_instbig_icol_shadow_senv_l1001, 8, k_physical_cc_ccn_instbig_icol_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 236, 237 },
-  { "physical+cc+ccn+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 211106234761472ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_instbig_shadow_senv_l1001, 2, p_physical_cc_ccn_instbig_shadow_senv_l1001, 41, a_physical_cc_ccn_instbig_shadow_senv_l1001, 7, k_physical_cc_ccn_instbig_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 238, 239 },
-  { "physical+cc+ccn+shadow+senv+l1001", T3_GEN_PHYSICAL, 211106234761216ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_shadow_senv_l1001, 2, p_physical_cc_ccn_shadow_senv_l1001, 41, a_physical_cc_ccn_shadow_senv_l1001, 3, k_physical_cc_ccn_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 240, 241 },
-  { "physical+cc+ccn+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 246290606850320ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001, 41, a_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001, 8, k_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 236, 242 },
-  { "physical+cc+ccn+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 211106234761232ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_trans_shadow_senv_l1001, 2, p_physical_cc_ccn_trans_shadow_senv_l1001, 41, a_physical_cc_ccn_trans_shadow_senv_l1001, 3, k_physical_cc_ccn_trans_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 240, 243 },
-  { "physical+cc+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 105553118494976ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_instbig_icol_shadow_senv_l1001, 38, a_physical_cc_instbig_icol_shadow_senv_l1001, 7, k_physical_cc_instbig_icol_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 244, 245 },
-  { "physical+cc+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 70368746406144ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_instbig_shadow_senv_l1001, 2, p_physical_cc_instbig_shadow_senv_l1001, 38, a_physical_cc_instbig_shadow_senv_l1001, 6, k_physical_cc_instbig_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 246, 247 },
-  { "physical+cc+shadow+senv+l1001", T3_GEN_PHYSICAL, 70368746405888ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_shadow_senv_l1001, 2, p_physical_cc_shadow_senv_l1001, 38, a_physical_cc_shadow_senv_l1001, 2, k_physical_cc_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 248, 249 },
-  { "physical+cc+sheen+irid", T3_GEN_PHYSICAL, 914793674309632ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid, 2, p_physical_cc_sheen_irid, 30, a_physical_cc_sheen_irid, 2, k_physical_cc_sheen_irid, 1, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 250, 251 },
-  { "physical+cc+sheen+irid+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 949978048626944ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001, 44, a_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001, 7, k_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 252, 253 },
-  { "physical+cc+sheen+irid+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 914793676538112ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_instbig_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_instbig_shadow_senv_l1001, 44, a_physical_cc_sheen_irid_instbig_shadow_senv_l1001, 6, k_physical_cc_sheen_irid_instbig_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 254, 255 },
-  { "physical+cc+sheen+irid+shadow+senv+l1001", T3_GEN_PHYSICAL, 914793676537856ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_shadow_senv_l1001, 44, a_physical_cc_sheen_irid_shadow_senv_l1001, 2, k_physical_cc_sheen_irid_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 256, 257 },
-  { "physical+cc+sheen+irid+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 949978048626960ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001, 44, a_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001, 7, k_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 252, 258 },
-  { "physical+cc+sheen+irid+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 914793676537872ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_trans_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_trans_shadow_senv_l1001, 44, a_physical_cc_sheen_irid_trans_shadow_senv_l1001, 2, k_physical_cc_sheen_irid_trans_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 256, 259 },
-  { "physical+cc+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 105553118494992ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_trans_instbig_icol_shadow_senv_l1001, 38, a_physical_cc_trans_instbig_icol_shadow_senv_l1001, 7, k_physical_cc_trans_instbig_icol_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 244, 260 },
-  { "physical+cc+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 70368746405904ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_trans_shadow_senv_l1001, 2, p_physical_cc_trans_shadow_senv_l1001, 38, a_physical_cc_trans_shadow_senv_l1001, 2, k_physical_cc_trans_shadow_senv_l1001, 10, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 248, 261 },
+  { "physical+cc", T3_GEN_PHYSICAL, 70368744177664ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_cc, 2, p_physical_cc, 25, a_physical_cc, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 232, 233 },
+  { "physical+cc+ccn", T3_GEN_PHYSICAL, 211106232532992ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_cc_ccn, 2, p_physical_cc_ccn, 28, a_physical_cc_ccn, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 234, 235 },
+  { "physical+cc+ccn+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 246290606850304ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_ccn_instbig_icol_shadow_senv_l1001, 51, a_physical_cc_ccn_instbig_icol_shadow_senv_l1001, 8, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 236, 237 },
+  { "physical+cc+ccn+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 211106234761472ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_instbig_shadow_senv_l1001, 2, p_physical_cc_ccn_instbig_shadow_senv_l1001, 51, a_physical_cc_ccn_instbig_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 238, 239 },
+  { "physical+cc+ccn+shadow+senv+l1001", T3_GEN_PHYSICAL, 211106234761216ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_shadow_senv_l1001, 2, p_physical_cc_ccn_shadow_senv_l1001, 51, a_physical_cc_ccn_shadow_senv_l1001, 3, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 240, 241 },
+  { "physical+cc+ccn+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 246290606850320ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001, 51, a_physical_cc_ccn_trans_instbig_icol_shadow_senv_l1001, 8, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 236, 242 },
+  { "physical+cc+ccn+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 211106234761232ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_ccn_trans_shadow_senv_l1001, 2, p_physical_cc_ccn_trans_shadow_senv_l1001, 51, a_physical_cc_ccn_trans_shadow_senv_l1001, 3, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 240, 243 },
+  { "physical+cc+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 105553118494976ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_instbig_icol_shadow_senv_l1001, 48, a_physical_cc_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 244, 245 },
+  { "physical+cc+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 70368746406144ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_instbig_shadow_senv_l1001, 2, p_physical_cc_instbig_shadow_senv_l1001, 48, a_physical_cc_instbig_shadow_senv_l1001, 6, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 246, 247 },
+  { "physical+cc+shadow+senv+l1001", T3_GEN_PHYSICAL, 70368746405888ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_shadow_senv_l1001, 2, p_physical_cc_shadow_senv_l1001, 48, a_physical_cc_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 248, 249 },
+  { "physical+cc+sheen+irid", T3_GEN_PHYSICAL, 914793674309632ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid, 2, p_physical_cc_sheen_irid, 31, a_physical_cc_sheen_irid, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 250, 251 },
+  { "physical+cc+sheen+irid+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 949978048626944ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001, 54, a_physical_cc_sheen_irid_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 252, 253 },
+  { "physical+cc+sheen+irid+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 914793676538112ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_instbig_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_instbig_shadow_senv_l1001, 54, a_physical_cc_sheen_irid_instbig_shadow_senv_l1001, 6, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 254, 255 },
+  { "physical+cc+sheen+irid+shadow+senv+l1001", T3_GEN_PHYSICAL, 914793676537856ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_shadow_senv_l1001, 54, a_physical_cc_sheen_irid_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 256, 257 },
+  { "physical+cc+sheen+irid+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 949978048626960ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001, 54, a_physical_cc_sheen_irid_trans_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 252, 258 },
+  { "physical+cc+sheen+irid+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 914793676537872ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_sheen_irid_trans_shadow_senv_l1001, 2, p_physical_cc_sheen_irid_trans_shadow_senv_l1001, 54, a_physical_cc_sheen_irid_trans_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 256, 259 },
+  { "physical+cc+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 105553118494992ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_cc_trans_instbig_icol_shadow_senv_l1001, 48, a_physical_cc_trans_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 244, 260 },
+  { "physical+cc+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 70368746405904ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_cc_trans_shadow_senv_l1001, 2, p_physical_cc_trans_shadow_senv_l1001, 48, a_physical_cc_trans_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 248, 261 },
   { "physical+ds", T3_GEN_PHYSICAL, 4398046511104ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_ds, 2, p_physical_ds, 22, a_physical_ds, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 223, 262 },
   { "physical+emap", T3_GEN_PHYSICAL, 2048ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_emap, 2, p_physical_emap, 24, a_physical_emap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 263, 264 },
-  { "physical+env", T3_GEN_PHYSICAL, 1048576ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_env, 2, p_physical_env, 29, a_physical_env, 2, k_physical_env, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 265, 266 },
+  { "physical+env", T3_GEN_PHYSICAL, 1048576ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_env, 2, p_physical_env, 32, a_physical_env, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 265, 266 },
   { "physical+flat", T3_GEN_PHYSICAL, 32ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_flat, 2, p_physical_flat, 21, a_physical_flat, 1, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 267, 268 },
   { "physical+fog", T3_GEN_PHYSICAL, 4ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_fog, 2, p_physical_fog, 25, a_physical_fog, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 269, 270 },
   { "physical+inst", T3_GEN_PHYSICAL, 8ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_inst, 2, p_physical_inst, 22, a_physical_inst, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 271, 272 },
   { "physical+instbig", T3_GEN_PHYSICAL, 256ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_instbig, 2, p_physical_instbig, 22, a_physical_instbig, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 273, 274 },
   { "physical+instbig+icol", T3_GEN_PHYSICAL, 35184372089088ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_instbig_icol, 2, p_physical_instbig_icol, 22, a_physical_instbig_icol, 7, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 275, 276 },
-  { "physical+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 35184374317312ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_instbig_icol_shadow_senv_l1001, 2, p_physical_instbig_icol_shadow_senv_l1001, 36, a_physical_instbig_icol_shadow_senv_l1001, 7, k_physical_instbig_icol_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 277, 278 },
-  { "physical+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2228480ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_instbig_shadow_senv_l1001, 2, p_physical_instbig_shadow_senv_l1001, 36, a_physical_instbig_shadow_senv_l1001, 6, k_physical_instbig_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 279, 280 },
+  { "physical+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 35184374317312ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_instbig_icol_shadow_senv_l1001, 2, p_physical_instbig_icol_shadow_senv_l1001, 43, a_physical_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 277, 278 },
+  { "physical+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2228480ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_instbig_shadow_senv_l1001, 2, p_physical_instbig_shadow_senv_l1001, 43, a_physical_instbig_shadow_senv_l1001, 6, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 279, 280 },
   { "physical+irid", T3_GEN_PHYSICAL, 562949953421312ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_irid, 2, p_physical_irid, 25, a_physical_irid, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 281, 282 },
-  { "physical+irid+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 598134327738624ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_instbig_icol_shadow_senv_l1001, 2, p_physical_irid_instbig_icol_shadow_senv_l1001, 39, a_physical_irid_instbig_icol_shadow_senv_l1001, 7, k_physical_irid_instbig_icol_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 283, 284 },
-  { "physical+irid+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 562949955649792ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_instbig_shadow_senv_l1001, 2, p_physical_irid_instbig_shadow_senv_l1001, 39, a_physical_irid_instbig_shadow_senv_l1001, 6, k_physical_irid_instbig_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 285, 286 },
-  { "physical+irid+shadow+senv+l1001", T3_GEN_PHYSICAL, 562949955649536ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_shadow_senv_l1001, 2, p_physical_irid_shadow_senv_l1001, 39, a_physical_irid_shadow_senv_l1001, 2, k_physical_irid_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 287, 288 },
-  { "physical+irid+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 598134327738640ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_irid_trans_instbig_icol_shadow_senv_l1001, 39, a_physical_irid_trans_instbig_icol_shadow_senv_l1001, 7, k_physical_irid_trans_instbig_icol_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 283, 289 },
-  { "physical+irid+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 562949955649552ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_trans_shadow_senv_l1001, 2, p_physical_irid_trans_shadow_senv_l1001, 39, a_physical_irid_trans_shadow_senv_l1001, 2, k_physical_irid_trans_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 287, 290 },
+  { "physical+irid+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 598134327738624ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_instbig_icol_shadow_senv_l1001, 2, p_physical_irid_instbig_icol_shadow_senv_l1001, 46, a_physical_irid_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 283, 284 },
+  { "physical+irid+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 562949955649792ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_instbig_shadow_senv_l1001, 2, p_physical_irid_instbig_shadow_senv_l1001, 46, a_physical_irid_instbig_shadow_senv_l1001, 6, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 285, 286 },
+  { "physical+irid+shadow+senv+l1001", T3_GEN_PHYSICAL, 562949955649536ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_shadow_senv_l1001, 2, p_physical_irid_shadow_senv_l1001, 46, a_physical_irid_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 287, 288 },
+  { "physical+irid+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 598134327738640ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_irid_trans_instbig_icol_shadow_senv_l1001, 46, a_physical_irid_trans_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 283, 289 },
+  { "physical+irid+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 562949955649552ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_irid_trans_shadow_senv_l1001, 2, p_physical_irid_trans_shadow_senv_l1001, 46, a_physical_irid_trans_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 287, 290 },
   { "physical+l0000", T3_GEN_PHYSICAL, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_physical_l0000, 2, p_physical_l0000, 15, a_physical_l0000, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 291, 292 },
   { "physical+l1000", T3_GEN_PHYSICAL, 0ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_physical_l1000, 2, p_physical_l1000, 18, a_physical_l1000, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 293, 294 },
   { "physical+l1111", T3_GEN_PHYSICAL, 0ull, { 1, 1, 1, 1 }, NULL, T3_GEN_GL, groups_physical_l1111, 2, p_physical_l1111, 33, a_physical_l1111, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 295, 296 },
@@ -19422,53 +19242,53 @@ static const t3_gen_program programs[] = {
   { "physical+map+nearest", T3_GEN_PHYSICAL, 129ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_map_nearest, 2, p_physical_map_nearest, 24, a_physical_map_nearest, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 301, 302 },
   { "physical+map+nmap+ao+emap+rmap+mmap", T3_GEN_PHYSICAL, 15873ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_map_nmap_ao_emap_rmap_mmap, 2, p_physical_map_nmap_ao_emap_rmap_mmap, 36, a_physical_map_nmap_ao_emap_rmap_mmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 304, 305 },
   { "physical+map+rep", T3_GEN_PHYSICAL, 65ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_map_rep, 2, p_physical_map_rep, 24, a_physical_map_rep, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 301, 302 },
-  { "physical+map+rep+nmap+ao+rmap+transm+bs+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 2295780281030465ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001, 53, a_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001, 8, k_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 306, 307 },
-  { "physical+map+rep+nmap+ao+rmap+transm+bs+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2260595908941633ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001, 53, a_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001, 7, k_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 308, 309 },
-  { "physical+map+rep+nmap+ao+rmap+transm+bs+shadow+senv+l1001", T3_GEN_PHYSICAL, 2260595908941377ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001, 53, a_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001, 3, k_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 310, 311 },
-  { "physical+map+rep+nmap+ao+rmap+transm+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 2286984188008257ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001, 53, a_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001, 8, k_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 306, 312 },
-  { "physical+map+rep+nmap+ao+rmap+transm+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2251799815919425ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001, 53, a_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001, 7, k_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 308, 313 },
-  { "physical+map+rep+nmap+ao+rmap+transm+shadow+senv+l1001", T3_GEN_PHYSICAL, 2251799815919169ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001, 53, a_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001, 3, k_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 310, 314 },
+  { "physical+map+rep+nmap+ao+rmap+transm+bs+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 2295780281030465ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001, 68, a_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_icol_shadow_senv_l1001, 8, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 306, 307 },
+  { "physical+map+rep+nmap+ao+rmap+transm+bs+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2260595908941633ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001, 68, a_physical_map_rep_nmap_ao_rmap_transm_bs_instbig_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 308, 309 },
+  { "physical+map+rep+nmap+ao+rmap+transm+bs+shadow+senv+l1001", T3_GEN_PHYSICAL, 2260595908941377ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001, 68, a_physical_map_rep_nmap_ao_rmap_transm_bs_shadow_senv_l1001, 3, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 310, 311 },
+  { "physical+map+rep+nmap+ao+rmap+transm+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 2286984188008257ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001, 68, a_physical_map_rep_nmap_ao_rmap_transm_instbig_icol_shadow_senv_l1001, 8, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 306, 312 },
+  { "physical+map+rep+nmap+ao+rmap+transm+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2251799815919425ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001, 68, a_physical_map_rep_nmap_ao_rmap_transm_instbig_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 308, 313 },
+  { "physical+map+rep+nmap+ao+rmap+transm+shadow+senv+l1001", T3_GEN_PHYSICAL, 2251799815919169ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001, 2, p_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001, 68, a_physical_map_rep_nmap_ao_rmap_transm_shadow_senv_l1001, 3, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 310, 314 },
   { "physical+map+vcol+fog", T3_GEN_PHYSICAL, 7ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_map_vcol_fog, 2, p_physical_map_vcol_fog, 27, a_physical_map_vcol_fog, 4, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 315, 316 },
   { "physical+mmap", T3_GEN_PHYSICAL, 8192ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_mmap, 2, p_physical_mmap, 24, a_physical_mmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 317, 318 },
   { "physical+nmap", T3_GEN_PHYSICAL, 512ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_nmap, 2, p_physical_nmap, 25, a_physical_nmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 319, 320 },
   { "physical+rmap", T3_GEN_PHYSICAL, 4096ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_rmap, 2, p_physical_rmap, 24, a_physical_rmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 321, 322 },
-  { "physical+senv", T3_GEN_PHYSICAL, 2097152ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_senv, 2, p_physical_senv, 29, a_physical_senv, 2, k_physical_senv, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 265, 266 },
-  { "physical+shadow", T3_GEN_PHYSICAL, 131072ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_shadow, 2, p_physical_shadow, 38, a_physical_shadow, 2, k_physical_shadow, 5, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 323, 324 },
-  { "physical+shadow+senv+l1001", T3_GEN_PHYSICAL, 2228224ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_shadow_senv_l1001, 2, p_physical_shadow_senv_l1001, 36, a_physical_shadow_senv_l1001, 2, k_physical_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 325, 326 },
+  { "physical+senv", T3_GEN_PHYSICAL, 2097152ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_senv, 2, p_physical_senv, 32, a_physical_senv, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 265, 266 },
+  { "physical+shadow", T3_GEN_PHYSICAL, 131072ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_shadow, 2, p_physical_shadow, 42, a_physical_shadow, 2, k_physical_shadow, 1, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 323, 324 },
+  { "physical+shadow+senv+l1001", T3_GEN_PHYSICAL, 2228224ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_shadow_senv_l1001, 2, p_physical_shadow_senv_l1001, 43, a_physical_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 325, 326 },
   { "physical+sheen", T3_GEN_PHYSICAL, 281474976710656ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_sheen, 2, p_physical_sheen, 25, a_physical_sheen, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 327, 328 },
-  { "physical+sheen+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 316659351027968ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_instbig_icol_shadow_senv_l1001, 2, p_physical_sheen_instbig_icol_shadow_senv_l1001, 39, a_physical_sheen_instbig_icol_shadow_senv_l1001, 7, k_physical_sheen_instbig_icol_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 329, 330 },
-  { "physical+sheen+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 281474978939136ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_instbig_shadow_senv_l1001, 2, p_physical_sheen_instbig_shadow_senv_l1001, 39, a_physical_sheen_instbig_shadow_senv_l1001, 6, k_physical_sheen_instbig_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 331, 332 },
-  { "physical+sheen+shadow+senv+l1001", T3_GEN_PHYSICAL, 281474978938880ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_shadow_senv_l1001, 2, p_physical_sheen_shadow_senv_l1001, 39, a_physical_sheen_shadow_senv_l1001, 2, k_physical_sheen_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 333, 334 },
-  { "physical+sheen+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 316659351027984ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_sheen_trans_instbig_icol_shadow_senv_l1001, 39, a_physical_sheen_trans_instbig_icol_shadow_senv_l1001, 7, k_physical_sheen_trans_instbig_icol_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 329, 335 },
-  { "physical+sheen+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 281474978938896ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_trans_shadow_senv_l1001, 2, p_physical_sheen_trans_shadow_senv_l1001, 39, a_physical_sheen_trans_shadow_senv_l1001, 2, k_physical_sheen_trans_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 333, 336 },
+  { "physical+sheen+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 316659351027968ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_instbig_icol_shadow_senv_l1001, 2, p_physical_sheen_instbig_icol_shadow_senv_l1001, 46, a_physical_sheen_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 329, 330 },
+  { "physical+sheen+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 281474978939136ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_instbig_shadow_senv_l1001, 2, p_physical_sheen_instbig_shadow_senv_l1001, 46, a_physical_sheen_instbig_shadow_senv_l1001, 6, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 331, 332 },
+  { "physical+sheen+shadow+senv+l1001", T3_GEN_PHYSICAL, 281474978938880ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_shadow_senv_l1001, 2, p_physical_sheen_shadow_senv_l1001, 46, a_physical_sheen_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 333, 334 },
+  { "physical+sheen+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 316659351027984ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_sheen_trans_instbig_icol_shadow_senv_l1001, 46, a_physical_sheen_trans_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 329, 335 },
+  { "physical+sheen+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 281474978938896ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_sheen_trans_shadow_senv_l1001, 2, p_physical_sheen_trans_shadow_senv_l1001, 46, a_physical_sheen_trans_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 333, 336 },
   { "physical+trans", T3_GEN_PHYSICAL, 16ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_trans, 2, p_physical_trans, 22, a_physical_trans, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 223, 337 },
-  { "physical+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 35184374317328ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_trans_instbig_icol_shadow_senv_l1001, 36, a_physical_trans_instbig_icol_shadow_senv_l1001, 7, k_physical_trans_instbig_icol_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 277, 338 },
-  { "physical+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 2228240ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_trans_shadow_senv_l1001, 2, p_physical_trans_shadow_senv_l1001, 36, a_physical_trans_shadow_senv_l1001, 2, k_physical_trans_shadow_senv_l1001, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 325, 339 },
-  { "physical+transm", T3_GEN_PHYSICAL, 2251799813685248ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_transm, 2, p_physical_transm, 30, a_physical_transm, 2, k_physical_transm, 8, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 340, 341 },
-  { "physical+transm+bs", T3_GEN_PHYSICAL, 2260595906707456ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_transm_bs, 2, p_physical_transm_bs, 30, a_physical_transm_bs, 2, k_physical_transm_bs, 8, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 340, 342 },
-  { "physical+transm+bs+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 2295780281024768ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_bs_instbig_icol_shadow_senv_l1001, 2, p_physical_transm_bs_instbig_icol_shadow_senv_l1001, 43, a_physical_transm_bs_instbig_icol_shadow_senv_l1001, 7, k_physical_transm_bs_instbig_icol_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 343, 344 },
-  { "physical+transm+bs+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2260595908935936ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_bs_instbig_shadow_senv_l1001, 2, p_physical_transm_bs_instbig_shadow_senv_l1001, 43, a_physical_transm_bs_instbig_shadow_senv_l1001, 6, k_physical_transm_bs_instbig_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 345, 346 },
-  { "physical+transm+bs+shadow+senv+l1001", T3_GEN_PHYSICAL, 2260595908935680ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_bs_shadow_senv_l1001, 2, p_physical_transm_bs_shadow_senv_l1001, 43, a_physical_transm_bs_shadow_senv_l1001, 2, k_physical_transm_bs_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 347, 348 },
-  { "physical+transm+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 2286984188002560ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_instbig_icol_shadow_senv_l1001, 2, p_physical_transm_instbig_icol_shadow_senv_l1001, 43, a_physical_transm_instbig_icol_shadow_senv_l1001, 7, k_physical_transm_instbig_icol_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 343, 349 },
-  { "physical+transm+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2251799815913728ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_instbig_shadow_senv_l1001, 2, p_physical_transm_instbig_shadow_senv_l1001, 43, a_physical_transm_instbig_shadow_senv_l1001, 6, k_physical_transm_instbig_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 345, 350 },
-  { "physical+transm+shadow+senv+l1001", T3_GEN_PHYSICAL, 2251799815913472ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_shadow_senv_l1001, 2, p_physical_transm_shadow_senv_l1001, 43, a_physical_transm_shadow_senv_l1001, 2, k_physical_transm_shadow_senv_l1001, 15, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 347, 351 },
+  { "physical+trans+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 35184374317328ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_trans_instbig_icol_shadow_senv_l1001, 2, p_physical_trans_instbig_icol_shadow_senv_l1001, 43, a_physical_trans_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 277, 338 },
+  { "physical+trans+shadow+senv+l1001", T3_GEN_PHYSICAL, 2228240ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_trans_shadow_senv_l1001, 2, p_physical_trans_shadow_senv_l1001, 43, a_physical_trans_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 325, 339 },
+  { "physical+transm", T3_GEN_PHYSICAL, 2251799813685248ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_transm, 2, p_physical_transm, 38, a_physical_transm, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 340, 341 },
+  { "physical+transm+bs", T3_GEN_PHYSICAL, 2260595906707456ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_transm_bs, 2, p_physical_transm_bs, 38, a_physical_transm_bs, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 340, 342 },
+  { "physical+transm+bs+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 2295780281024768ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_bs_instbig_icol_shadow_senv_l1001, 2, p_physical_transm_bs_instbig_icol_shadow_senv_l1001, 58, a_physical_transm_bs_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 343, 344 },
+  { "physical+transm+bs+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2260595908935936ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_bs_instbig_shadow_senv_l1001, 2, p_physical_transm_bs_instbig_shadow_senv_l1001, 58, a_physical_transm_bs_instbig_shadow_senv_l1001, 6, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 345, 346 },
+  { "physical+transm+bs+shadow+senv+l1001", T3_GEN_PHYSICAL, 2260595908935680ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_bs_shadow_senv_l1001, 2, p_physical_transm_bs_shadow_senv_l1001, 58, a_physical_transm_bs_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 347, 348 },
+  { "physical+transm+instbig+icol+shadow+senv+l1001", T3_GEN_PHYSICAL, 2286984188002560ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_instbig_icol_shadow_senv_l1001, 2, p_physical_transm_instbig_icol_shadow_senv_l1001, 58, a_physical_transm_instbig_icol_shadow_senv_l1001, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 343, 349 },
+  { "physical+transm+instbig+shadow+senv+l1001", T3_GEN_PHYSICAL, 2251799815913728ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_instbig_shadow_senv_l1001, 2, p_physical_transm_instbig_shadow_senv_l1001, 58, a_physical_transm_instbig_shadow_senv_l1001, 6, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 345, 350 },
+  { "physical+transm+shadow+senv+l1001", T3_GEN_PHYSICAL, 2251799815913472ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_physical_transm_shadow_senv_l1001, 2, p_physical_transm_shadow_senv_l1001, 58, a_physical_transm_shadow_senv_l1001, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 347, 351 },
   { "physical+vcol", T3_GEN_PHYSICAL, 2ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_physical_vcol, 2, p_physical_vcol, 22, a_physical_vcol, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 352, 353 },
-  { "pmremblur+z10", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z10, 2, p_pmremblur_z10, 3, a_pmremblur_z10, 2, k_pmremblur_z10, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 355 },
-  { "pmremblur+z4", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z4, 2, p_pmremblur_z4, 3, a_pmremblur_z4, 2, k_pmremblur_z4, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 356 },
-  { "pmremblur+z5", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z5, 2, p_pmremblur_z5, 3, a_pmremblur_z5, 2, k_pmremblur_z5, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 357 },
-  { "pmremblur+z6", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z6, 2, p_pmremblur_z6, 3, a_pmremblur_z6, 2, k_pmremblur_z6, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 358 },
-  { "pmremblur+z7", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z7, 2, p_pmremblur_z7, 3, a_pmremblur_z7, 2, k_pmremblur_z7, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 359 },
-  { "pmremblur+z8", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z8, 2, p_pmremblur_z8, 3, a_pmremblur_z8, 2, k_pmremblur_z8, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 360 },
-  { "pmremblur+z9", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z9, 2, p_pmremblur_z9, 3, a_pmremblur_z9, 2, k_pmremblur_z9, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 361 },
+  { "pmremblur+z10", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z10, 2, p_pmremblur_z10, 4, a_pmremblur_z10, 2, k_pmremblur_z10, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 355 },
+  { "pmremblur+z4", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z4, 2, p_pmremblur_z4, 4, a_pmremblur_z4, 2, k_pmremblur_z4, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 356 },
+  { "pmremblur+z5", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z5, 2, p_pmremblur_z5, 4, a_pmremblur_z5, 2, k_pmremblur_z5, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 357 },
+  { "pmremblur+z6", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z6, 2, p_pmremblur_z6, 4, a_pmremblur_z6, 2, k_pmremblur_z6, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 358 },
+  { "pmremblur+z7", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z7, 2, p_pmremblur_z7, 4, a_pmremblur_z7, 2, k_pmremblur_z7, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 359 },
+  { "pmremblur+z8", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z8, 2, p_pmremblur_z8, 4, a_pmremblur_z8, 2, k_pmremblur_z8, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 360 },
+  { "pmremblur+z9", T3_GEN_PMREMBLUR, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremblur_z9, 2, p_pmremblur_z9, 4, a_pmremblur_z9, 2, k_pmremblur_z9, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 354, 361 },
   { "pmremcube", T3_GEN_PMREMCUBE, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremcube, 2, p_pmremcube, 0, a_pmremcube, 2, k_pmremcube, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 362, 363 },
   { "pmremequi", T3_GEN_PMREMEQUI, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremequi, 2, p_pmremequi, 1, a_pmremequi, 2, k_pmremequi, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 364, 365 },
-  { "pmremggx+z10", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z10, 2, p_pmremggx_z10, 3, a_pmremggx_z10, 2, k_pmremggx_z10, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 367 },
-  { "pmremggx+z4", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z4, 2, p_pmremggx_z4, 3, a_pmremggx_z4, 2, k_pmremggx_z4, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 368 },
-  { "pmremggx+z5", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z5, 2, p_pmremggx_z5, 3, a_pmremggx_z5, 2, k_pmremggx_z5, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 369 },
-  { "pmremggx+z6", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z6, 2, p_pmremggx_z6, 3, a_pmremggx_z6, 2, k_pmremggx_z6, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 370 },
-  { "pmremggx+z7", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z7, 2, p_pmremggx_z7, 3, a_pmremggx_z7, 2, k_pmremggx_z7, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 371 },
-  { "pmremggx+z8", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z8, 2, p_pmremggx_z8, 3, a_pmremggx_z8, 2, k_pmremggx_z8, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 372 },
-  { "pmremggx+z9", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z9, 2, p_pmremggx_z9, 3, a_pmremggx_z9, 2, k_pmremggx_z9, 4, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 373 },
+  { "pmremggx+z10", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z10, 2, p_pmremggx_z10, 4, a_pmremggx_z10, 2, k_pmremggx_z10, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 367 },
+  { "pmremggx+z4", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z4, 2, p_pmremggx_z4, 4, a_pmremggx_z4, 2, k_pmremggx_z4, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 368 },
+  { "pmremggx+z5", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z5, 2, p_pmremggx_z5, 4, a_pmremggx_z5, 2, k_pmremggx_z5, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 369 },
+  { "pmremggx+z6", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z6, 2, p_pmremggx_z6, 4, a_pmremggx_z6, 2, k_pmremggx_z6, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 370 },
+  { "pmremggx+z7", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z7, 2, p_pmremggx_z7, 4, a_pmremggx_z7, 2, k_pmremggx_z7, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 371 },
+  { "pmremggx+z8", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z8, 2, p_pmremggx_z8, 4, a_pmremggx_z8, 2, k_pmremggx_z8, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 372 },
+  { "pmremggx+z9", T3_GEN_PMREMGGX, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_pmremggx_z9, 2, p_pmremggx_z9, 4, a_pmremggx_z9, 2, k_pmremggx_z9, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 366, 373 },
   { "points", T3_GEN_POINTS, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_points, 2, p_points, 5, a_points, 1, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 0, 1 },
   { "points+fog", T3_GEN_POINTS, 4ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_points_fog, 2, p_points_fog, 8, a_points_fog, 1, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 13, 14 },
   { "points+map", T3_GEN_POINTS, 1ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_points_map, 2, p_points_map, 7, a_points_map, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 27, 28 },
@@ -19501,7 +19321,7 @@ static const t3_gen_program programs[] = {
   { "standard+ds", T3_GEN_STANDARD, 4398046511104ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_ds, 2, p_standard_ds, 19, a_standard_ds, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 396, 405 },
   { "standard+ds+l1000", T3_GEN_STANDARD, 4398046511104ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_ds_l1000, 2, p_standard_ds_l1000, 15, a_standard_ds_l1000, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 406, 407 },
   { "standard+emap", T3_GEN_STANDARD, 2048ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_emap, 2, p_standard_emap, 21, a_standard_emap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 408, 409 },
-  { "standard+env", T3_GEN_STANDARD, 1048576ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_env, 2, p_standard_env, 26, a_standard_env, 2, k_standard_env, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 410, 411 },
+  { "standard+env", T3_GEN_STANDARD, 1048576ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_env, 2, p_standard_env, 29, a_standard_env, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 410, 411 },
   { "standard+flat", T3_GEN_STANDARD, 32ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_flat, 2, p_standard_flat, 18, a_standard_flat, 1, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 412, 413 },
   { "standard+fog", T3_GEN_STANDARD, 4ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_fog, 2, p_standard_fog, 22, a_standard_fog, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 414, 415 },
   { "standard+fog+instbig+l1000", T3_GEN_STANDARD, 260ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_fog_instbig_l1000, 2, p_standard_fog_instbig_l1000, 18, a_standard_fog_instbig_l1000, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 416, 417 },
@@ -19509,29 +19329,29 @@ static const t3_gen_program programs[] = {
   { "standard+instbig", T3_GEN_STANDARD, 256ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig, 2, p_standard_instbig, 19, a_standard_instbig, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 420, 421 },
   { "standard+instbig+fog2+l1000", T3_GEN_STANDARD, 2147483904ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_fog2_l1000, 2, p_standard_instbig_fog2_l1000, 17, a_standard_instbig_fog2_l1000, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 422, 423 },
   { "standard+instbig+icol", T3_GEN_STANDARD, 35184372089088ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_icol, 2, p_standard_instbig_icol, 19, a_standard_instbig_icol, 7, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 424, 425 },
-  { "standard+instbig+icol+shadow", T3_GEN_STANDARD, 35184372220160ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_icol_shadow, 2, p_standard_instbig_icol_shadow, 35, a_standard_instbig_icol_shadow, 7, k_standard_instbig_icol_shadow, 5, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 426, 427 },
-  { "standard+instbig+icol+shadow+l1000", T3_GEN_STANDARD, 35184372220160ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_icol_shadow_l1000, 2, p_standard_instbig_icol_shadow_l1000, 23, a_standard_instbig_icol_shadow_l1000, 7, k_standard_instbig_icol_shadow_l1000, 4, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 428, 429 },
+  { "standard+instbig+icol+shadow", T3_GEN_STANDARD, 35184372220160ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_icol_shadow, 2, p_standard_instbig_icol_shadow, 39, a_standard_instbig_icol_shadow, 7, k_standard_instbig_icol_shadow, 1, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 426, 427 },
+  { "standard+instbig+icol+shadow+l1000", T3_GEN_STANDARD, 35184372220160ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_icol_shadow_l1000, 2, p_standard_instbig_icol_shadow_l1000, 27, a_standard_instbig_icol_shadow_l1000, 7, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 428, 429 },
   { "standard+instbig+l1001", T3_GEN_STANDARD, 256ull, { 1, 0, 0, 1 }, NULL, T3_GEN_GL, groups_standard_instbig_l1001, 2, p_standard_instbig_l1001, 18, a_standard_instbig_l1001, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 430, 431 },
   { "standard+instbig+l1110", T3_GEN_STANDARD, 256ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_l1110, 2, p_standard_instbig_l1110, 27, a_standard_instbig_l1110, 6, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 432, 433 },
-  { "standard+instbig+shadow+l1000", T3_GEN_STANDARD, 131328ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_shadow_l1000, 2, p_standard_instbig_shadow_l1000, 23, a_standard_instbig_shadow_l1000, 6, k_standard_instbig_shadow_l1000, 4, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 434, 435 },
-  { "standard+instbig+shadow+l1110+s011", T3_GEN_STANDARD, 131328ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_shadow_l1110_s011, 2, p_standard_instbig_shadow_l1110_s011, 43, a_standard_instbig_shadow_l1110_s011, 6, k_standard_instbig_shadow_l1110_s011, 5, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 436, 437 },
+  { "standard+instbig+shadow+l1000", T3_GEN_STANDARD, 131328ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_shadow_l1000, 2, p_standard_instbig_shadow_l1000, 27, a_standard_instbig_shadow_l1000, 6, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 434, 435 },
+  { "standard+instbig+shadow+l1110+s011", T3_GEN_STANDARD, 131328ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_standard_instbig_shadow_l1110_s011, 2, p_standard_instbig_shadow_l1110_s011, 47, a_standard_instbig_shadow_l1110_s011, 6, k_standard_instbig_shadow_l1110_s011, 1, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 436, 437 },
   { "standard+l0000", T3_GEN_STANDARD, 0ull, { 0, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_l0000, 2, p_standard_l0000, 12, a_standard_l0000, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 438, 439 },
-  { "standard+l0010+shadow", T3_GEN_STANDARD, 131072ull, { 0, 0, 1, 0 }, NULL, T3_GEN_GL, groups_standard_l0010_shadow, 2, p_standard_l0010_shadow, 28, a_standard_l0010_shadow, 2, k_standard_l0010_shadow, 4, { 0, 0, 0 }, { 0, 0, 1 }, NULL, NULL, &text, 440, 441 },
+  { "standard+l0010+shadow", T3_GEN_STANDARD, 131072ull, { 0, 0, 1, 0 }, NULL, T3_GEN_GL, groups_standard_l0010_shadow, 2, p_standard_l0010_shadow, 32, a_standard_l0010_shadow, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 1 }, NULL, NULL, &text, 440, 441 },
   { "standard+l0100+shadow", T3_GEN_STANDARD, 131072ull, { 0, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_l0100_shadow, 2, p_standard_l0100_shadow, 24, a_standard_l0100_shadow, 2, k_standard_l0100_shadow, 1, { 0, 0, 0 }, { 0, 1, 0 }, NULL, NULL, &text, 442, 443 },
   { "standard+l1000", T3_GEN_STANDARD, 0ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_l1000, 2, p_standard_l1000, 15, a_standard_l1000, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 406, 444 },
   { "standard+l1111", T3_GEN_STANDARD, 0ull, { 1, 1, 1, 1 }, NULL, T3_GEN_GL, groups_standard_l1111, 2, p_standard_l1111, 30, a_standard_l1111, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 445, 446 },
   { "standard+l1211", T3_GEN_STANDARD, 0ull, { 1, 2, 1, 1 }, NULL, T3_GEN_GL, groups_standard_l1211, 2, p_standard_l1211, 34, a_standard_l1211, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 447, 448 },
   { "standard+l2200", T3_GEN_STANDARD, 0ull, { 2, 2, 0, 0 }, NULL, T3_GEN_GL, groups_standard_l2200, 2, p_standard_l2200, 26, a_standard_l2200, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 449, 450 },
-  { "standard+l2200+shadow", T3_GEN_STANDARD, 131072ull, { 2, 2, 0, 0 }, NULL, T3_GEN_GL, groups_standard_l2200_shadow, 2, p_standard_l2200_shadow, 56, a_standard_l2200_shadow, 2, k_standard_l2200_shadow, 10, { 0, 0, 0 }, { 2, 2, 0 }, NULL, NULL, &text, 451, 452 },
+  { "standard+l2200+shadow", T3_GEN_STANDARD, 131072ull, { 2, 2, 0, 0 }, NULL, T3_GEN_GL, groups_standard_l2200_shadow, 2, p_standard_l2200_shadow, 64, a_standard_l2200_shadow, 2, k_standard_l2200_shadow, 2, { 0, 0, 0 }, { 2, 2, 0 }, NULL, NULL, &text, 451, 452 },
   { "standard+l4410", T3_GEN_STANDARD, 0ull, { 4, 4, 1, 0 }, NULL, T3_GEN_GL, groups_standard_l4410, 2, p_standard_l4410, 48, a_standard_l4410, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 453, 454 },
   { "standard+lmap", T3_GEN_STANDARD, 4194304ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_lmap, 2, p_standard_lmap, 22, a_standard_lmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 455, 456 },
   { "standard+map", T3_GEN_STANDARD, 1ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map, 2, p_standard_map, 21, a_standard_map, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 457, 458 },
   { "standard+map+ds", T3_GEN_STANDARD, 4398046511105ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_ds, 2, p_standard_map_ds, 21, a_standard_map_ds, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 457, 459 },
-  { "standard+map+env", T3_GEN_STANDARD, 1048577ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_env, 2, p_standard_map_env, 28, a_standard_map_env, 3, k_standard_map_env, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 460, 461 },
+  { "standard+map+env", T3_GEN_STANDARD, 1048577ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_env, 2, p_standard_map_env, 31, a_standard_map_env, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 460, 461 },
   { "standard+map+nearest", T3_GEN_STANDARD, 129ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_nearest, 2, p_standard_map_nearest, 21, a_standard_map_nearest, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 457, 458 },
   { "standard+map+nmap+ao+emap+rmap+mmap", T3_GEN_STANDARD, 15873ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_nmap_ao_emap_rmap_mmap, 2, p_standard_map_nmap_ao_emap_rmap_mmap, 33, a_standard_map_nmap_ao_emap_rmap_mmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 462, 463 },
   { "standard+map+nmap+ao+emap+rmap+mmap+ds", T3_GEN_STANDARD, 4398046526977ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_nmap_ao_emap_rmap_mmap_ds, 2, p_standard_map_nmap_ao_emap_rmap_mmap_ds, 33, a_standard_map_nmap_ao_emap_rmap_mmap_ds, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 464, 465 },
-  { "standard+map+nmap+ao+emap+rmap+mmap+senv", T3_GEN_STANDARD, 2113025ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_nmap_ao_emap_rmap_mmap_senv, 2, p_standard_map_nmap_ao_emap_rmap_mmap_senv, 40, a_standard_map_nmap_ao_emap_rmap_mmap_senv, 3, k_standard_map_nmap_ao_emap_rmap_mmap_senv, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 466, 467 },
+  { "standard+map+nmap+ao+emap+rmap+mmap+senv", T3_GEN_STANDARD, 2113025ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_nmap_ao_emap_rmap_mmap_senv, 2, p_standard_map_nmap_ao_emap_rmap_mmap_senv, 43, a_standard_map_nmap_ao_emap_rmap_mmap_senv, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 466, 467 },
   { "standard+map+rep", T3_GEN_STANDARD, 65ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_map_rep, 2, p_standard_map_rep, 21, a_standard_map_rep, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 457, 458 },
   { "standard+map+rep+nmap+ao+emap+rmap+mmap+l1101", T3_GEN_STANDARD, 15937ull, { 1, 1, 0, 1 }, NULL, T3_GEN_GL, groups_standard_map_rep_nmap_ao_emap_rmap_mmap_l1101, 2, p_standard_map_rep_nmap_ao_emap_rmap_mmap_l1101, 36, a_standard_map_rep_nmap_ao_emap_rmap_mmap_l1101, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 468, 469 },
   { "standard+map+rep+nmap+ao+emap+rmap+mmap+tan+l1101", T3_GEN_STANDARD, 34359754305ull, { 1, 1, 0, 1 }, NULL, T3_GEN_GL, groups_standard_map_rep_nmap_ao_emap_rmap_mmap_tan_l1101, 2, p_standard_map_rep_nmap_ao_emap_rmap_mmap_tan_l1101, 36, a_standard_map_rep_nmap_ao_emap_rmap_mmap_tan_l1101, 4, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 470, 471 },
@@ -19546,11 +19366,11 @@ static const t3_gen_program programs[] = {
   { "standard+morph+morphn+l1000", T3_GEN_STANDARD, 68720001024ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_morph_morphn_l1000, 2, p_standard_morph_morphn_l1000, 19, a_standard_morph_morphn_l1000, 2, k_standard_morph_morphn_l1000, 2, { 0, 3, 1334 }, { 0, 0, 0 }, NULL, NULL, &text, 488, 489 },
   { "standard+nmap", T3_GEN_STANDARD, 512ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_nmap, 2, p_standard_nmap, 22, a_standard_nmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 490, 491 },
   { "standard+rmap", T3_GEN_STANDARD, 4096ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_rmap, 2, p_standard_rmap, 21, a_standard_rmap, 3, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 492, 493 },
-  { "standard+senv", T3_GEN_STANDARD, 2097152ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_senv, 2, p_standard_senv, 26, a_standard_senv, 2, k_standard_senv, 3, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 410, 411 },
-  { "standard+shadow", T3_GEN_STANDARD, 131072ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_shadow, 2, p_standard_shadow, 35, a_standard_shadow, 2, k_standard_shadow, 5, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 494, 495 },
-  { "standard+shadow+l1000", T3_GEN_STANDARD, 131072ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_shadow_l1000, 2, p_standard_shadow_l1000, 23, a_standard_shadow_l1000, 2, k_standard_shadow_l1000, 4, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 496, 497 },
-  { "standard+shadow+l1110+s011", T3_GEN_STANDARD, 131072ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_standard_shadow_l1110_s011, 2, p_standard_shadow_l1110_s011, 43, a_standard_shadow_l1110_s011, 2, k_standard_shadow_l1110_s011, 5, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 498, 499 },
-  { "standard+shadow+senv+l1201+s100", T3_GEN_STANDARD, 2228224ull, { 1, 2, 0, 1 }, NULL, T3_GEN_GL, groups_standard_shadow_senv_l1201_s100, 2, p_standard_shadow_senv_l1201_s100, 41, a_standard_shadow_senv_l1201_s100, 2, k_standard_shadow_senv_l1201_s100, 7, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 500, 501 },
+  { "standard+senv", T3_GEN_STANDARD, 2097152ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_senv, 2, p_standard_senv, 29, a_standard_senv, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 410, 411 },
+  { "standard+shadow", T3_GEN_STANDARD, 131072ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_shadow, 2, p_standard_shadow, 39, a_standard_shadow, 2, k_standard_shadow, 1, { 0, 0, 0 }, { 1, 1, 0 }, NULL, NULL, &text, 494, 495 },
+  { "standard+shadow+l1000", T3_GEN_STANDARD, 131072ull, { 1, 0, 0, 0 }, NULL, T3_GEN_GL, groups_standard_shadow_l1000, 2, p_standard_shadow_l1000, 27, a_standard_shadow_l1000, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 496, 497 },
+  { "standard+shadow+l1110+s011", T3_GEN_STANDARD, 131072ull, { 1, 1, 1, 0 }, NULL, T3_GEN_GL, groups_standard_shadow_l1110_s011, 2, p_standard_shadow_l1110_s011, 47, a_standard_shadow_l1110_s011, 2, k_standard_shadow_l1110_s011, 1, { 0, 0, 0 }, { 0, 1, 1 }, NULL, NULL, &text, 498, 499 },
+  { "standard+shadow+senv+l1201+s100", T3_GEN_STANDARD, 2228224ull, { 1, 2, 0, 1 }, NULL, T3_GEN_GL, groups_standard_shadow_senv_l1201_s100, 2, p_standard_shadow_senv_l1201_s100, 48, a_standard_shadow_senv_l1201_s100, 2, NULL, 0, { 0, 0, 0 }, { 1, 0, 0 }, NULL, NULL, &text, 500, 501 },
   { "standard+skin", T3_GEN_STANDARD, 262144ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_skin, 2, p_standard_skin, 21, a_standard_skin, 4, NULL, 0, { 7, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 502, 503 },
   { "standard+skin+morph", T3_GEN_STANDARD, 786432ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_skin_morph, 2, p_standard_skin_morph, 25, a_standard_skin_morph, 4, k_standard_skin_morph, 1, { 7, 3, 667 }, { 0, 0, 0 }, NULL, NULL, &text, 504, 505 },
   { "standard+trans", T3_GEN_STANDARD, 16ull, { 1, 1, 0, 0 }, NULL, T3_GEN_GL, groups_standard_trans, 2, p_standard_trans, 19, a_standard_trans, 2, NULL, 0, { 0, 0, 0 }, { 0, 0, 0 }, NULL, NULL, &text, 396, 506 },
