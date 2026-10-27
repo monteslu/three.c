@@ -25,12 +25,12 @@ the full program table's GL programs brought up to date with the capture.
   checks that it draws the same picture as rgb, with a control that a two
   component attribute is still refused.
 - `material.alpha_to_coverage` (r186's `alphaToCoverage`) turns on GL's
-  sample alpha-to-coverage for the material's draws into a multisampled
-  target. The tables hold no r186 alpha-to-coverage program yet (r186 keeps
-  such a material's alpha instead of writing 1, and smooths its alpha test),
-  so it changes the picture only where the program writes an alpha below 1: a
-  transparent material, or an extension that sets the alpha itself. WebGPU
-  draws these materials as before.
+  sample alpha-to-coverage for the material's draws. It does not soften an
+  opaque alpha-tested material's edges yet: r186 gives such a material its
+  own program (the alpha kept instead of written as 1, the alpha test
+  smoothed), and the tables do not have those programs, so the coverage stays
+  full and the picture is the plain alpha test's. WebGPU draws these
+  materials as before.
 
 ### Changed
 - An extension texture may be sampled up to 128 times in one program (was 64).
