@@ -188,7 +188,12 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
     else if (tex_nearest(m->map)) f |= T3_GEN_NEAREST;
   }
   if (m->vertex_colors) {
-    if (!g->attributes[T3_ATTR_COLOR] || g->attributes[T3_ATTR_COLOR]->item_size != 3) { *why = "vertex colors that are not rgb"; return false; }
+    /* rgb or rgba (glTF exporters write COLOR_0 as vec4 by default): the program reads the first three
+     * components of the attribute, so an rgba one draws with its colour and an opaque alpha (r186's
+     * USE_COLOR_ALPHA program, which would multiply the alpha in, is not in the tables) */
+    if (!g->attributes[T3_ATTR_COLOR] || (g->attributes[T3_ATTR_COLOR]->item_size != 3 && g->attributes[T3_ATTR_COLOR]->item_size != 4)) {
+      *why = "vertex colors that are not rgb or rgba"; return false;
+    }
     f |= T3_GEN_VCOL;
   }
   if (r->fog && m->fog) f |= r->fog->type == T3_FOG_LINEAR ? T3_GEN_FOG : T3_GEN_FOG2;
