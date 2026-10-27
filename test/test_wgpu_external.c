@@ -312,6 +312,34 @@ int main(void) {
   check(green > 8, "the glass shows the coloured backdrop (copied from the caller's view)");
   et.flip_y = false;
 
+  /* H: depth_min / depth_max, the viewport's depth range: the box drawn with the range 0..0.02 writes
+   * depth only in that band (an embedder's first person weapon over a depth buffer it keeps). The
+   * control is the same draw with both 0 (the full 0..1 range), whose depths lie above the band. */
+  {
+    static uint8_t ha[S * S * 4], hb[S * S * 4];
+    float lo_max = 0, full_min = 1;
+    int n_lo = 0, n_full = 0;
+    et.load_color = et.load_depth = false; et.x = 0; et.y = 0; et.w = S; et.h = S;
+    et.depth_min = 0; et.depth_max = 0.02f;
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, scene, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(dt, true, ha);
+    et.depth_min = 0; et.depth_max = 0;
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, scene, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(dt, true, hb);
+    for (int i = 0; i < S * S; i++) {
+      float p, q; memcpy(&p, ha + i * 4, 4); memcpy(&q, hb + i * 4, 4);
+      if (p < 1) { n_lo++; if (p > lo_max) lo_max = p; }
+      if (q < 1) { n_full++; if (q < full_min) full_min = q; }
+    }
+    printf("      depth range 0..0.02: %d texels, max depth %.4f; default range: %d texels, min depth %.4f\n", n_lo, lo_max, n_full, full_min);
+    check(n_lo > 100 && lo_max <= 0.0201f, "depth_max squeezes the pass into the near end of the depth range");
+    check(n_full > 100 && full_min > 0.5f, "control: with both 0 the depths use the full range");
+  }
+
   /* G: PMREM and the scene recorded on one external encoder, one submit (the
    * embedder's frame): the same picture as each submitting on its own */
   {
