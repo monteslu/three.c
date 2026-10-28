@@ -152,6 +152,13 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
     if [ $st = 0 ]; then echo "ok    test_extension_batch_wgpu"; elif [ $st = 77 ]; then echo "skip  test_extension_batch_wgpu (no WebGPU adapter)"
     else echo "FAIL  test_extension_batch_wgpu"; grep -v '^Warning' build/test/test_extension_batch_wgpu.log; fail=1; fi
   fi
+  # a WebGPU renderer makes no GL call when destroyed (a dual cart traps on one); the control, a GLES renderer, must fail
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_wgpu_destroy.c \
+    build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_wgpu_destroy
+  set +e; ./build/test/test_wgpu_destroy > build/test/test_wgpu_destroy.log 2>&1; st=$?; set -e
+  if [ $st = 0 ]; then echo "ok    test_wgpu_destroy"; elif [ $st = 77 ]; then echo "skip  test_wgpu_destroy (no WebGPU adapter)"
+  else echo "FAIL  test_wgpu_destroy"; grep -v '^Warning' build/test/test_wgpu_destroy.log; fail=1; fi
+  run test_wgpu_destroy_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_wgpu_destroy >/dev/null 2>&1"
   # every optional vertex attribute on WebGPU (a compatibility-mode device: 8 vertex buffers), against the GLES frame
   if [ -f build/test/vbtab/vbtab_wgpu.c ]; then
     "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_vertex_buffers.c \
