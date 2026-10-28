@@ -11,6 +11,7 @@
  *     build/native-wgpu/libthree.a -L <dawn>/lib -lwebgpu_dawn -Wl,-rpath,<dawn>/lib -lEGL -lGLESv2 -lz -lm
  *
  * Exits 0 on success, 77 when no WebGPU adapter is available. */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -311,6 +312,58 @@ int main(void) {
   for (int y = S / 2 - 4; y < S / 2 + 4; y++) for (int x = S / 2 - 4; x < S / 2 + 4; x++) { const uint8_t *p = fa + (y * S + x) * 4; if (p[1] > p[0] + 20 || p[0] > p[1] + 20) green++; }
   check(green > 8, "the glass shows the coloured backdrop (copied from the caller's view)");
   et.flip_y = false;
+
+  /* I: a normal map on a flip_y target. A plane with no tangents builds its tangent frame from screen derivatives
+   * (dpdx, dpdy); flip_y renders upside down, so the screen's y runs the other way and dpdy must be negated, or
+   * the bumps are lit from the wrong side. Ridges along u, lit from above: the same picture, rows bottom-up. The
+   * control: the normal map's y negated (normal_scale.y = -1) on the plain target must differ (the check sees
+   * which way the bumps face). */
+  {
+    static uint8_t ia[S * S * 4], ib[S * S * 4], ic[S * S * 4];
+    enum { NT = 64 };
+    static uint8_t nm[NT * NT * 4];
+    for (int y = 0; y < NT; y++)
+      for (int x = 0; x < NT; x++) {
+        float s = sinf((float)y / NT * 6.2831853f * 8);   /* ridges across v: the normal tilts along the bitangent */
+        uint8_t *p = nm + (y * NT + x) * 4;
+        p[0] = 128, p[1] = (uint8_t)(128 + 110 * s), p[2] = (uint8_t)(128 + 127 * sqrtf(1 - 0.75f * s * s)), p[3] = 255;
+      }
+    t3_texture *nt = t3_texture_new(NT, NT, nm);
+    nt->wrap_s = nt->wrap_t = T3_REPEAT;
+    t3_scene *ns = t3_scene_new();
+    t3_geometry *pg = t3_plane_geometry_new(3, 3, 1, 1);
+    t3_material *pm = t3_mesh_standard_material_new(0xc0c0c0);
+    pm->roughness = 0.6f; pm->metalness = 0;
+    t3_material_set_texture(pm, T3_NORMAL_MAP, nt);
+    t3_mesh *pl = t3_mesh_new(pg, pm);
+    t3_object_add(&ns->base, pl);
+    t3_light *sun = t3_directional_light_new(0xffffff, 3);
+    t3_object_set_position(sun, 0, 4, 1.5f);   /* from above the picture: lights one side of each ridge */
+    t3_object_add(&ns->base, sun);
+    t3_camera *pc = t3_perspective_camera_new(50, 1, 0.1f, 20);
+    t3_object_set_position(pc, 0, 0, 3);
+    et.load_color = et.load_depth = false; et.x = 0; et.y = 0; et.w = S; et.h = S; et.flip_y = false;
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, ns, pc);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, ia);
+    et.flip_y = true;
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, ns, pc);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, ib);
+    et.flip_y = false;
+    pm->normal_scale.y = -1;
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, ns, pc);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, ic);
+    int ni = differ(ia, ib, true), nc = differ(ia, ic, false);
+    printf("      normal map flip_y: %d texels differ from the plain render mirrored (bumps turned over: %d)\n", ni, nc);
+    check(nc > S * S / 8, "control: a normal map's y turned over changes the picture");
+    check(ni <= S / 4, "a normal map on a flip_y target is lit as on the plain one, rows bottom-up");
+    t3_release(pl); t3_release(pg); t3_release(pm); t3_release(nt); t3_release(sun); t3_release(pc); t3_release(ns);
+  }
 
   /* H: depth_min / depth_max, the viewport's depth range: the box drawn with the range 0..0.02 writes
    * depth only in that band (an embedder's first person weapon over a depth buffer it keeps). The
