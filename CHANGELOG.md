@@ -5,6 +5,50 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.186.21 (2026-10-28)
+
+WebGPU vertex buffers: the layout three.c binds is a tool API, and a program
+over the device's limit is refused by name. Destroying a WebGPU renderer makes
+no GL call.
+
+### Added
+- `tools/program-model.mjs` exports `vertexBufferLayout(attributes, { batched })`
+  and `WEBGPU_MAX_VERTEX_BUFFERS` (8): the WebGPU vertex buffers three.c
+  binds for a captured program (one per geometry attribute, the instance
+  matrix's four columns in one instance-step buffer as r186's
+  InstancedInterleavedBuffer, the instance colour in its own). A tool that
+  compiles a captured program the way a host draws it uses this layout: one
+  buffer per attribute counts the matrix four times, 10 buffers for an
+  InstancedMesh with vertex colours, tangents and instance colours that
+  three.c draws with 7, and Dawn refuses that pipeline ("Vertex buffer count
+  exceeds the maximum number of vertex buffers (8)").
+- `programModel` refuses a WebGPU program that needs more than 8 vertex
+  buffers, naming its attributes, so a table never carries one.
+
+### Fixed
+- `t3_renderer_destroy` on a WebGPU renderer makes no GL call. It deleted
+  GL objects it never made (`glDeleteTextures(0)` for each generated shadow
+  map among them), and an embedder that imports both APIs (a dual GL /
+  WebGPU wasm cart running on WebGPU) trapped when a scene was freed.
+  `test/test_wgpu_destroy.c` counts GL deletes around a WebGPU renderer's
+  destroy (2 before the fix, 0 now); the control, a GLES renderer, must see
+  them.
+- WebGPU: a program needing more vertex buffers than the device's
+  `maxVertexBuffers` does not build, and the renderer's error names it,
+  where its pipeline was a validation error and the draw was lost.
+
+### Tests
+- `test/test_vertex_buffers.c`: an InstancedMesh with every optional vertex
+  attribute (uv1, vertex colours, tangents, instance colours) and map,
+  normal map and ambient occlusion map on a physical material, on GLES and on
+  a WebGPU compatibility-mode device: nothing skipped, no validation error,
+  each instance its own colour, GL vs WebGPU within 8 per channel (4 on the
+  same GPU). The control (white instances) must fail.
+- `test/test_vertex_buffer_layout.mjs`: that program's layout is 7 buffers
+  (the matrix in one), `programModel` refuses 9, and on Dawn (lavapipe) the
+  pipeline builds while the control, one buffer per attribute (10), is
+  refused for its vertex buffer count.
+
 ## v0.186.20 (2026-10-27)
 
 Material names and KHR_materials factors from glTF, morph targets by name,
