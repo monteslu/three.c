@@ -418,14 +418,24 @@ void t3_renderer_destroy(t3_renderer *r) {
 #endif
   free(r->gen_slots);
   free(r->gen);
-  if (r->out_fbo) { glDeleteFramebuffers(1, &r->out_fbo); glDeleteTextures(1, &r->out_tex); glDeleteRenderbuffers(1, &r->out_depth); }
-  if (r->out_vao) { glDeleteVertexArrays(1, &r->out_vao); glDeleteBuffers(1, &r->out_vbo); }
-  if (r->dfg_tex) glDeleteTextures(1, &r->dfg_tex);
-  if (r->gen_ubo) glDeleteBuffers(1, &r->gen_ubo);
-  if (r->cast_ubo) glDeleteBuffers(1, &r->cast_ubo);
+  /* a WebGPU renderer holds no GL objects: no GL call on destroy (an embedder
+   * importing both APIs must not touch GL once WebGPU is selected) */
+#ifdef T3_WGPU
+  bool gl = r->wgpu == NULL;
+#else
+  bool gl = true;
+#endif
+  if (gl && r->out_fbo) { glDeleteFramebuffers(1, &r->out_fbo); glDeleteTextures(1, &r->out_tex); glDeleteRenderbuffers(1, &r->out_depth); }
+  if (gl && r->out_vao) { glDeleteVertexArrays(1, &r->out_vao); glDeleteBuffers(1, &r->out_vbo); }
+  if (gl && r->dfg_tex) glDeleteTextures(1, &r->dfg_tex);
+  if (gl && r->gen_ubo) glDeleteBuffers(1, &r->gen_ubo);
+  if (gl && r->cast_ubo) glDeleteBuffers(1, &r->cast_ubo);
   free(r->cast);
   free(r->cast_stage);
-  for (int i = 0; i < r->gen_sh_n; i++) { glDeleteTextures(1, &r->gen_sh[i].tex); glDeleteFramebuffers(1, &r->gen_sh[i].fbo); }
+  for (int i = 0; gl && i < r->gen_sh_n; i++) {
+    if (r->gen_sh[i].tex) glDeleteTextures(1, &r->gen_sh[i].tex);
+    if (r->gen_sh[i].fbo) glDeleteFramebuffers(1, &r->gen_sh[i].fbo);
+  }
   free(r->gen_missing);
   free(r->gen_stage);
   free(r->opaque.items);
@@ -435,10 +445,10 @@ void t3_renderer_destroy(t3_renderer *r) {
   free(r->batches); free(r->htab); free(r->mobj); free(r->mnext);
   free(r->prev_inst);
   free(r->inst);
-  if (r->inst_vbo) glDeleteBuffers(1, &r->inst_vbo);
+  if (gl && r->inst_vbo) glDeleteBuffers(1, &r->inst_vbo);
   free(r->lights);
-  if (r->msaa_fbo) { glDeleteFramebuffers(1, &r->msaa_fbo); glDeleteRenderbuffers(2, r->msaa_rb); }
-  if (r->resolve_fbo) { glDeleteFramebuffers(1, &r->resolve_fbo); glDeleteRenderbuffers(1, &r->resolve_rb); }
+  if (gl && r->msaa_fbo) { glDeleteFramebuffers(1, &r->msaa_fbo); glDeleteRenderbuffers(2, r->msaa_rb); }
+  if (gl && r->resolve_fbo) { glDeleteFramebuffers(1, &r->resolve_fbo); glDeleteRenderbuffers(1, &r->resolve_rb); }
   if (r->bk) r->bk->destroy(r->bk);
   free(r);
 }
