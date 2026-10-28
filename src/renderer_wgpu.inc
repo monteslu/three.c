@@ -135,6 +135,14 @@ static void wgpu_viewport_copy(t3_renderer *r, int which) {
   if (!r->wg_cur_src) { gen_note(r, "transmission: no colour attachment to copy (a depth-only target)"); return; }
   t3_wgpu *w = r->wgpu;
   t3_wgpu_end_pass(w);
+  if (r->wg_cur_later) {
+    /* keep_multisampled: the colour so far into its resolve view first (an empty pass that loads and resolves) */
+    t3_wgpu_pass R = r->wg_cur_pass;
+    R.resolve = (WGPUTextureView)r->wg_cur_later;
+    R.load_color = R.load_depth = true;
+    t3_wgpu_begin_pass(w, &R);
+    t3_wgpu_end_pass(w);
+  }
   r->wg_vp_view[which] = t3_wgpu_viewport_copy(w, &r->wg_vp[which], (WGPUTextureView)r->wg_cur_src, (WGPUTextureFormat)r->wg_cur_src_format,
                                                r->wg_cur_w, r->wg_cur_h, r->wg_flip);
   t3_wgpu_pass P = r->wg_cur_pass;
@@ -326,7 +334,7 @@ static void wgpu_output_pass(t3_renderer *r, WGPUTextureView scene_view, WGPUTex
 /* the attachments a render (or clear) draws into: the render target's, or
  * the canvas side's (r186's linear RGBA16F target, or the output texture
  * itself when the output needs no conversion) */
-typedef struct { WGPUTextureView color, resolve, depth, out; bool direct, ext; } wgpu_dest;
+typedef struct { WGPUTextureView color, resolve, later, depth, out; bool direct, ext; } wgpu_dest;
 static bool depth_has_stencil(int f) { return f == WGPUTextureFormat_Depth24PlusStencil8 || f == WGPUTextureFormat_Depth32FloatStencil8 || f == WGPUTextureFormat_Stencil8; }
 static void wgpu_destination(t3_renderer *r, wgpu_dest *d) {
   t3_wgpu *w = r->wgpu;
@@ -339,7 +347,8 @@ static void wgpu_destination(t3_renderer *r, wgpu_dest *d) {
     if (r->output_color_space == T3_SRGB_COLOR_SPACE || r->tone_mapping)
       gen_note(r, "an external WebGPU target is drawn directly: set the output colour space linear and tone mapping off, and convert in your own pass");
     d->color = (WGPUTextureView)et->color;
-    d->resolve = et->samples > 1 ? (WGPUTextureView)et->color_resolve : NULL;
+    d->resolve = et->samples > 1 && !et->keep_multisampled ? (WGPUTextureView)et->color_resolve : NULL;
+    d->later = et->samples > 1 && et->keep_multisampled ? (WGPUTextureView)et->color_resolve : NULL;
     d->depth = (WGPUTextureView)et->depth;
     d->direct = d->ext = true;
     r->wg_pass_format = et->color ? et->color_format : 0;
@@ -412,7 +421,8 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
   r->wg_cur_pass = P;
   /* (an external target's colour view, or its resolve view, must have TextureBinding usage;
    * with flip_y its rows are bottom-up and the copy flips them back) */
-  r->wg_cur_src = (void *)(D.resolve ? D.resolve : D.color);
+  r->wg_cur_src = (void *)(D.resolve ? D.resolve : D.later ? D.later : D.color);
+  r->wg_cur_later = (void *)D.later;
   r->wg_cur_src_format = r->wg_pass_format;
   r->wg_cur_w = rt ? rt->width : r->width;
   r->wg_cur_h = rt ? rt->height : r->height;

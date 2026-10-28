@@ -1235,7 +1235,14 @@ typedef struct t3_external_target {
    * (0, 0.02, say) to draw something over a depth buffer it keeps (a first person weapon). GLES: ignored
    * (glDepthRangef does it). */
   float depth_min, depth_max;
+  /* WebGPU, samples > 1: the colour stays multisampled when the render's pass ends (no resolve into
+   * color_resolve), for an embedder whose next pass draws more into the same multisampled colour and
+   * resolves at its end: one resolve where each pass would make its own. A transmission copy inside the
+   * render still resolves first (it reads color_resolve). GLES: ignored (the embedder blits). */
+  bool keep_multisampled;
 } t3_external_target;
+/* t3_external_target has keep_multisampled (an embedder can test for it) */
+#define T3_EXTERNAL_TARGET_KEEP_MULTISAMPLED 1
 /* Render into t until set back with NULL (the renderer's own screen target,
  * framebuffer 0 on GLES). On GLES this is t3_renderer_set_framebuffer plus the
  * viewport, scissor and the clear the descriptor asks for (autoClear of only

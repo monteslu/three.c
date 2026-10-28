@@ -272,6 +272,7 @@ struct t3_renderer {
   t3_wgpu_pass wg_cur_pass;     /* the scene pass, restarted after a transmission copy */
 #endif
   void *wg_cur_src; int wg_cur_src_format, wg_cur_w, wg_cur_h;
+  void *wg_cur_later;           /* keep_multisampled: the resolve view the pass leaves for later (a transmission copy resolves into it) */
   void *wg_ext_out; int wg_ext_out_format;   /* an embedder's output view (t3_renderer_wgpu_set_output) */   /* the attachments of the pass being recorded */
   /* the generated programs' environment / background / PMREM values for the
    * draw being filled (renderer_gen.inc, renderer_env.inc) */

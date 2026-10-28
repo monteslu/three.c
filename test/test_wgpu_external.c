@@ -393,6 +393,84 @@ int main(void) {
     check(n_full > 100 && full_min > 0.5f, "control: with both 0 the depths use the full range");
   }
 
+  /* K: keep_multisampled. A 4x MSAA render that leaves its colour multisampled (no resolve into
+   * color_resolve) and a later render on LOAD that draws nothing and resolves: the resolve view ends up
+   * exactly as one render resolving at its end, a transmission copy in between included (the copy resolves
+   * what was drawn so far first). The control (T3_TEST_CONTROL=1) ignores the flag: the first render
+   * resolves and the check that it did not fails. */
+  {
+    bool control = getenv("T3_TEST_CONTROL") && atoi(getenv("T3_TEST_CONTROL"));
+    WGPUTextureDescriptor md = { .usage = WGPUTextureUsage_RenderAttachment, .dimension = WGPUTextureDimension_2D, .size = { S, S, 1 },
+                                 .format = WGPUTextureFormat_RGBA8Unorm, .mipLevelCount = 1, .sampleCount = 4 };
+    WGPUTexture mc = wgpuDeviceCreateTexture(dev, &md);
+    md.format = WGPUTextureFormat_Depth32Float;
+    WGPUTexture mdt = wgpuDeviceCreateTexture(dev, &md);
+    WGPUTextureView mcv = wgpuTextureCreateView(mc, NULL), mdv = wgpuTextureCreateView(mdt, NULL);
+    t3_external_target ke = et;
+    ke.color = (uintptr_t)mcv; ke.color_resolve = (uintptr_t)cv; ke.depth = (uintptr_t)mdv; ke.samples = 4;
+    ke.flip_y = false; ke.load_color = ke.load_depth = false; ke.x = 0; ke.y = 0; ke.w = S; ke.h = S;
+    ke.depth_min = ke.depth_max = 0;
+    static uint8_t kref[S * S * 4], k0[S * S * 4], kmid[S * S * 4], kend[S * S * 4], gref[S * S * 4], gmid[S * S * 4], gend[S * S * 4];
+    t3_scene *empty = t3_scene_new();
+    /* the reference: one render that resolves at its end */
+    ke.keep_multisampled = false;
+    t3_renderer_set_external_target(r, &ke);
+    t3_renderer_render(r, scene, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, kref);
+    /* the resolve view set to a known picture: nothing drawn, another clear colour */
+    float keep_clear[4] = { ke.clear_rgba[0], ke.clear_rgba[1], ke.clear_rgba[2], ke.clear_rgba[3] };
+    ke.clear_rgba[0] = 0.9f, ke.clear_rgba[1] = 0.1f, ke.clear_rgba[2] = 0.1f;
+    t3_renderer_set_external_target(r, &ke);
+    t3_renderer_render(r, empty, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, k0);
+    memcpy(ke.clear_rgba, keep_clear, sizeof keep_clear);
+    /* the box, kept multisampled: the resolve view is untouched */
+    ke.keep_multisampled = !control;
+    t3_renderer_set_external_target(r, &ke);
+    t3_renderer_render(r, scene, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, kmid);
+    /* a later render on LOAD, nothing drawn, resolving */
+    ke.keep_multisampled = false;
+    ke.load_color = ke.load_depth = true;
+    t3_renderer_set_external_target(r, &ke);
+    t3_renderer_render(r, empty, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, kend);
+    int nmid = differ(k0, kmid, false), nend = differ(kref, kend, false), nref = differ(k0, kref, false);
+    printf("      keep_multisampled: %d texels changed by the kept render, %d differ from one render after the later resolve (the two pictures: %d)\n", nmid, nend, nref);
+    check(nref > S * S / 8, "keep_multisampled: the reference and the known picture differ (else the checks see nothing)");
+    check(nmid == 0, "keep_multisampled: the render left its resolve view untouched");
+    check(nend == 0 && !memcmp(kref, kend, sizeof kref), "keep_multisampled: a later pass's resolve gives exactly one render's picture");
+    /* transmission inside a kept render: the glass copies the backdrop resolved so far */
+    ke.load_color = ke.load_depth = false;
+    ke.keep_multisampled = false;
+    glass_frame(r, &ke, ct, gref);
+    /* the resolve view red again: a copy that read it without resolving first would show red through the glass */
+    ke.clear_rgba[0] = 0.9f, ke.clear_rgba[1] = 0.1f, ke.clear_rgba[2] = 0.1f;
+    t3_renderer_set_external_target(r, &ke);
+    t3_renderer_render(r, empty, cam);
+    t3_renderer_wgpu_submit(r);
+    memcpy(ke.clear_rgba, keep_clear, sizeof keep_clear);
+    ke.keep_multisampled = !control;
+    glass_frame(r, &ke, ct, gmid);
+    ke.keep_multisampled = false;
+    ke.load_color = ke.load_depth = true;
+    t3_renderer_set_external_target(r, &ke);
+    t3_renderer_render(r, empty, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, gend);
+    int ng = differ(gref, gend, false), ngm = differ(gref, gmid, false);
+    printf("      keep_multisampled with transmission: %d texels differ from one render (before the later resolve: %d)\n", ng, ngm);
+    check(!memcmp(gref, gend, sizeof gref), "keep_multisampled: transmission's copy resolves first; the final picture is one render's");
+    t3_release(empty);
+    wgpuTextureViewRelease(mcv); wgpuTextureViewRelease(mdv);
+    wgpuTextureRelease(mc); wgpuTextureRelease(mdt);
+    t3_renderer_set_external_target(r, &et);
+  }
+
   /* G: PMREM and the scene recorded on one external encoder, one submit (the
    * embedder's frame): the same picture as each submitting on its own */
   {
