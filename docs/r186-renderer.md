@@ -377,6 +377,18 @@ What else it does:
   near end (0 to 0.02, say) draws over a depth buffer the embedder keeps,
   as a first person weapon drawn after the world does. GLES ignores the
   fields (`glDepthRangef` does the same there).
+- **Blending:** a pipeline's blend state is the material's, as GLES sets it
+  (r186's WebGLState.setBlending): Normal, Additive, Subtractive and Multiply,
+  straight or premultiplied alpha, and CustomBlending with its own factors and
+  equations (Add, Subtract, ReverseSubtract, Min, Max; Min and Max take
+  factors One, as WebGPU requires).
+- **Samplers:** a texture's sampler takes its anisotropy (when every filter
+  is linear, as r186's WebGPUTextureUtils), so a grazing floor is as sharp as
+  on GLES. On GLES, a texture's wrap, filters and anisotropy changed after its
+  upload apply at the next bind.
+- **Bottom-up targets:** a `flip_y` draw (an embedder's bottom-up target)
+  negates the fragment program's screen y derivatives (`dpdy`), so a normal
+  map on geometry without tangents is lit as on GLES.
 - **Projection:** three.js builds WebGPU's projection z row from near and far.
   three.c does that for the usual projection, and a projection the
   application edited (an oblique near plane, as r186's Reflector and
@@ -387,6 +399,8 @@ What else it does:
 wasmcart gives carts) needs a few things, and the renderer handles them:
 
 - Cube textures declare their cube binding dimension when created.
+- A mesh's morph texture is created to bind as a 2D array, so a mesh with a
+  single morph target draws.
 - Cube mipmaps are built on the CPU, because a GPU pass cannot sample one
   face.
 - A DepthTexture used as a map takes r186's compatibility program (`cm`),

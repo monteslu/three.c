@@ -5,6 +5,44 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.186.20 (2026-10-27)
+
+Material names and KHR_materials factors from glTF, morph targets by name,
+blend modes and texture sampling the same on WebGPU as on GLES.
+
+### Added
+- The glTF loader keeps each material's name (`t3_material.name`) and reads
+  the factors of KHR_materials_sheen, clearcoat, specular, ior,
+  transmission, volume, emissive_strength, iridescence and anisotropy into a
+  MeshPhysicalMaterial, as r186's GLTFLoader. `test/test_gltf_materials.c`,
+  with a control that renames the extensions.
+- Morph targets by name: `t3_mesh.morph_target_names` (r186's
+  `morphTargetDictionary`, from the glTF mesh's `extras.targetNames`) and
+  `t3_mesh_get_morph_target_index`.
+
+### Fixed
+- WebGPU draws every blend mode: Subtractive, Multiply and CustomBlending
+  (its factors and equations) drew as Normal before, and premultiplied alpha
+  was ignored. Min and Max take factors One there, as WebGPU requires.
+  GLES's premultiplied Subtractive and Multiply and straight Additive now set
+  r186's functions (premultiplied Subtractive turned the colour black).
+  `test/test_blend_modes.c` runs every mode on both backends; Normal is the
+  control.
+- WebGPU samplers take `texture.anisotropy` (it was always 1, so an
+  anisotropic texture was blurrier at grazing angles than on GLES), and on
+  GLES a texture's wrap, filters and anisotropy changed after its upload apply
+  at the next bind, as the WebGPU sampler made at every draw does.
+  `test/test_texture_parity.c` compares the two on a grazing mipmapped floor,
+  with controls.
+- A WebGPU `flip_y` draw (an embedder's bottom-up target) negates the
+  fragment program's screen y derivatives: a normal map on geometry without
+  tangents was lit from the wrong side against GLES. `test_wgpu_external`
+  section I, with a control.
+- A mesh with one morph target draws on a WebGPU compatibility-mode device
+  (its morph texture now names its 2D-array binding when it is created; it
+  was a validation error and nothing drew).
+
+
 ## v0.186.19 (2026-10-27)
 
 A WebGPU viewport depth range for embedder passes, rgba vertex colours, and
