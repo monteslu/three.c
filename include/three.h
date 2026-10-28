@@ -757,6 +757,13 @@ t3_light *t3_spot_light_new(uint32_t color, float intensity, float distance, flo
 
 void t3_object_add(t3_object *parent, void *child);
 void t3_object_remove(t3_object *parent, void *child);
+/* A counter that moves whenever any object is added to or removed from a
+ * parent (t3_object_add, t3_object_remove, in any scene) or an object's
+ * layers or raycast override change through their setters. A cache of a
+ * scene's structure (its lights, its meshes) built at one value holds while
+ * the value is unchanged; moving objects, visibility and field writes do not
+ * change it. (three.c's own; three.js has no such counter.) */
+uint32_t t3_graph_version(void);
 void t3_object_set_position(void *o, float x, float y, float z);
 void t3_object_set_rotation(void *o, float x, float y, float z);
 void t3_object_set_quaternion(void *o, t3_quat q);

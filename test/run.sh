@@ -24,6 +24,10 @@ run test_scene_sort ./build/test/test_scene_sort
 run test_attr_locations ./build/test/test_attr_locations
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include test/test_no_gl.c build/native/libthree.a -lz -lm -o build/test/test_no_gl
 run test_no_gl ./build/test/test_no_gl
+# t3_graph_version moves on adds, removes, reparents and the layers setter, not on moves; the control must fail
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include test/test_graph_version.c build/native/libthree.a -lz -lm -o build/test/test_graph_version
+run test_graph_version ./build/test/test_graph_version
+run test_graph_version_control sh -c "! T3_TEST_CONTROL=1 ./build/test/test_graph_version >/dev/null"
 # GLTFLoader material names, KHR_materials_* and morph target names; the control renames the extensions (must fail)
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include test/test_gltf_materials.c build/native/libthree.a -lz -lm -o build/test/test_gltf_materials
 run test_gltf_materials ./build/test/test_gltf_materials

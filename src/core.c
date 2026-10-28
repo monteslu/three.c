@@ -1136,6 +1136,7 @@ uint32_t t3__world_epoch = 1, t3__bounds_epoch = 1, t3__graph_epoch = 1;
  * keeping copies of world matrices knows from it whether any changed */
 uint32_t t3__world_recomputes = 0;
 uint32_t t3_world_recompute_count(void) { return t3__world_recomputes; }
+uint32_t t3_graph_version(void) { return t3__graph_epoch; }
 
 /* Sphere.expandByPoint */
 static void sphere_expand(float s[4], float x, float y, float z) {
