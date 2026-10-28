@@ -70,6 +70,34 @@ static scene_t make_scene(float aniso) {
   t3_object_look_at(sc.cam, 0, 0.3f, -20);
   return sc;
 }
+/* one-texel black and white columns (sRGB), 8 texels a pixel (mip level 3, seen head on): a mip chain made in
+ * linear light averages them to 0.5 (188 in sRGB), one made on the sRGB values to 128 */
+static uint8_t stripes[TN * TN * 4];
+static scene_t make_stripes(void) {
+  for (int i = 0; i < TN * TN; i++) { uint8_t v = (i & 1) ? 255 : 0; stripes[i * 4] = stripes[i * 4 + 1] = stripes[i * 4 + 2] = v; stripes[i * 4 + 3] = 255; }
+  scene_t sc;
+  sc.s = t3_scene_new();
+  sc.tex = t3_texture_new(TN, TN, stripes);
+  sc.tex->wrap_s = sc.tex->wrap_t = T3_REPEAT;
+  sc.tex->color_space = T3_SRGB_COLOR_SPACE;
+  t3_material *m = t3_mesh_basic_material_new(0xffffff);
+  t3_material_set_texture(m, T3_MAP, sc.tex);
+  t3_geometry *g = t3_plane_geometry_new(2, 2, 1, 1);
+  float *uv = g->attributes[T3_ATTR_UV]->array;
+  for (int i = 0; i < 8; i++) uv[i] *= (float)(W * 8) / TN;   /* W pixels show W * 8 texels */
+  t3_mesh *q = t3_mesh_new(g, m);
+  t3_object_add(&sc.s->base, q);
+  t3_release(q), t3_release(g), t3_release(m);
+  sc.cam = t3_orthographic_camera_new(-1, 1, 1, -1, 0.1f, 10);
+  t3_object_set_position(sc.cam, 0, 0, 5);
+  return sc;
+}
+/* the mean red of the middle quarter */
+static double mid_mean(const uint8_t *a) {
+  double s = 0; int n = 0;
+  for (int y = H / 4; y < H * 3 / 4; y++) for (int x = W / 4; x < W * 3 / 4; x++) s += a[(y * W + x) * 4], n++;
+  return s / n;
+}
 static void free_scene(scene_t *sc) { t3_release(sc->tex), t3_release(sc->cam), t3_release(sc->s); }
 
 static void gl_read(uint8_t *out) {
@@ -93,7 +121,7 @@ static void check(bool ok, const char *what, double v) { printf("%s  %s (%.3f%%)
 int main(void) {
   make_pattern();
   static uint8_t gl8[W * H * 4], gl1[W * H * 4], gl_live[W * H * 4], gl_clamp[W * H * 4], gl_live_clamp[W * H * 4];
-  static uint8_t wg8[W * H * 4], wg1[W * H * 4];
+  static uint8_t wg8[W * H * 4], wg1[W * H * 4], gl_st[W * H * 4], wg_st[W * H * 4];
 
   /* GLES */
   EGLDisplay d = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -124,6 +152,9 @@ int main(void) {
     b.tex->version++;   /* a texture made clamped (uploaded again) */
     t3_renderer_render(r, b.s, b.cam); gl_read(gl_clamp);
     free_scene(&b);
+    scene_t c = make_stripes();
+    t3_renderer_render(r, c.s, c.cam); gl_read(gl_st);
+    free_scene(&c);
   }
   t3_renderer_destroy(r);
 
@@ -143,12 +174,12 @@ int main(void) {
   while (!done) wgpuInstanceProcessEvents(inst);
   if (!dev) { puts("test_texture_parity: no WebGPU device, skipped"); return 77; }
   WGPUQueue q = wgpuDeviceGetQueue(dev);
-  for (int k = 0; k < 2; k++) {
+  for (int k = 0; k < 3; k++) {
     t3_renderer *w = t3_renderer_new(W, H);
     t3_renderer_use_wgpu(w, dev, q, WGPUTextureFormat_RGBA8Unorm);
-    scene_t a = make_scene(k ? 1 : 8);
+    scene_t a = k == 2 ? make_stripes() : make_scene(k ? 1 : 8);
     t3_renderer_render(w, a.s, a.cam);
-    t3_renderer_wgpu_read(w, k ? wg1 : wg8);
+    t3_renderer_wgpu_read(w, k == 2 ? wg_st : k ? wg1 : wg8);
     free_scene(&a);
     t3_renderer_destroy(w);
   }
@@ -160,6 +191,10 @@ int main(void) {
   check(differ(gl_live, gl8) > 0.03, "control: and changes the picture", differ(gl_live, gl8));
   check(differ(gl_live_clamp, gl_clamp) < 0.001, "GLES: wrap changed after the upload applies", differ(gl_live_clamp, gl_clamp));
   check(differ(gl_clamp, gl1) > 0.03, "control: clamped differs from repeated", differ(gl_clamp, gl1));
+  double mg = mid_mean(gl_st), mw = mid_mean(wg_st);
+  printf("      sRGB stripes at mip level 3: GLES %.1f, WebGPU %.1f (linear-light average 188, sRGB-value average 128)\n", mg, mw);
+  check(mg > 175 && mg < 200, "GLES: an sRGB texture's mip chain averages in linear light (mean / 100)", mg / 10000);
+  check(mw > 175 && mw < 200, "WebGPU: an sRGB texture's mip chain averages in linear light (mean / 100)", mw / 10000);
   check(errors == 0, "no WebGPU errors", errors);
   printf("test_texture_parity: %s\n", fails ? "FAILED" : "ok");
   return fails ? 1 : 0;
