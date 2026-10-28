@@ -471,6 +471,46 @@ int main(void) {
     t3_renderer_set_external_target(r, &et);
   }
 
+  /* L: a depth prepass on WebGPU (t3_renderer_render_prepass into the caller's target): it writes the
+   * depth and no colour (the colour view keeps its clear), and the colour render after it on LOAD of that
+   * depth draws exactly the picture of one plain render (the same programs: the depth matches to the bit,
+   * so the less-or-equal test passes where the prepass drew). The control (T3_TEST_CONTROL=1) draws the
+   * prepass as a plain render: colour lands and the no-colour check fails. */
+  {
+    bool control = getenv("T3_TEST_CONTROL") && atoi(getenv("T3_TEST_CONTROL"));
+    static uint8_t lref[S * S * 4], lpre[S * S * 4], lend[S * S * 4], ldep[S * S * 4];
+    et.flip_y = false; et.load_color = et.load_depth = false; et.x = 0; et.y = 0; et.w = S; et.h = S;
+    et.depth_min = et.depth_max = 0;
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, scene, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, lref);
+    t3_renderer_set_external_target(r, &et);
+    if (control) t3_renderer_render(r, scene, cam);
+    else t3_renderer_render_prepass(r, scene, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, lpre);
+    read_back(dt, true, ldep);
+    int written = 0, cleared = 0;
+    for (int i = 0; i < S * S; i++) {
+      float z; memcpy(&z, ldep + i * 4, 4);
+      written += z < 1;
+      cleared += abs(lpre[i * 4] - 26) <= 1 && abs(lpre[i * 4 + 1] - 51) <= 1 && abs(lpre[i * 4 + 2] - 153) <= 1;
+    }
+    et.load_depth = true;
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, scene, cam);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, lend);
+    et.load_depth = false;
+    printf("      depth prepass: %d texels with depth, %d of %d at the clear colour; then the colour render: %d texels differ from a plain one\n",
+           written, cleared, S * S, differ(lref, lend, false));
+    check(written > 100, "depth prepass: the depth is written");
+    check(cleared == S * S, "depth prepass: no colour written (the view keeps its clear)");
+    check(!memcmp(lref, lend, sizeof lref), "depth prepass: the colour render on its depth is one plain render's picture");
+    t3_renderer_set_external_target(r, &et);
+  }
+
   /* G: PMREM and the scene recorded on one external encoder, one submit (the
    * embedder's frame): the same picture as each submitting on its own */
   {

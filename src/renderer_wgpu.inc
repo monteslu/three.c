@@ -176,7 +176,7 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
     st.bf[4] = state->blend_dst_alpha < 0 ? 255 : (uint8_t)(state->blend_dst_alpha - 200);
     st.bf[5] = state->blend_equation_alpha < 0 ? 255 : (uint8_t)(state->blend_equation_alpha - 100);
   }
-  st.color_write = state->color_write;
+  st.color_write = state->color_write && !r->depth_prepass;   /* a depth prepass: the colour program, no colour written */
   st.instance = batched ? 2 : o->type == T3_INSTANCED_MESH ? 1 : 0;
   st.color = (WGPUTextureFormat)r->wg_pass_format;
   st.depth = (WGPUTextureFormat)r->wg_depth_format;
@@ -426,7 +426,7 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
   r->wg_cur_src_format = r->wg_pass_format;
   r->wg_cur_w = rt ? rt->width : r->width;
   r->wg_cur_h = rt ? rt->height : r->height;
-  gen_background(r, scene, cam);
+  if (!r->depth_prepass) gen_background(r, scene, cam);
   for (int i = 0; i < r->opaque.n; i++) wgpu_draw_item(r, &r->opaque.items[i], cam);
   if (r->backpass.n) {
     backpass_side(r, T3_BACK_SIDE);
@@ -436,8 +436,8 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
   for (int i = 0; i < r->transparent.n; i++) wgpu_draw_item(r, &r->transparent.items[i], cam);
   backpass_side(r, T3_DOUBLE_SIDE);
   t3_wgpu_end_pass(w);
-  if (!D.direct) wgpu_output_pass(r, D.color, D.out);
-  if (!rt) count_output_pass(r);
+  if (!D.direct && !r->depth_prepass) wgpu_output_pass(r, D.color, D.out);
+  if (!rt && !r->depth_prepass) count_output_pass(r);
   t3_wgpu_end_frame(w);
   if (rt) t3_wgpu_render_target_done(w, r->target);
 }

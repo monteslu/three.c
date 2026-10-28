@@ -1062,10 +1062,13 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *camera);
  * are preserved. Useful for an embedder's prepass; ordinary render calls
  * afterward include transparents again. Does not change material properties. */
 void t3_renderer_render_opaque(t3_renderer *r, t3_scene *scene, t3_camera *camera);
-/* GLES prepass for an embedder scene framebuffer. Opaque material shaders
+/* A depth prepass for an embedder's scene target. Opaque material shaders
  * preserve alpha discard/displacement, but write no colour. Skips sky/output
  * conversion; normal clearing/target rules apply. Restores colour writes on
- * return. No-op on WebGPU. */
+ * return. GLES: into the bound framebuffer. WebGPU: into the external target
+ * (its load ops; the same programs with a colour write mask of none, so the
+ * depth is the colour pass's to the bit); the embedder's colour render after
+ * it loads that depth. */
 void t3_renderer_render_prepass(t3_renderer *r, t3_scene *scene, t3_camera *camera);
 /* renderer.compile( scene, camera ): builds the programs the scene's
  * materials need, without drawing */
@@ -1243,6 +1246,8 @@ typedef struct t3_external_target {
 } t3_external_target;
 /* t3_external_target has keep_multisampled (an embedder can test for it) */
 #define T3_EXTERNAL_TARGET_KEEP_MULTISAMPLED 1
+/* t3_renderer_render_prepass draws on WebGPU too (an embedder can test for it) */
+#define T3_WGPU_DEPTH_PREPASS 1
 /* Render into t until set back with NULL (the renderer's own screen target,
  * framebuffer 0 on GLES). On GLES this is t3_renderer_set_framebuffer plus the
  * viewport, scissor and the clear the descriptor asks for (autoClear of only

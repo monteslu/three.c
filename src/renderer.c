@@ -2386,9 +2386,6 @@ void t3_renderer_compile(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
 }
 
 void t3_renderer_render_prepass(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
-#ifdef T3_WGPU
-  if (r->wgpu) return; /* GLES embedder API */
-#endif
   bool previous = r->depth_prepass;
   r->depth_prepass = true;
   t3_renderer_render_opaque(r, scene, cam);

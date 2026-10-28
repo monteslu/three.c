@@ -130,10 +130,11 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
   set +e; ./build/test/test_wgpu_external > build/test/test_wgpu_external.log 2>&1; st=$?; set -e
   if [ $st = 0 ]; then echo "ok    test_wgpu_external"; elif [ $st = 77 ]; then echo "skip  test_wgpu_external (no WebGPU adapter)"
   else echo "FAIL  test_wgpu_external"; grep -v '^Warning' build/test/test_wgpu_external.log; fail=1; fi
-  # its control (T3_TEST_CONTROL=1: keep_multisampled ignored) must fail, on the kept render's check
+  # its control (T3_TEST_CONTROL=1: keep_multisampled ignored, the prepass drawn as a plain render) must fail, on both checks
   set +e; T3_TEST_CONTROL=1 ./build/test/test_wgpu_external > build/test/test_wgpu_external_control.log 2>&1; st=$?; set -e
   if [ $st = 77 ]; then echo "skip  test_wgpu_external_control (no WebGPU adapter)"
-  elif [ $st != 0 ] && grep -q "FAIL  keep_multisampled: the render left its resolve view untouched" build/test/test_wgpu_external_control.log; then echo "ok    test_wgpu_external_control"
+  elif [ $st != 0 ] && grep -q "FAIL  keep_multisampled: the render left its resolve view untouched" build/test/test_wgpu_external_control.log \
+    && grep -q "FAIL  depth prepass: no colour written" build/test/test_wgpu_external_control.log; then echo "ok    test_wgpu_external_control"
   else echo "FAIL  test_wgpu_external_control (the control passed)"; fail=1; fi
   # texture sampling (mipmaps, anisotropy, sampler fields changed after the upload): GLES and WebGPU draw the same
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_texture_parity.c \
