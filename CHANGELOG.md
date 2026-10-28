@@ -5,6 +5,44 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.186.22 (2026-10-28)
+
+A scene structure counter for embedders' caches, cheaper per-draw extension
+lookups and texture re-uploads, and shadow maps drawn before a renderer's
+first render on GLES.
+
+### Added
+- `t3_graph_version()`: a counter that moves on every add, remove and
+  reparent (in any scene) and when an object's layers or raycast override
+  change through their setters, not on moves, visibility or field writes. An
+  embedder keeps a cache of a scene's lights or meshes valid while the value
+  is unchanged instead of walking the scene each frame. three.c's own:
+  three.js has no such counter.
+
+### Changed
+- GLES: a texture's new version of the same size and format is uploaded into
+  its existing storage (`texSubImage2D`, as r186's WebGLTextures re-uploads
+  into `texStorage2D`) instead of specifying the storage again
+  (`texImage2D`); a data texture rewritten every view (clustered light lists,
+  froxel lists) no longer reallocates its storage each time.
+- `t3_extension_set_uniform` and `t3_extension_set_texture` remember the
+  entry a name found, keyed by the name's address and checked against the
+  name before use, instead of comparing the name with every uniform of the
+  program on each draw (a stack of shading parts filling 15 names a draw over
+  up to 64 entries costs one lookup a name).
+
+### Fixed
+- GLES `t3_renderer_render_depth` bumps the render stamp, as the WebGPU path
+  does. Before a renderer's first render the stamp and every program's were
+  0, so shadow casters drawn first (an embedder's cascaded or atlas shadows)
+  got no camera uniforms and the shadow map came out empty on the first
+  frame.
+
+### Tests
+- `test/test_graph_version.c` (no GL): the counter moves on adds, removes,
+  reparents and the layers setter and not on moves; the control
+  (`T3_TEST_CONTROL=1`, which expects no change across an add) must fail.
+
 ## v0.186.21 (2026-10-28)
 
 WebGPU vertex buffers: the layout three.c binds is a tool API, and a program
