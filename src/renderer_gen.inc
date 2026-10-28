@@ -690,28 +690,52 @@ static bool ext_name_is(const char *manifest, const char *name) {
   size_t n = strlen(name);
   return !strncmp(manifest, name, n) && (manifest[n] == 0 || manifest[n] == '#');
 }
+static void ext_uniform_put(t3_gen_gl *gl, int i, const float *v, int n, bool *ok) {
+  if (gl->ext[i].mat3) {
+    /* std140 / WGSL mat3x3: three columns at a 16-byte stride */
+    if (n != 9) { *ok = false; return; }
+    float cols[11] = { v[0], v[1], v[2], 0, v[3], v[4], v[5], 0, v[6], v[7], v[8] };
+    ext_put(gl, gl->ext[i].group, gl->ext[i].off, cols, 44);
+  } else {
+    if (n < 1 || (size_t)n * 4 > gl->ext[i].len) { *ok = false; return; }
+    ext_put(gl, gl->ext[i].group, gl->ext[i].off, v, (size_t)n * 4);
+  }
+}
+/* a hook passes the same names every draw: the entry a name found is
+ * remembered by the name's address (and checked against the name) */
+static unsigned ext_slot(const char *name, unsigned n) { return (unsigned)(((uintptr_t)name >> 3) ^ ((uintptr_t)name >> 9)) & (n - 1); }
 bool t3_extension_set_uniform(t3_extension_ctx *c, const char *name, const float *v, int n) {
   t3_gen_gl *gl = c->gl;
-  bool found = false;
+  bool ok = true;
+  unsigned s = ext_slot(name, 32);
+  int k = gl->ext_ck[s].name == name ? gl->ext_ck[s].idx : -1;
+  if (k >= 0 && k < gl->n_ext && ext_name_is(gl->ext[k].name, name)) {
+    ext_uniform_put(gl, k, v, n, &ok);
+    return ok;
+  }
+  int found = 0, first = -1;
   for (int i = 0; i < gl->n_ext; i++) {
     if (!ext_name_is(gl->ext[i].name, name) || !gl->mirror[gl->ext[i].group]) continue;
-    if (gl->ext[i].mat3) {
-      /* std140 / WGSL mat3x3: three columns at a 16-byte stride */
-      if (n != 9) return false;
-      float cols[11] = { v[0], v[1], v[2], 0, v[3], v[4], v[5], 0, v[6], v[7], v[8] };
-      ext_put(gl, gl->ext[i].group, gl->ext[i].off, cols, 44);
-    } else {
-      if (n < 1 || (size_t)n * 4 > gl->ext[i].len) return false;
-      ext_put(gl, gl->ext[i].group, gl->ext[i].off, v, (size_t)n * 4);
-    }
-    found = true;
+    ext_uniform_put(gl, i, v, n, &ok);
+    if (!ok) return false;
+    if (!found++) first = i;
   }
-  return found;
+  gl->ext_ck[s].name = name;
+  gl->ext_ck[s].idx = (int16_t)(found == 1 ? first : -1);
+  return found > 0;
 }
 bool t3_extension_set_texture(t3_extension_ctx *c, const char *name, t3_texture *t) {
   t3_gen_gl *gl = c->gl;
+  unsigned s = ext_slot(name, 16);
+  int k = gl->ext_tck[s].name == name ? gl->ext_tck[s].idx : -1;
+  if (k >= 0 && k < gl->n_ext_tex && !strcmp(gl->ext_tex[k].name, name)) { gl->ext_tex[k].tex = t; return true; }
   for (int i = 0; i < gl->n_ext_tex; i++)
-    if (!strcmp(gl->ext_tex[i].name, name)) { gl->ext_tex[i].tex = t; return true; }
+    if (!strcmp(gl->ext_tex[i].name, name)) {
+      gl->ext_tex[i].tex = t;
+      gl->ext_tck[s].name = name;
+      gl->ext_tck[s].idx = (int16_t)i;
+      return true;
+    }
   return false;
 }
 void t3_renderer_set_extension(t3_renderer *r, const char *name, t3_extension_fill fill, void *user) {

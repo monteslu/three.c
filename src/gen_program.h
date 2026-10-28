@@ -163,6 +163,10 @@ typedef struct t3_gen_gl {
   /* an extension texture and its flipY flags: one per sample of it in the
    * program (a texture read at several places has several), n_flip of them */
   struct { const char *name; t3_texture *tex; uint8_t n_flip; int8_t flip_group[T3_GEN_MAX_FLIPS]; uint16_t flip_off[T3_GEN_MAX_FLIPS]; } ext_tex[T3_GEN_MAX_TEXTURES];
+  /* t3_extension_set_uniform / _set_texture's answers by the name's address (a hook
+   * passes the same string every draw): the one entry of that name, checked
+   * against the name before use (idx -1: the name has no single entry) */
+  struct { const char *name; int16_t idx; } ext_ck[32], ext_tck[16];
 } t3_gen_gl;
 
 /* NULL with err set when the driver rejects the program or a name is unknown */
