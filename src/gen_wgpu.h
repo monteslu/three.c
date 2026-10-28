@@ -30,6 +30,8 @@ typedef struct {
   uint8_t cull;           /* 0 none, 1 back, 2 front */
   uint8_t depth_test, depth_write, depth_func;   /* depth_func: three.js's constants */
   uint8_t blend;          /* t3 blending, 0 = off */
+  uint8_t premult;        /* material.premultipliedAlpha */
+  uint8_t bf[6];          /* CustomBlending: blendSrc, blendDst, blendEquation, blendSrcAlpha, blendDstAlpha, blendEquationAlpha as three.js constants minus 200 (factors) / 100 (equations); 255: null */
   uint8_t color_write;
   uint8_t instance;       /* 0 none, 1 InstancedMesh matrices (stride 64), 2 a batch (stride 80) */
   uint8_t strides[12];    /* the geometry's item size for each non-instance attribute, manifest order */

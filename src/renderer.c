@@ -1547,7 +1547,7 @@ static int blend_key(const t3_material *m) {
   return 5 | (m->blend_src - 199) << 4 | (m->blend_dst - 199) << 8 | (m->blend_equation - 99) << 12 | sa << 15 |
          da << 19 | ea << 23;
 }
-/* WebGLState.setBlending */
+/* WebGLState.setBlending (gen_wgpu.c wgpu_blend_state is the WebGPU copy) */
 static void apply_blending(const t3_material *m) {
   int b = m->blending;
   if (b == 5) {
@@ -1562,14 +1562,14 @@ static void apply_blending(const t3_material *m) {
   if (m->premultiplied_alpha) {
     switch (b) {
     case 2: glBlendFunc(GL_ONE, GL_ONE); break;
-    case 3: glBlendFuncSeparate(GL_ZERO, GL_ZERO, GL_ONE_MINUS_SRC_COLOR, GL_ONE_MINUS_SRC_ALPHA); break;
-    case 4: glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_SRC_ALPHA); break;
+    case 3: glBlendFuncSeparate(GL_ZERO, GL_ONE_MINUS_SRC_COLOR, GL_ZERO, GL_ONE); break;
+    case 4: glBlendFuncSeparate(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE); break;
     default: glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); break;
     }
   } else {
     switch (b) {
-    case 2: glBlendFunc(GL_SRC_ALPHA, GL_ONE); break;
-    case 3: glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR); break;
+    case 2: glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE); break;
+    case 3: glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR); break;   /* r186 refuses Subtractive and Multiply without premultipliedAlpha; these are the older straight-alpha functions */
     case 4: glBlendFunc(GL_ZERO, GL_SRC_COLOR); break;
     default: glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); break;
     }

@@ -334,6 +334,49 @@ static WGPUShaderModule flip_fragment(t3_wgpu *w, struct gen_wgpu_prog *wg) {
   return wg->fs_flip;
 }
 
+/* three.js's *Factor (200..210) and *Equation (100..104) constants, and WebGLState.setBlending's per-mode functions (renderer.c apply_blending), as
+ * WebGPU blend state. WebGPU requires both factors One on a Min or Max equation (GL ignores them there). */
+static WGPUBlendFactor wgpu_factor(int f) {
+  static const WGPUBlendFactor map[] = { WGPUBlendFactor_Zero, WGPUBlendFactor_One, WGPUBlendFactor_Src, WGPUBlendFactor_OneMinusSrc, WGPUBlendFactor_SrcAlpha,
+    WGPUBlendFactor_OneMinusSrcAlpha, WGPUBlendFactor_DstAlpha, WGPUBlendFactor_OneMinusDstAlpha, WGPUBlendFactor_Dst, WGPUBlendFactor_OneMinusDst, WGPUBlendFactor_SrcAlphaSaturated };
+  return f >= 0 && f <= 10 ? map[f] : WGPUBlendFactor_One;
+}
+static WGPUBlendOperation wgpu_equation(int e) {
+  static const WGPUBlendOperation map[] = { WGPUBlendOperation_Add, WGPUBlendOperation_Subtract, WGPUBlendOperation_ReverseSubtract, WGPUBlendOperation_Min, WGPUBlendOperation_Max };
+  return e >= 0 && e <= 4 ? map[e] : WGPUBlendOperation_Add;
+}
+static WGPUBlendComponent wgpu_component(int op, WGPUBlendFactor s, WGPUBlendFactor d) {
+  WGPUBlendComponent c = { wgpu_equation(op), s, d };
+  if (c.operation == WGPUBlendOperation_Min || c.operation == WGPUBlendOperation_Max) c.srcFactor = c.dstFactor = WGPUBlendFactor_One;
+  return c;
+}
+static WGPUBlendState wgpu_blend_state(const t3_wgpu_state *st) {
+  const WGPUBlendFactor Z = WGPUBlendFactor_Zero, O = WGPUBlendFactor_One, SA = WGPUBlendFactor_SrcAlpha, OSA = WGPUBlendFactor_OneMinusSrcAlpha, SC = WGPUBlendFactor_Src, OSC = WGPUBlendFactor_OneMinusSrc;
+  WGPUBlendState b;
+  switch (st->blend) {
+  case 5: {   /* CustomBlending: the material's own factors and equations, the alpha ones defaulting to the color ones */
+    int sa = st->bf[3] == 255 ? st->bf[0] : st->bf[3], da = st->bf[4] == 255 ? st->bf[1] : st->bf[4], ea = st->bf[5] == 255 ? st->bf[2] : st->bf[5];
+    b.color = wgpu_component(st->bf[2], wgpu_factor(st->bf[0]), wgpu_factor(st->bf[1]));
+    b.alpha = wgpu_component(ea, wgpu_factor(sa), wgpu_factor(da));
+    break; }
+  /* the rest as r186's WebGLState.setBlending (renderer.c apply_blending); r186 refuses Subtractive and Multiply without
+   * premultipliedAlpha, three.c keeps their older straight-alpha functions there */
+  case 2:   /* AdditiveBlending */
+    b.color = wgpu_component(0, st->premult ? O : SA, O); b.alpha = wgpu_component(0, O, O); break;
+  case 3:   /* SubtractiveBlending */
+    if (st->premult) { b.color = wgpu_component(0, Z, OSC); b.alpha = wgpu_component(0, Z, O); }
+    else { b.color = wgpu_component(0, Z, OSC); b.alpha = wgpu_component(0, Z, OSC); }
+    break;
+  case 4:   /* MultiplyBlending */
+    if (st->premult) { b.color = wgpu_component(0, WGPUBlendFactor_Dst, OSA); b.alpha = wgpu_component(0, Z, O); }
+    else { b.color = wgpu_component(0, Z, SC); b.alpha = wgpu_component(0, Z, SC); }
+    break;
+  default:  /* NormalBlending */
+    b.color = wgpu_component(0, st->premult ? O : SA, OSA); b.alpha = wgpu_component(0, O, OSA); break;
+  }
+  return b;
+}
+
 WGPURenderPipeline t3_wgpu_pipeline(t3_wgpu *w, t3_gen_gl *g, const t3_wgpu_state *st) {
   struct gen_wgpu_prog *wg = g->wg;
   for (int i = 0; i < wg->n_pipes; i++) if (!memcmp(&wg->pipes[i].st, st, sizeof *st)) return wg->pipes[i].p;
@@ -378,13 +421,7 @@ WGPURenderPipeline t3_wgpu_pipeline(t3_wgpu *w, t3_gen_gl *g, const t3_wgpu_stat
     if (b == inst_buf || b == icol_buf) continue;
     vb[b].arrayStride = (uint64_t)st->strides[k++] * 4;
   }
-  WGPUBlendState blend = {
-    .color = { .operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_SrcAlpha, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha },
-    .alpha = { .operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_One, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha } };
-  if (st->blend == 2) {   /* AdditiveBlending */
-    blend.color = (WGPUBlendComponent){ WGPUBlendOperation_Add, WGPUBlendFactor_SrcAlpha, WGPUBlendFactor_One };
-    blend.alpha = (WGPUBlendComponent){ WGPUBlendOperation_Add, WGPUBlendFactor_One, WGPUBlendFactor_One };
-  }
+  WGPUBlendState blend = wgpu_blend_state(st);
   WGPUColorTargetState ct = { .format = st->color, .blend = st->blend ? &blend : NULL,
                               .writeMask = st->color_write ? WGPUColorWriteMask_All : WGPUColorWriteMask_None };
   WGPUFragmentState fs = { .module = st->flip_y ? flip_fragment(w, wg) : wg->fs, .entryPoint = SV("main"), .targetCount = st->color ? 1 : 0, .targets = &ct };

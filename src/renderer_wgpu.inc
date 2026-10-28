@@ -161,6 +161,13 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   st.cull = state->side == T3_DOUBLE_SIDE ? 0 : state->side == T3_BACK_SIDE ? 2 : 1;
   st.depth_test = state->depth_test; st.depth_write = state->depth_write; st.depth_func = (uint8_t)state->depth_func;
   st.blend = state->transparent && state->blending != T3_NO_BLENDING ? (uint8_t)state->blending : 0;
+  st.premult = state->premultiplied_alpha;
+  if (st.blend == T3_CUSTOM_BLENDING) {   /* the same fields the GL path reads (renderer.c apply_blending) */
+    st.bf[0] = (uint8_t)(state->blend_src - 200); st.bf[1] = (uint8_t)(state->blend_dst - 200); st.bf[2] = (uint8_t)(state->blend_equation - 100);
+    st.bf[3] = state->blend_src_alpha < 0 ? 255 : (uint8_t)(state->blend_src_alpha - 200);
+    st.bf[4] = state->blend_dst_alpha < 0 ? 255 : (uint8_t)(state->blend_dst_alpha - 200);
+    st.bf[5] = state->blend_equation_alpha < 0 ? 255 : (uint8_t)(state->blend_equation_alpha - 100);
+  }
   st.color_write = state->color_write;
   st.instance = batched ? 2 : o->type == T3_INSTANCED_MESH ? 1 : 0;
   st.color = (WGPUTextureFormat)r->wg_pass_format;
