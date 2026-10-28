@@ -105,6 +105,11 @@ typedef struct {
   float max_mip;      /* __maxMipLevel: log2(size) when mipmaps were generated */
   bool borrowed;      /* t3_texture_from_gl with owns_gl false: the embedder deletes it */
   uint32_t sampler;   /* the sampler fields (sampler_key) its parameters were last set from */
+  /* the level-0 storage bind_texture last specified (0: none): a new version of
+   * the same size and format is uploaded into it (texSubImage2D, as r186
+   * WebGLTextures re-uploads into texStorage2D), not specified again */
+  int up_w, up_h;
+  GLenum up_ifmt, up_fmt, up_type;
 } texture_gl;
 static uint32_t sampler_key(const t3_texture *t);
 
@@ -1286,7 +1291,13 @@ static void bind_texture(t3_texture *t, int unit) {
     }
     int align = t->unpack_alignment ? t->unpack_alignment : 4;
     glPixelStorei(GL_UNPACK_ALIGNMENT, align);
-    glTexImage2D(GL_TEXTURE_2D, 0, gl_internal_format(t), t->width, t->height, 0, gl_format(t), gl_type(t->type), px);
+    GLenum ifmt = gl_internal_format(t), fmt = gl_format(t), type = gl_type(t->type);
+    if (tg->up_w == t->width && tg->up_h == t->height && tg->up_ifmt == ifmt && tg->up_fmt == fmt && tg->up_type == type)
+      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, t->width, t->height, fmt, type, px);
+    else {
+      glTexImage2D(GL_TEXTURE_2D, 0, ifmt, t->width, t->height, 0, fmt, type, px);
+      tg->up_w = t->width, tg->up_h = t->height, tg->up_ifmt = ifmt, tg->up_fmt = fmt, tg->up_type = type;
+    }
     /* leave GL's default behind: an embedder's own uploads assume it */
     if (align != 4) glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     free(tmp);
