@@ -367,6 +367,16 @@ uint32_t t3_gen_texture_count(const t3_gen_program *src) {
   return n;
 }
 
+uint32_t t3_gen_vertex_buffer_count(const t3_gen_program *src) {
+  uint32_t n = 0;
+  bool inst = false;
+  for (int a = 0; a < src->n_attributes; a++) {
+    if (!strncmp(src->attributes[a].name, "nodeAttribute", 13)) { if (!inst) n++; inst = true; }
+    else n++;
+  }
+  return n;
+}
+
 t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params params, char *err, size_t errcap) {
   if (src->n_groups > T3_GEN_MAX_GROUPS) { snprintf(err, errcap, "%s: %d groups", src->state, src->n_groups); return NULL; }
   if (t3_gen_texture_count(src) > T3_GEN_MAX_TEXTURES) {

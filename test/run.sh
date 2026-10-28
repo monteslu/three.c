@@ -52,6 +52,23 @@ if node tools/gen-project-table.mjs --name exttab --out build/test/exttab --stat
 else
   echo "FAIL  test_extension_batch (gen-project-table)"; fail=1
 fi
+# every optional vertex attribute at once on an InstancedMesh (uv1, vertex and instance colours, tangents,
+# five maps): the WebGPU vertex buffers three.c binds stay inside the 8 every device has. A table of the
+# test's own state; GLES here, WebGPU (against this frame) below. The control (white instances) must fail.
+VBS='physical+map+vcol+nearest+instbig+nmap+ao+tan+icol+l1000'
+mkdir -p build/test/vbtab
+printf '%s\n' "$VBS" > build/test/vbtab/states.txt
+if node tools/gen-project-table.mjs --name vbtab --out build/test/vbtab --states build/test/vbtab/states.txt \
+     --cache build/test/vbtab/cache >/dev/null 2>&1; then
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_vertex_buffers.c build/test/vbtab/vbtab_gl.c \
+    build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_vertex_buffers
+  run test_vertex_buffers env EGL_PLATFORM=surfaceless ./build/test/test_vertex_buffers build/test/vertex-buffers-gles.rgba
+  run test_vertex_buffers_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_vertex_buffers >/dev/null 2>&1"
+  # the layout itself, and on Dawn (lavapipe, when webgpu-node is installed) the old one-buffer-per-attribute layout refused
+  run test_vertex_buffer_layout node test/test_vertex_buffer_layout.mjs build/test/vbtab/cache "$VBS"
+else
+  echo "FAIL  test_vertex_buffers (gen-project-table)"; fail=1
+fi
 # a texture sampled twice has a flipY flag per sample, all in the property map (mock GPU)
 run test_flip_copies node test/test_flip_copies.mjs
 # a project's own program table with three.c's core table: the same picture as the full table
@@ -134,6 +151,15 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
     set +e; ./build/test/test_extension_batch_wgpu > build/test/test_extension_batch_wgpu.log 2>&1; st=$?; set -e
     if [ $st = 0 ]; then echo "ok    test_extension_batch_wgpu"; elif [ $st = 77 ]; then echo "skip  test_extension_batch_wgpu (no WebGPU adapter)"
     else echo "FAIL  test_extension_batch_wgpu"; grep -v '^Warning' build/test/test_extension_batch_wgpu.log; fail=1; fi
+  fi
+  # every optional vertex attribute on WebGPU (a compatibility-mode device: 8 vertex buffers), against the GLES frame
+  if [ -f build/test/vbtab/vbtab_wgpu.c ]; then
+    "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_vertex_buffers.c \
+      build/test/vbtab/vbtab_gl.c build/test/vbtab/vbtab_wgpu.c build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn \
+      -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_vertex_buffers_wgpu
+    set +e; ./build/test/test_vertex_buffers_wgpu build/test/vertex-buffers-wgpu.rgba build/test/vertex-buffers-gles.rgba > build/test/test_vertex_buffers_wgpu.log 2>&1; st=$?; set -e
+    if [ $st = 0 ]; then echo "ok    test_vertex_buffers_wgpu"; elif [ $st = 77 ]; then echo "skip  test_vertex_buffers_wgpu (no WebGPU adapter)"
+    else echo "FAIL  test_vertex_buffers_wgpu"; grep -v '^Warning' build/test/test_vertex_buffers_wgpu.log; fail=1; fi
   fi
   # ... and on a compatibility-mode device (as wasmcart gives carts): a texture binds only with the view dimension it was made with
   set +e; ./build/test/test_extension_wgpu compat > build/test/test_extension_wgpu_compat.log 2>&1; st=$?; set -e

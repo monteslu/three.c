@@ -150,8 +150,20 @@ t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_param
     for (int i = 0; i < src->n_groups; i++)
       for (uint32_t t = 0; t < src->groups[i]->n_textures; t++) ns += src->groups[i]->textures[t].has_sampler;
     WGPULimits lim = { 0 };
-    uint32_t maxt = 16, maxs = 16;
-    if (wgpuDeviceGetLimits(w->dev, &lim) == WGPUStatus_Success) { maxt = lim.maxSampledTexturesPerShaderStage; maxs = lim.maxSamplersPerShaderStage; }
+    uint32_t maxt = 16, maxs = 16, maxvb = 8;
+    if (wgpuDeviceGetLimits(w->dev, &lim) == WGPUStatus_Success) {
+      maxt = lim.maxSampledTexturesPerShaderStage; maxs = lim.maxSamplersPerShaderStage;
+      if (lim.maxVertexBuffers) maxvb = lim.maxVertexBuffers;
+    }
+    /* the vertex buffers t3_wgpu_pipeline binds (the instance matrix columns share one, as r186's
+     * InstancedInterleavedBuffer): a program over the device's maxVertexBuffers does not build and the
+     * renderer names it, where a pipeline would be a validation error and the draw lost */
+    uint32_t nvb = t3_gen_vertex_buffer_count(src);
+    if (maxvb > 16) maxvb = 16;
+    if (nvb > maxvb) {
+      snprintf(err, errcap, "%s: %u vertex buffers, more than the %u the device allows", src->state, nvb, maxvb);
+      return NULL;
+    }
     if (maxt > T3_GEN_MAX_TEXTURES) maxt = T3_GEN_MAX_TEXTURES;
     if (maxs > T3_GEN_MAX_TEXTURES) maxs = T3_GEN_MAX_TEXTURES;
     if (nt > maxt || ns > maxs) {

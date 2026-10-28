@@ -172,6 +172,10 @@ t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params
 void t3_gen_gl_free(t3_gen_gl *g);
 /* a program's texture bindings over all its groups (at most T3_GEN_MAX_TEXTURES build) */
 uint32_t t3_gen_texture_count(const t3_gen_program *src);
+/* the WebGPU vertex buffers the program binds (gen_wgpu.c t3_wgpu_pipeline): one per geometry attribute, the instance
+ * matrix columns (nodeAttribute0..3) together in one instance-step buffer, the instance colour in its own. WebGPU devices
+ * guarantee 8 (maxVertexBuffers, core and compatibility mode); tools/program-model.mjs vertexBufferLayout is the same */
+uint32_t t3_gen_vertex_buffer_count(const t3_gen_program *src);
 /* backend-neutral part of a build (ops, draw group, constants) */
 void t3_gen_common(t3_gen_gl *g);
 /* the program text with the object's template values (gen_program.c) */

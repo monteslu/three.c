@@ -37,6 +37,43 @@ function groupOf(be, code, name) {
   return m ? +m[1] : null;
 }
 
+// The WebGPU vertex buffers three.c binds for a program's attributes (src/gen_wgpu.c t3_wgpu_pipeline,
+// src/gen_program.c t3_gen_vertex_buffer_count): one per geometry attribute; the instance matrix
+// columns nodeAttribute0..3 share one instance-step buffer (64 bytes an InstancedMesh, 80 a batch:
+// the matrix and an rgb + pad colour), as r186's InstancedInterleavedBuffer; the instance colour (vec3,
+// named nodeAttribute<n> in a capture and instanceColor after programModel) in one of its own. A tool
+// that compiles a captured program the way a host draws it uses this layout, not one buffer per
+// attribute (that counts the matrix four times: 9 buffers for an instanced, vertex- and instance-
+// coloured, normal-mapped program three.c binds with 6).
+export const WEBGPU_MAX_VERTEX_BUFFERS = 8;   // maxVertexBuffers every WebGPU device has (core and compatibility mode)
+const FORMATS = { float: 'float32', vec2: 'float32x2', vec3: 'float32x3', vec4: 'float32x4',
+  uint: 'uint32', uvec2: 'uint32x2', uvec3: 'uint32x3', uvec4: 'uint32x4',
+  int: 'sint32', ivec2: 'sint32x2', ivec3: 'sint32x3', ivec4: 'sint32x4' };
+/**
+ * @param {{ name: string, type: string, location: number, instanced?: boolean }[]} attributes in location order
+ * @param {{ batched?: boolean }} [opts] a batch's instance record (80 bytes) instead of an InstancedMesh's matrix (64)
+ * @returns {{ arrayStride: number, stepMode: 'vertex'|'instance', attributes: { shaderLocation: number, offset: number, format: string }[] }[]}
+ */
+export function vertexBufferLayout(attributes, { batched = false } = {}) {
+  const out = [];
+  let inst = null;
+  for (const a of attributes) {
+    const format = FORMATS[a.type];
+    if (!format) throw new Error(`vertexBufferLayout: attribute ${a.name} has type ${a.type}`);
+    const col = /^nodeAttribute([0-3])$/.exec(a.name);
+    if (col && a.type === 'vec4') {
+      if (!inst) out.push(inst = { arrayStride: batched ? 80 : 64, stepMode: 'instance', attributes: [] });
+      inst.attributes.push({ shaderLocation: a.location, offset: +col[1] * 16, format });
+    } else if (a.name === 'instanceColor' || /^nodeAttribute\d+$/.test(a.name)) {
+      out.push({ arrayStride: 12, stepMode: 'instance', attributes: [{ shaderLocation: a.location, offset: 0, format }] });
+    } else {
+      const n = +format.replace(/^\D+32x?/, '') || 1;
+      out.push({ arrayStride: 4 * n, stepMode: 'vertex', attributes: [{ shaderLocation: a.location, offset: 0, format }] });
+    }
+  }
+  return out;
+}
+
 // j: the capture JSON (with constants / unexplained), vert / frag: its stages,
 // be: 'gl' | 'wgpu'. Throws on anything three.c cannot draw from.
 export function programModel(state, be, j, vert, frag) {
@@ -52,6 +89,11 @@ export function programModel(state, be, j, vert, frag) {
     vert = vert.replace(re, 'instanceColor');
     frag = frag.replace(re, 'instanceColor');
     a.name = 'instanceColor';
+  }
+  if (be === 'wgpu') {
+    const nvb = vertexBufferLayout(attributes).length;
+    if (nvb > WEBGPU_MAX_VERTEX_BUFFERS)
+      throw new Error(`${state}.${be}: ${nvb} vertex buffers (${attributes.map((a) => a.name).join(' ')}), more than the ${WEBGPU_MAX_VERTEX_BUFFERS} every WebGPU device allows`);
   }
   const code = vert + '\n' + frag;
   const groupNames = j.groups.map((g) => g.name);

@@ -377,6 +377,20 @@ What else it does:
   near end (0 to 0.02, say) draws over a depth buffer the embedder keeps,
   as a first person weapon drawn after the world does. GLES ignores the
   fields (`glDepthRangef` does the same there).
+- **Vertex buffers:** one per geometry attribute, the instance matrix's four
+  columns in one instance-step buffer (64 bytes an instance; a batch's record
+  is 80, the matrix and a colour), as r186's `InstancedInterleavedBuffer`,
+  and the instance colour in one of its own. The most any program needs is
+  7 (an InstancedMesh with position, normal, uv, colour and tangent, and
+  instance colours), inside the 8 every WebGPU device has (`maxVertexBuffers`,
+  core and compatibility mode). A program over the device's limit does not
+  build: its draws are skipped and the renderer's error names it, where a
+  pipeline would be a validation error. `tools/program-model.mjs`
+  `vertexBufferLayout` gives the same layout to tools that compile a captured
+  program as a host draws it (a tool that gave each matrix column a buffer of
+  its own counted 10 for that program and refused it), and `programModel`
+  refuses a WebGPU program over 8. `test/test_vertex_buffers.c` and
+  `test/test_vertex_buffer_layout.mjs` check both.
 - **Blending:** a pipeline's blend state is the material's, as GLES sets it
   (r186's WebGLState.setBlending): Normal, Additive, Subtractive and Multiply,
   straight or premultiplied alpha, and CustomBlending with its own factors and
