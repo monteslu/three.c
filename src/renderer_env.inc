@@ -451,6 +451,9 @@ void t3_renderer_render_depth(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   if (r->cur_depth_write != 1) { glDepthMask(GL_TRUE); r->cur_depth_write = 1; }
   t3_mat4_multiply(&r->shadow_proj_screen, &cam->projection_matrix, &cam->matrix_world_inverse);
   t3_frustum_from_matrix(&r->shadow_frustum, &r->shadow_proj_screen);
+  /* a stamp of its own, as the WebGPU path: before the renderer's first render the
+   * stamp is 0, every program's too, and the casters drew with no camera */
+  r->stamp++;
   for (int k = 0; k < r->gen_n; k++) if (r->gen[k].gl) r->gen[k].gl->render_stamp = 0;   /* frame data = this camera */
   gen_casters(r, &scene->base, cam);
   for (int k = 0; k < r->gen_n; k++) if (r->gen[k].gl) r->gen[k].gl->render_stamp = 0;
