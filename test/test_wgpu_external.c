@@ -18,6 +18,7 @@
 #include <webgpu/webgpu.h>
 
 #include "three.h"
+#include "gen_wgpu.h"   /* (the pass state cache, test N) */
 
 #define S 64
 
@@ -602,6 +603,47 @@ int main(void) {
     check(!memcmp(e0, e1, sizeof e0), "the fourth frame matches the first");
     check(distinct(e0) >= 4, "the frame holds the scene");
     t3_release(ec); t3_release(tm); t3_release(t1); t3_release(t2); t3_release(bg); t3_release(sc);
+  }
+
+  { /* N: the pass state cache holds no references (no AddRef or Release per change, host calls in a cart),
+     * so a buffer three.c releases must be forgotten by it: a new buffer made at the released one's address
+     * would otherwise compare equal and skip its set. The old handle is kept alive here (a reference of the
+     * test's own) and set again after three.c renamed the attribute: that must be a set, not a skip. The
+     * control: the same buffer set twice is one set and one skip, so the counters can tell them apart. */
+    t3_wgpu *w = t3_wgpu_new(dev, queue, WGPUTextureFormat_RGBA8Unorm);
+    WGPUCommandEncoder enc = wgpuDeviceCreateCommandEncoder(dev, NULL);
+    t3_wgpu_set_encoder(w, enc);
+    t3_wgpu_begin_frame(w, 0);
+    t3_wgpu_begin_pass(w, &(t3_wgpu_pass){ .color = cv, .depth = dv });
+    float small[12] = { 0 };
+    t3_attribute *a = t3_attribute_new(T3_FLOAT32, small, 4, 3);
+    WGPUBuffer b0 = t3_wgpu_attribute(w, a, false, NULL);
+    wgpuBufferAddRef(b0);
+    unsigned c0[3], c1[3], c2[3];
+    t3_wgpu_counters(w, c0);
+    t3_wgpu_set_vertex_buffer(w, 0, b0, 0);
+    t3_wgpu_set_vertex_buffer(w, 0, b0, 0);
+    t3_wgpu_counters(w, c1);
+    check(c1[1] - c0[1] == 1 && c1[2] - c0[2] == 1, "control: the same buffer set twice is one set and one skip");
+    free(a->array);   /* grown: three.c replaces (and releases) the buffer */
+    a->array = calloc(300, sizeof(float));
+    a->count = 100;
+    a->version++;
+    WGPUBuffer b1 = t3_wgpu_attribute(w, a, false, NULL);
+    check(b1 && b1 != b0, "a grown attribute gets a new buffer");
+    t3_wgpu_set_vertex_buffer(w, 0, b0, 0);
+    t3_wgpu_counters(w, c2);
+    check(c2[1] - c1[1] == 1 && c2[2] == c1[2], "a buffer three.c released is forgotten by the pass state (its handle set again is a set, not a skip)");
+    t3_wgpu_end_pass(w);
+    t3_wgpu_end_frame(w);
+    t3_wgpu_set_encoder(w, NULL);
+    WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
+    wgpuQueueSubmit(queue, 1, &cb);
+    wgpuCommandBufferRelease(cb);
+    wgpuCommandEncoderRelease(enc);
+    wgpuBufferRelease(b0);
+    t3_release(a);
+    t3_wgpu_destroy(w);
   }
 
   const char *err = t3_renderer_last_error(r);

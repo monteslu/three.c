@@ -68,11 +68,13 @@ struct t3_wgpu {
   uint32_t serial;    /* the open frame's number: a vertex buffer written in it is renamed, not overwritten */
   /* what the open pass has bound (t3_wgpu_set_*): a draw re-sets only what
    * changed. Each setter is a call through the WebGPU API (in a browser a
-   * JS call and a command for the GPU process). Each object here holds a
-   * reference until the pass ends or it is replaced: a released one could
-   * otherwise be freed mid-pass and a new one made at its address (a bind
-   * group evicted from a program's ring, a renamed vertex buffer), which
-   * would compare equal and skip the set */
+   * JS call and a command for the GPU process). The slots hold no reference
+   * (an AddRef and a Release a change were two more API calls each, host
+   * calls in a cart): instead every place three.c releases a pipeline, bind
+   * group or buffer first forgets it here (forget_*), so a released object's
+   * address, reused by a new one, can never compare equal and skip a set
+   * (a bind group evicted from a program's ring, a renamed vertex buffer).
+   * The pass encoder keeps what it recorded alive itself. */
   struct {
     WGPURenderPipeline pipe;
     WGPUBindGroup bg[T3_GEN_MAX_GROUPS];
@@ -95,9 +97,33 @@ struct t3_wgpu {
 WGPUDevice t3_wgpu_device(t3_wgpu *w) { return w->dev; }
 bool t3_wgpu_compat(t3_wgpu *w) { return !wgpuDeviceHasFeature(w->dev, WGPUFeatureName_CoreFeaturesAndLimits); }
 
+/* every live t3_wgpu, for forget_*: a program or an attribute is freed without naming its device's t3_wgpu */
+#define MAX_LIVE 16
+static t3_wgpu *live[MAX_LIVE];
+static void forget_pipeline(WGPURenderPipeline p) {
+  for (int k = 0; k < MAX_LIVE; k++)
+    if (live[k] && live[k]->bound.pipe == p) live[k]->bound.pipe = NULL;
+}
+static void forget_bind_group(WGPUBindGroup g) {
+  for (int k = 0; k < MAX_LIVE; k++)
+    for (int i = 0; live[k] && i < T3_GEN_MAX_GROUPS; i++)
+      if (live[k]->bound.bg[i] == g) live[k]->bound.bg[i] = NULL;
+}
+static void forget_buffer(WGPUBuffer b) {
+  for (int k = 0; k < MAX_LIVE; k++) {
+    if (!live[k]) continue;
+    for (int i = 0; i < 16; i++) if (live[k]->bound.vb[i] == b) live[k]->bound.vb[i] = NULL;
+    if (live[k]->bound.ib == b) live[k]->bound.ib = NULL;
+  }
+}
+static void release_pipeline(WGPURenderPipeline p) { forget_pipeline(p); wgpuRenderPipelineRelease(p); }
+static void release_bind_group(WGPUBindGroup g) { forget_bind_group(g); wgpuBindGroupRelease(g); }
+static void release_buffer(WGPUBuffer b) { forget_buffer(b); wgpuBufferRelease(b); }
+
 t3_wgpu *t3_wgpu_new(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat out_format) {
   t3_wgpu *w = calloc(1, sizeof *w);
   T3_CHECK_ALLOC(w);
+  for (int k = 0; k < MAX_LIVE; k++) if (!live[k]) { live[k] = w; break; }
   w->dev = device;
   w->q = queue;
   w->out_format = out_format;
@@ -105,6 +131,7 @@ t3_wgpu *t3_wgpu_new(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat out_f
 }
 void t3_wgpu_destroy(t3_wgpu *w) {
   if (!w) return;
+  for (int k = 0; k < MAX_LIVE; k++) if (live[k] == w) live[k] = NULL;
   if (w->stream) wgpuBufferRelease(w->stream);
   for (int i = 0; i < w->n_samplers; i++) wgpuSamplerRelease(w->samplers[i].s);
   for (int i = 0; i < w->n_mip_pipes; i++) wgpuRenderPipelineRelease(w->mip_pipes[i].p);
@@ -262,9 +289,9 @@ t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_param
 void t3_gen_wgpu_free(t3_gen_gl *g) {
   if (!g || !g->wg) return;
   struct gen_wgpu_prog *wg = g->wg;
-  for (int i = 0; i < wg->n_pipes; i++) wgpuRenderPipelineRelease(wg->pipes[i].p);
+  for (int i = 0; i < wg->n_pipes; i++) release_pipeline(wg->pipes[i].p);
   for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) {
-    for (int k = 0; k < wg->n_bgs[i]; k++) wgpuBindGroupRelease(wg->bgs[i][k].g);
+    for (int k = 0; k < wg->n_bgs[i]; k++) release_bind_group(wg->bgs[i][k].g);
     if (wg->bgl[i]) wgpuBindGroupLayoutRelease(wg->bgl[i]);
     free(g->mirror[i]);
   }
@@ -510,7 +537,7 @@ WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextur
   w->n_bg_made++;
   int slot;
   if (wg->n_bgs[group] < MAX_BG) slot = wg->n_bgs[group]++;
-  else { slot = wg->next_bg[group]; wg->next_bg[group] = (slot + 1) % MAX_BG; wgpuBindGroupRelease(wg->bgs[group][slot].g); }
+  else { slot = wg->next_bg[group]; wg->next_bg[group] = (slot + 1) % MAX_BG; release_bind_group(wg->bgs[group][slot].g); }
   struct bg *b = &wg->bgs[group][slot];
   memset(b, 0, sizeof *b);
   memcpy(b->views, views, sizeof(WGPUTextureView) * (size_t)nt);
@@ -638,24 +665,18 @@ void t3_wgpu_counters(const t3_wgpu *w, unsigned out[3]) { out[0] = w->n_bg_made
 void t3_wgpu_set_pipeline(t3_wgpu *w, WGPURenderPipeline p) {
   if (w->bound.pipe == p) { w->n_sets_skipped++; return; }
   w->n_sets++;
-  wgpuRenderPipelineAddRef(p);
-  if (w->bound.pipe) wgpuRenderPipelineRelease(w->bound.pipe);
   w->bound.pipe = p;
   wgpuRenderPassEncoderSetPipeline(w->pass, p);
 }
 void t3_wgpu_set_bind_group(t3_wgpu *w, int group, WGPUBindGroup bg, int nd, const uint32_t *offs) {
   if (group < 0 || group >= T3_GEN_MAX_GROUPS || nd > 8) {   /* untracked: the slot is unknown after it */
-    if (group >= 0 && group < T3_GEN_MAX_GROUPS && w->bound.bg[group]) { wgpuBindGroupRelease(w->bound.bg[group]); w->bound.bg[group] = NULL; }
+    if (group >= 0 && group < T3_GEN_MAX_GROUPS) w->bound.bg[group] = NULL;
     wgpuRenderPassEncoderSetBindGroup(w->pass, (uint32_t)group, bg, (size_t)nd, offs);
     return;
   }
   if (w->bound.bg[group] == bg && w->bound.nd[group] == (uint32_t)nd && !memcmp(w->bound.offs[group], offs, sizeof(uint32_t) * (size_t)nd)) { w->n_sets_skipped++; return; }
   w->n_sets++;
-  if (w->bound.bg[group] != bg) {
-    wgpuBindGroupAddRef(bg);
-    if (w->bound.bg[group]) wgpuBindGroupRelease(w->bound.bg[group]);
-    w->bound.bg[group] = bg;
-  }
+  w->bound.bg[group] = bg;
   w->bound.nd[group] = (uint32_t)nd;
   memcpy(w->bound.offs[group], offs, sizeof(uint32_t) * (size_t)nd);
   wgpuRenderPassEncoderSetBindGroup(w->pass, (uint32_t)group, bg, (size_t)nd, offs);
@@ -663,11 +684,7 @@ void t3_wgpu_set_bind_group(t3_wgpu *w, int group, WGPUBindGroup bg, int nd, con
 void t3_wgpu_set_vertex_buffer(t3_wgpu *w, int slot, WGPUBuffer b, uint64_t off) {
   if (slot >= 0 && slot < 16) {
     if (w->bound.vb[slot] == b && w->bound.voff[slot] == off) { w->n_sets_skipped++; return; }
-    if (w->bound.vb[slot] != b) {
-      wgpuBufferAddRef(b);
-      if (w->bound.vb[slot]) wgpuBufferRelease(w->bound.vb[slot]);
-      w->bound.vb[slot] = b;
-    }
+    w->bound.vb[slot] = b;
     w->bound.voff[slot] = off;
   }
   w->n_sets++;
@@ -676,11 +693,7 @@ void t3_wgpu_set_vertex_buffer(t3_wgpu *w, int slot, WGPUBuffer b, uint64_t off)
 void t3_wgpu_set_index_buffer(t3_wgpu *w, WGPUBuffer b, uint32_t fmt) {
   if (w->bound.ib == b && w->bound.ifmt == fmt) { w->n_sets_skipped++; return; }
   w->n_sets++;
-  if (w->bound.ib != b) {
-    wgpuBufferAddRef(b);
-    if (w->bound.ib) wgpuBufferRelease(w->bound.ib);
-    w->bound.ib = b;
-  }
+  w->bound.ib = b;
   w->bound.ifmt = fmt;
   wgpuRenderPassEncoderSetIndexBuffer(w->pass, b, (WGPUIndexFormat)fmt, 0, WGPU_WHOLE_SIZE);
 }
@@ -689,10 +702,6 @@ void t3_wgpu_end_pass(t3_wgpu *w) {
   wgpuRenderPassEncoderRelease(w->pass);
   w->pass = NULL;
   /* the next pass begins with nothing bound */
-  if (w->bound.pipe) wgpuRenderPipelineRelease(w->bound.pipe);
-  for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) if (w->bound.bg[i]) wgpuBindGroupRelease(w->bound.bg[i]);
-  for (int i = 0; i < 16; i++) if (w->bound.vb[i]) wgpuBufferRelease(w->bound.vb[i]);
-  if (w->bound.ib) wgpuBufferRelease(w->bound.ib);
   memset(&w->bound, 0, sizeof w->bound);
 }
 void t3_wgpu_end_frame(t3_wgpu *w) {
@@ -823,9 +832,9 @@ static WGPUBuffer attribute_buf(t3_wgpu *w, t3_attribute *a, bool index, uint32_
     return v->b;
   }
   if (!v) { v = calloc(1, sizeof *v); T3_CHECK_ALLOC(v); a->_wgpu = v; }
-  if (v->b && w->enc && v->serial == w->serial) { wgpuBufferRelease(v->b); v->b = NULL; }   /* (in use by the open frame: renamed) */
+  if (v->b && w->enc && v->serial == w->serial) { release_buffer(v->b); v->b = NULL; }   /* (in use by the open frame: renamed) */
   if (!v->b || v->size < padded) {
-    if (v->b) wgpuBufferRelease(v->b);
+    if (v->b) release_buffer(v->b);
     WGPUBufferDescriptor d = { .usage = (index ? WGPUBufferUsage_Index : WGPUBufferUsage_Vertex) | WGPUBufferUsage_CopyDst, .size = padded };
     v->b = wgpuDeviceCreateBuffer(w->dev, &d);
     v->size = padded;
@@ -865,7 +874,7 @@ WGPUBuffer t3_wgpu_floats(t3_wgpu *w, void **slot, const float *data, size_t n) 
   /* rewritten while a deferred frame still reads it: a new buffer instead */
   bool busy = v->b && w->enc && v->serial == w->serial;
   if (!v->b || v->size < bytes || busy) {
-    if (v->b) wgpuBufferRelease(v->b);
+    if (v->b) release_buffer(v->b);
     size_t sz = v->size > bytes * 2 ? v->size : bytes * 2;
     WGPUBufferDescriptor d = { .usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst, .size = sz };
     v->b = wgpuDeviceCreateBuffer(w->dev, &d);
@@ -1050,7 +1059,7 @@ void t3_wgpu_release(uint32_t kind, void *thing) {
   case T3_KIND_ATTRIBUTE: {
     t3_attribute *a = thing;
     struct vbuf *v = a->_wgpu;
-    if (v && v->b) wgpuBufferRelease(v->b);
+    if (v && v->b) release_buffer(v->b);
     free(v);
     a->_wgpu = NULL;
     break;
