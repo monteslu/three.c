@@ -43,7 +43,7 @@ struct vbuf { WGPUBuffer b; size_t size; uint32_t version; bool uint; uint32_t s
 struct sampler_entry { uint32_t key; WGPUSampler s; };
 
 struct t3_wgpu {
-  bool reversed;
+  bool reversed, forward_shadows;
   WGPUDevice dev;
   WGPUQueue q;
   WGPUTextureFormat out_format;
@@ -100,6 +100,9 @@ struct t3_wgpu {
 
 WGPUDevice t3_wgpu_device(t3_wgpu *w) { return w->dev; }
 void t3_wgpu_set_reversed_depth(t3_wgpu *w, bool on) { w->reversed = on; }
+void t3_wgpu_set_forward_shadows(t3_wgpu *w, bool on) { w->forward_shadows = on; }
+#define SHADOW_REV(w) ((w)->reversed && !(w)->forward_shadows)
+#define SHADOW_FMT(w) (SHADOW_REV(w) ? WGPUTextureFormat_Depth32Float : WGPUTextureFormat_Depth24Plus)
 WGPUTextureFormat t3_wgpu_depth_format(const t3_wgpu *w) { return w->reversed ? WGPUTextureFormat_Depth32Float : WGPUTextureFormat_Depth24Plus; }
 bool t3_wgpu_compat(t3_wgpu *w) { return !wgpuDeviceHasFeature(w->dev, WGPUFeatureName_CoreFeaturesAndLimits); }
 
@@ -1325,13 +1328,13 @@ WGPUTextureView t3_wgpu_depth_map(t3_wgpu *w, void **slot, int width, int height
                                             .textureBindingViewDimension = WGPUTextureViewDimension_Cube };
     WGPUTextureDescriptor d = { .nextInChain = cube ? &bvd.chain : NULL, .usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding,
       .dimension = WGPUTextureDimension_2D,
-      .size = { (uint32_t)width, (uint32_t)height, cube ? 6u : 1u }, .format = t3_wgpu_depth_format(w), .mipLevelCount = 1, .sampleCount = 1 };
+      .size = { (uint32_t)width, (uint32_t)height, cube ? 6u : 1u }, .format = SHADOW_FMT(w), .mipLevelCount = 1, .sampleCount = 1 };
     x->t = wgpuDeviceCreateTexture(w->dev, &d);
-    WGPUTextureViewDescriptor sv = { .format = t3_wgpu_depth_format(w), .dimension = cube ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2D,
+    WGPUTextureViewDescriptor sv = { .format = SHADOW_FMT(w), .dimension = cube ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2D,
       .mipLevelCount = 1, .arrayLayerCount = cube ? 6 : 1, .aspect = WGPUTextureAspect_DepthOnly };
     x->sample = wgpuTextureCreateView(x->t, &sv);
     for (int f = 0; f < (cube ? 6 : 1); f++) {
-      WGPUTextureViewDescriptor fv = { .format = t3_wgpu_depth_format(w), .dimension = WGPUTextureViewDimension_2D, .mipLevelCount = 1,
+      WGPUTextureViewDescriptor fv = { .format = SHADOW_FMT(w), .dimension = WGPUTextureViewDimension_2D, .mipLevelCount = 1,
         .baseArrayLayer = (uint32_t)f, .arrayLayerCount = 1, .aspect = WGPUTextureAspect_All };
       x->faces[f] = wgpuTextureCreateView(x->t, &fv);
     }
@@ -1341,12 +1344,12 @@ WGPUTextureView t3_wgpu_depth_map(t3_wgpu *w, void **slot, int width, int height
   return x->sample;
 }
 WGPUSampler t3_wgpu_compare_sampler(t3_wgpu *w, bool linear) {
-  uint32_t key = 0x80000000u | (uint32_t)linear | (uint32_t)w->reversed << 1;
+  uint32_t key = 0x80000000u | (uint32_t)linear | (uint32_t)SHADOW_REV(w) << 1;
   for (int i = 0; i < w->n_samplers; i++) if (w->samplers[i].key == key) return w->samplers[i].s;
   WGPUFilterMode fm = linear ? WGPUFilterMode_Linear : WGPUFilterMode_Nearest;
   WGPUSamplerDescriptor d = { .addressModeU = WGPUAddressMode_ClampToEdge, .addressModeV = WGPUAddressMode_ClampToEdge, .addressModeW = WGPUAddressMode_ClampToEdge,
     .magFilter = fm, .minFilter = fm, .mipmapFilter = WGPUMipmapFilterMode_Nearest, .lodMinClamp = 0, .lodMaxClamp = 32,
-    .compare = w->reversed ? WGPUCompareFunction_GreaterEqual : WGPUCompareFunction_LessEqual, .maxAnisotropy = 1 };
+    .compare = SHADOW_REV(w) ? WGPUCompareFunction_GreaterEqual : WGPUCompareFunction_LessEqual, .maxAnisotropy = 1 };
   WGPUSampler s = wgpuDeviceCreateSampler(w->dev, &d);
   if (w->n_samplers < 64) w->samplers[w->n_samplers++] = (struct sampler_entry){ key, s };
   return s;

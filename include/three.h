@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.1"
+#define T3_VERSION "0.187.2"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1345,6 +1345,12 @@ void t3_renderer_set_gpu_timing(t3_renderer *r, bool on);
  * and format stay the embedder's: clear to 0 and use a 32-bit float format.
  * Shadow states take programs of their own (+rdepth in a table). */
 void t3_renderer_set_reversed_depth(t3_renderer *r, bool on);
+/* Keep the renderer's shadow maps on forward depth under a reversed depth buffer
+ * (three.c's own: three.js reverses them too). A light's short range needs no extra
+ * precision, and every program then is the one it is with forward depth: no +rdepth
+ * states, so a project's tables need nothing new. Set it before the first render. */
+void t3_renderer_set_forward_shadows(t3_renderer *r, bool on);
+#define T3_FORWARD_SHADOWS 1
 /* The last shader compile / link error, or NULL. */
 const char *t3_renderer_last_error(t3_renderer *r);
 

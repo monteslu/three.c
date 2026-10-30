@@ -253,7 +253,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
       }
     }
     f |= T3_GEN_SHADOW;
-    if (r->reversed_depth) f |= T3_GEN_RDEPTH;   /* (only what reads a shadow map differs) */
+    if (r->reversed_depth && !r->forward_shadows) f |= T3_GEN_RDEPTH;   /* (only what reads a shadow map differs) */
     shadow = true;
   }
   /* lights: the exact vector when the table has it, else the smallest one that
@@ -875,7 +875,8 @@ static void gen_shadow_storage(t3_renderer *r, struct gen_shadow *s, int w, int 
   if (!s->fbo) glGenFramebuffers(1, &s->fbo);
   s->cube = cube;
   GLenum target = cube ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
-  GLenum dfmt = r->reversed_depth ? GL_DEPTH_COMPONENT32F : GL_DEPTH_COMPONENT24, dtype = r->reversed_depth ? GL_FLOAT : GL_UNSIGNED_INT;
+  bool rev = r->reversed_depth && !r->forward_shadows;
+  GLenum dfmt = rev ? GL_DEPTH_COMPONENT32F : GL_DEPTH_COMPONENT24, dtype = rev ? GL_FLOAT : GL_UNSIGNED_INT;
   if (cube) {
     tu_bind_cube(31, s->tex, true);
     for (int f = 0; f < 6; f++)
@@ -890,7 +891,7 @@ static void gen_shadow_storage(t3_renderer *r, struct gen_shadow *s, int w, int 
   glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(target, 0x884C /* GL_TEXTURE_COMPARE_MODE */, 0x884E /* GL_COMPARE_REF_TO_TEXTURE */);
-  glTexParameteri(target, 0x884D /* GL_TEXTURE_COMPARE_FUNC */, r->reversed_depth ? GL_GEQUAL : GL_LEQUAL);
+  glTexParameteri(target, 0x884D /* GL_TEXTURE_COMPARE_FUNC */, rev ? GL_GEQUAL : GL_LEQUAL);
   glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
   if (cube) glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X, s->tex, 0);
   else glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, s->tex, 0);

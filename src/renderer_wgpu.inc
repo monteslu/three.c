@@ -252,7 +252,10 @@ static void wgpu_shadow_maps(t3_renderer *r, t3_scene *scene) {
   r->rendering_shadows = true;
   int pf = r->wg_pass_format, df = r->wg_depth_format, ns = r->wg_samples;
   bool flip = r->wg_flip;
-  r->wg_pass_format = 0; r->wg_depth_format = t3_wgpu_depth_format(w); r->wg_samples = 1; r->wg_flip = false;
+  /* forward_shadows: the caster passes are forward whatever the view's depth is */
+  bool rev = r->reversed_depth;
+  if (rev && r->forward_shadows) { r->reversed_depth = false; t3_wgpu_set_reversed_depth(w, false); }
+  r->wg_pass_format = 0; r->wg_depth_format = r->reversed_depth ? WGPUTextureFormat_Depth32Float : WGPUTextureFormat_Depth24Plus; r->wg_samples = 1; r->wg_flip = false;
   for (int i = 0; i < r->caster_count; i++) {
     t3_light *l = r->casters[i];
     t3_light_shadow *sh = l->shadow;
@@ -294,6 +297,7 @@ static void wgpu_shadow_maps(t3_renderer *r, t3_scene *scene) {
     }
   }
   for (int k = 0; k < r->gen_n; k++) if (r->gen[k].gl) r->gen[k].gl->render_stamp = 0;   /* the main camera next */
+  if (rev && r->forward_shadows) { r->reversed_depth = true; t3_wgpu_set_reversed_depth(w, true); }
   r->wg_pass_format = pf; r->wg_depth_format = df; r->wg_samples = ns; r->wg_flip = flip;
   r->rendering_shadows = false;
 }

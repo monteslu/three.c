@@ -226,7 +226,7 @@ struct t3_renderer {
 
   /* GL state cache, kept across frames */
   bool fb_known, vp_known, clear_known;
-  bool reversed_depth;
+  bool reversed_depth, forward_shadows;
   GLuint cur_fbo;
   int vp_x, vp_y, vp_w, vp_h;
   int cur_scissor; /* -1 unknown */
@@ -789,6 +789,12 @@ static bool gen_note(t3_renderer *r, const char *what);
 #if !defined(T3_WASMCART) && !defined(_WIN32)
 extern void (*eglGetProcAddress(const char *))(void) __attribute__((weak));
 #endif
+void t3_renderer_set_forward_shadows(t3_renderer *r, bool on) {
+  r->forward_shadows = on;
+#ifdef T3_WGPU
+  if (r->wgpu) t3_wgpu_set_forward_shadows(r->wgpu, on);
+#endif
+}
 void t3_renderer_set_reversed_depth(t3_renderer *r, bool on) {
 #ifdef T3_WGPU
   if (r->wgpu) { r->reversed_depth = on; t3_wgpu_set_reversed_depth(r->wgpu, on); return; }
@@ -2249,7 +2255,7 @@ static void shadow_update_matrices(t3_renderer *r, t3_light *l) {
   t3_mat4_multiply(&tmp, &bias, &c->projection_matrix);
   t3_mat4_multiply(&sh->matrix, &tmp, &c->matrix_world_inverse);
   /* a reversed camera's z: 1 - z (LightShadow.updateMatrices with reversedDepth) */
-  if (r->reversed_depth) for (int k = 0; k < 4; k++) sh->matrix.e[k * 4 + 2] = sh->matrix.e[k * 4 + 3] - sh->matrix.e[k * 4 + 2];
+  if (r->reversed_depth && !r->forward_shadows) for (int k = 0; k < 4; k++) sh->matrix.e[k * 4 + 2] = sh->matrix.e[k * 4 + 3] - sh->matrix.e[k * 4 + 2];
   t3_mat4_multiply(&r->shadow_proj_screen, &c->projection_matrix, &c->matrix_world_inverse);
   t3_frustum_from_matrix(&r->shadow_frustum, &r->shadow_proj_screen);
 }

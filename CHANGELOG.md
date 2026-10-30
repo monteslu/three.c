@@ -5,6 +5,13 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.2 (2026-10-30)
+
+### Added
+- `t3_renderer_set_forward_shadows`: the renderer's shadow maps stay on forward depth under a
+  reversed depth buffer, so a project's program tables need no `+rdepth` states. three.c's own:
+  three.js reverses them too, which stays the default.
+
 ## v0.187.1 (2026-10-30)
 
 ### Fixed

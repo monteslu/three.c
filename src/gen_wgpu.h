@@ -133,6 +133,8 @@ WGPUDevice t3_wgpu_device(t3_wgpu *w);
 bool t3_wgpu_compat(t3_wgpu *w);
 /* reversedDepthBuffer: depth clears to 0, shadow compares mirror, the renderer's own depth buffers are 32-bit float */
 void t3_wgpu_set_reversed_depth(t3_wgpu *w, bool on);
+/* shadow maps stay forward under it: their format and compare (t3_renderer_set_forward_shadows) */
+void t3_wgpu_set_forward_shadows(t3_wgpu *w, bool on);
 WGPUTextureFormat t3_wgpu_depth_format(const t3_wgpu *w);
 
 #endif
