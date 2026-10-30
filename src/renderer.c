@@ -1,5 +1,5 @@
-/* The renderer: three.js r186's frame on OpenGL ES 3.0 (and, through
- * renderer_wgpu.inc, on WebGPU), drawing with r186's generated programs
+/* The renderer: three.js r187's frame on OpenGL ES 3.0 (and, through
+ * renderer_wgpu.inc, on WebGPU), drawing with r187's generated programs
  * (renderer_gen.inc).
  *
  * The frame follows three.js: update world matrices, build the render list
@@ -78,7 +78,7 @@ typedef struct {
   /* VAOs for programs with attributes of their own (ShaderMaterials), by
    * program, most recent first */
   struct { const void *program; GLuint vao; } pv[4];
-  /* r186's morph texture (the generated path): a 2D array, one layer per target */
+  /* r187's morph texture (the generated path): a 2D array, one layer per target */
   GLuint morph_tex;
   uint32_t morph_version;
   int pv_n;
@@ -106,7 +106,7 @@ typedef struct {
   bool borrowed;      /* t3_texture_from_gl with owns_gl false: the embedder deletes it */
   uint32_t sampler;   /* the sampler fields (sampler_key) its parameters were last set from */
   /* the level-0 storage bind_texture last specified (0: none): a new version of
-   * the same size and format is uploaded into it (texSubImage2D, as r186
+   * the same size and format is uploaded into it (texSubImage2D, as r187
    * WebGLTextures re-uploads into texStorage2D), not specified again */
   int up_w, up_h;
   GLenum up_ifmt, up_fmt, up_type;
@@ -131,7 +131,7 @@ struct t3_renderer {
   t3_color clear_color;
   float clear_alpha;
   bool shadow_map_enabled;
-  /* r186 shadowMap.autoUpdate (false: shadow_manual) */
+  /* r187 shadowMap.autoUpdate (false: shadow_manual) */
   bool shadow_manual;
   t3_shadow_map_type shadow_map_type;
   t3_color_space output_color_space;
@@ -146,16 +146,16 @@ struct t3_renderer {
   GLuint gq[4];
   unsigned gq_frame[4];
   int gq_head, gq_count;
-  t3_mesh *bg_sphere;     /* r186 Background.js's sphere */
-  void *pm186;            /* r186's PMREM generator state (renderer_env.inc) */
+  t3_mesh *bg_sphere;     /* r187 Background.js's sphere */
+  void *pm187;            /* r187's PMREM generator state (renderer_env.inc) */
   t3_scene *env_scene;    /* the scene being rendered (its environment intensity / rotation) */
 
   bool opaque_only; /* scoped by t3_renderer_render_opaque */
   bool depth_prepass; /* suppress colour output and background for GLES prepass */
   render_list opaque, transparent, scratch;
-  /* transmission (r186): double-sided transmissive items, drawn back faces
+  /* transmission (r187): double-sided transmissive items, drawn back faces
    * first; and per render, the framebuffer copied once for each side at its
-   * first transmissive draw ([0] front, [1] back: r186's two ViewportTextureNodes) */
+   * first transmissive draw ([0] front, [1] back: r187's two ViewportTextureNodes) */
   render_list backpass;
   bool vp_done[2];
   t3_render_target *vp_rt[2];   /* GL copies */
@@ -176,7 +176,7 @@ struct t3_renderer {
 
   /* Auto-instancing: opaque plain meshes that share geometry, material and
    * group are drawn as one instanced draw, with their world matrices as the
-   * instance attribute. Same pixels as drawing them one by one (r186's
+   * instance attribute. Same pixels as drawing them one by one (r187's
    * instanced program), a fraction of the draw calls. */
   bool auto_instancing;
   bool sort_bounds;
@@ -226,6 +226,7 @@ struct t3_renderer {
 
   /* GL state cache, kept across frames */
   bool fb_known, vp_known, clear_known;
+  bool reversed_depth;
   GLuint cur_fbo;
   int vp_x, vp_y, vp_w, vp_h;
   int cur_scissor; /* -1 unknown */
@@ -251,7 +252,7 @@ struct t3_renderer {
   t3_external_target ext_target;
   bool has_ext_target;
   t3_mat4 last_proj;     /* the projection matrix of the last render */
-  /* the programs r186's node renderer generates (gen_program.h), built on
+  /* the programs r187's node renderer generates (gen_program.h), built on
    * first use per table entry */
   struct gen_entry { const t3_gen_program *src; t3_gen_gl *gl; bool encode; t3_gen_params params; } *gen;
   /* this frame draws straight to the screen, its programs encoding sRGB
@@ -265,7 +266,7 @@ struct t3_renderer {
 #endif
   void *wg_dfg, *wg_inst, *wg_quad, *wg_color, *wg_depth, *wg_out;
   int wg_out_format;
-  bool exact_output;   /* t3_renderer_set_exact_output: always r186's output pass */
+  bool exact_output;   /* t3_renderer_set_exact_output: always r187's output pass */
   int wg_pass_format, wg_depth_format, wg_samples;
   bool wg_flip;   /* the pass's target is stored bottom-up (t3_external_target.flip_y) */
 #ifdef T3_WGPU
@@ -277,12 +278,12 @@ struct t3_renderer {
   /* the generated programs' environment / background / PMREM values for the
    * draw being filled (renderer_gen.inc, renderer_env.inc) */
   struct gen_aux {
-    const struct t3_texture *env;      /* the cube texture (classic) or cube-UV PMREM texture the draw samples */
+    const struct t3_texture *env;      /* the cube texture (classic) or PMREM cube the draw samples */
     float env_intensity; t3_euler env_rotation;
     const struct t3_texture *bg;       /* the background texture (bg programs) */
     float bg_intensity, bg_blur; t3_euler bg_rotation;
     const struct t3_texture *pm_src;   /* a PMREM pass's source */
-    float pm_rough, pm_mip, pm_sigma;
+    float pm_rough, pm_lod_bias, pm_source_lod, pm_sigma;
   } aux;
   struct gen_shadow { const t3_light *l; uint32_t light_id; GLuint fbo, tex; int w, h; bool cube; bool rendered; void *wg; } gen_sh[16];
   int gen_sh_n;
@@ -311,19 +312,19 @@ struct t3_renderer {
   /* extensions whose meshes may be auto-instanced (t3_renderer_set_extension_batching) */
   uint16_t ext_batch[64];
   int ext_batch_n;
-  /* r186 renders the scene into a linear (half float) target and a final pass
+  /* r187 renders the scene into a linear (half float) target and a final pass
    * applies the output colour space (and tone mapping); on when the output
    * encoding is sRGB or a tone mapping is set, for the screen target only */
   GLuint out_fbo, out_tex, out_depth, out_vao, out_vbo;
   int out_w, out_h;
   bool out_on;
-  GLuint dfg_tex;          /* r186's DFG LUT, made on first use */
+  GLuint dfg_tex;          /* r187's DFG LUT, made on first use */
 };
 
 
 
 static void rt_free(t3_render_target *rt);
-static void pm186_free(t3_renderer *r);
+static void pm187_free(t3_renderer *r);
 static void tu_forget(GLuint tex);
 static void tu_forget_all(void);
 static int tu_active_unit(void);
@@ -389,7 +390,7 @@ t3_renderer *t3_renderer_new(int width, int height) {
   static uint32_t serials;
   r->serial = ++serials;
   r->clear_alpha = 1;
-  r->output_color_space = T3_SRGB_COLOR_SPACE;   /* r186: outputColorSpace = SRGBColorSpace */
+  r->output_color_space = T3_SRGB_COLOR_SPACE;   /* r187: outputColorSpace = SRGBColorSpace */
   r->tone_mapping_exposure = 1;
   r->shadow_map_type = T3_PCF_SHADOW_MAP;
   t3__gl_release = gl_release;
@@ -415,7 +416,7 @@ void t3_renderer_destroy(t3_renderer *r) {
   for (int i = 0; i < 2; i++) t3_release(r->vp_rt[i]);
   t3_release(r->vp_sampler);
   free(r->backpass.items);
-  pm186_free(r);
+  pm187_free(r);
 #ifdef T3_WGPU
   for (int i = 0; i < r->gen_n; i++) if (r->wgpu) t3_gen_wgpu_free(r->gen[i].gl); else t3_gen_gl_free(r->gen[i].gl);
   t3_wgpu_destroy(r->wgpu);
@@ -547,7 +548,7 @@ static GLuint msaa_target(t3_renderer *r) {
   glBindRenderbuffer(GL_RENDERBUFFER, r->msaa_rb[0]);
   glRenderbufferStorageMultisample(GL_RENDERBUFFER, r->msaa_samples, GL_RGBA8, r->width, r->height);
   glBindRenderbuffer(GL_RENDERBUFFER, r->msaa_rb[1]);
-  glRenderbufferStorageMultisample(GL_RENDERBUFFER, r->msaa_samples, GL_DEPTH24_STENCIL8, r->width, r->height);
+  glRenderbufferStorageMultisample(GL_RENDERBUFFER, r->msaa_samples, r->reversed_depth ? 0x8CAD /* GL_DEPTH32F_STENCIL8 */ : GL_DEPTH24_STENCIL8, r->width, r->height);
   glBindFramebuffer(GL_FRAMEBUFFER, r->msaa_fbo);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, r->msaa_rb[0]);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, r->msaa_rb[1]);
@@ -627,7 +628,7 @@ static void gl_scissor_box(t3_renderer *r, bool on, int x, int y, int w, int h) 
 
 static GLuint target_fbo(t3_renderer *r);
 /* setViewport / setScissor measure y from the TOP of the drawing buffer (the
- * WebGPU convention, kept by r186's WebGL backend); an embedder's external
+ * WebGPU convention, kept by r187's WebGL backend); an embedder's external
  * target from the bottom, as GL */
 static GLuint gen_out_target(t3_renderer *r);
 static int view_gl_y(const t3_renderer *r, int y, int h) { return !r->has_ext_target ? r->height - y - h : y; }
@@ -637,9 +638,10 @@ static void bind_target(t3_renderer *r) {
   gl_fbo(r, target_fbo(r));
   const t3_render_target *rt = r->target;
   if (rt) {
-    /* r186's WebGL backend: a target's viewport and scissor are measured from the top too */
-    gl_viewport(r, rt->viewport[0], rt->height - rt->viewport[1] - rt->viewport[3], rt->viewport[2], rt->viewport[3]);
-    gl_scissor_box(r, rt->scissor_test, rt->scissor[0], rt->height - rt->scissor[1] - rt->scissor[3], rt->scissor[2], rt->scissor[3]);
+    /* r187's WebGL backend: a target's viewport and scissor are measured from the top too */
+    int h = rt->height >> rt->active_mip;
+    gl_viewport(r, rt->viewport[0], h - rt->viewport[1] - rt->viewport[3], rt->viewport[2], rt->viewport[3]);
+    gl_scissor_box(r, rt->scissor_test, rt->scissor[0], h - rt->scissor[1] - rt->scissor[3], rt->scissor[2], rt->scissor[3]);
   } else if (rt) {
     gl_viewport(r, rt->viewport[0], rt->viewport[1], rt->viewport[2], rt->viewport[3]);
     gl_scissor_box(r, rt->scissor_test, rt->scissor[0], rt->scissor[1], rt->scissor[2], rt->scissor[3]);
@@ -653,7 +655,7 @@ static bool wgpu_clear(t3_renderer *r, bool color, bool depth);
 void t3_renderer_clear(t3_renderer *r, bool color, bool depth, bool stencil) {
   if (wgpu_clear(r, color, depth || stencil)) return;
   if (!r->target && !r->has_ext_target && (r->output_color_space == T3_SRGB_COLOR_SPACE || r->tone_mapping)) {
-    /* r186 clears its linear framebuffer target; the next render may draw
+    /* r187 clears its linear framebuffer target; the next render may draw
      * straight to the screen (sRGB encoded) or through that target: clear both
      * so a render with autoClear off finds the clear either way */
     GLbitfield bits = (color ? GL_COLOR_BUFFER_BIT : 0) | (depth ? GL_DEPTH_BUFFER_BIT : 0) | (stencil ? GL_STENCIL_BUFFER_BIT : 0);
@@ -769,11 +771,43 @@ void t3_renderer_set_tone_mapping(t3_renderer *r, t3_tone_mapping tm, float expo
   r->tone_mapping = tm;
   r->tone_mapping_exposure = exposure;
 }
-void t3_renderer_set_render_target(t3_renderer *r, t3_render_target *rt) { r->target = rt; }
+void t3_renderer_set_render_target(t3_renderer *r, t3_render_target *rt) { t3_renderer_set_render_target_ex(r, rt, 0, 0); }
+void t3_renderer_set_render_target_ex(t3_renderer *r, t3_render_target *rt, int face, int mip) {
+  r->target = rt;
+  if (!rt || !rt->is_cube) return;
+  rt->active_face = face;
+  rt->active_mip = mip;
+  int s = rt->width >> mip;
+  rt->viewport[0] = rt->viewport[1] = rt->scissor[0] = rt->scissor[1] = 0;
+  rt->viewport[2] = rt->viewport[3] = rt->scissor[2] = rt->scissor[3] = s;
+}
 t3_render_target *t3_renderer_get_render_target(const t3_renderer *r) { return r->target; }
 void t3_renderer_set_auto_instancing(t3_renderer *r, bool on) { r->auto_instancing = on; }
 const t3_render_info *t3_renderer_info(t3_renderer *r) { return &r->info; }
 void t3_renderer_set_gpu_timing(t3_renderer *r, bool on) { r->gpu_timing = on; }
+static bool gen_note(t3_renderer *r, const char *what);
+#if !defined(T3_WASMCART) && !defined(_WIN32)
+extern void (*eglGetProcAddress(const char *))(void) __attribute__((weak));
+#endif
+void t3_renderer_set_reversed_depth(t3_renderer *r, bool on) {
+#ifdef T3_WGPU
+  if (r->wgpu) { r->reversed_depth = on; t3_wgpu_set_reversed_depth(r->wgpu, on); return; }
+#endif
+#if !defined(T3_WASMCART) && !defined(_WIN32)
+  /* WebGLCapabilities: only with EXT_clip_control */
+  const char *ext = (const char *)glGetString(GL_EXTENSIONS);
+  void (*clip_control)(GLenum, GLenum) = ext && strstr(ext, "GL_EXT_clip_control") && eglGetProcAddress
+    ? (void (*)(GLenum, GLenum))eglGetProcAddress("glClipControlEXT") : NULL;
+  if (clip_control) {
+    clip_control(0x8CA1 /* GL_LOWER_LEFT_EXT */, on ? 0x935F /* GL_ZERO_TO_ONE_EXT */ : 0x935E /* GL_NEGATIVE_ONE_TO_ONE_EXT */);
+    glClearDepthf(on ? 0 : 1);
+    r->reversed_depth = on;
+    r->cur_depth_test = -1;
+    return;
+  }
+#endif
+  if (on) gen_note(r, "a reversed depth buffer on GLES needs EXT_clip_control, which this context lacks: left off");
+}
 
 /* ── GPU timing (EXT_disjoint_timer_query) ───────────────────────── */
 #define T3_TIME_ELAPSED 0x88BF
@@ -1067,7 +1101,7 @@ static GLenum gl_internal_format(const t3_texture *t) {
     default: return GL_DEPTH_COMPONENT16;
     }
   }
-  /* r186 (colour management on): an sRGB texture is stored sRGB and GL
+  /* r187 (colour management on): an sRGB texture is stored sRGB and GL
    * decodes on sampling (WebGL backend: SRGB8_ALPHA8); the generated programs
    * do no decode of their own */
   if (t->color_space == T3_SRGB_COLOR_SPACE && t3_get_color_management() && t->type != T3_FLOAT_TYPE && t->type != T3_HALF_FLOAT_TYPE)
@@ -1321,6 +1355,7 @@ typedef struct {
   GLuint fbo, depth_rb;              /* the target (its texture) and its depth renderbuffer */
   GLuint msaa_fbo, msaa_color, msaa_depth; /* a multisampled target: drawn here, blitted to fbo */
   int w, h;
+  int face, mip;                     /* a cube target: what fbo has attached */
 } rt_gl;
 
 static void rt_free(t3_render_target *rt) {
@@ -1339,11 +1374,11 @@ static void rt_free(t3_render_target *rt) {
 
 #define T3_SCRATCH_UNIT 31 /* uploads that are not draws (render target setup, mipmaps) */
 
-/* a target's depth renderbuffer: r186 gives every target a depth texture of
+/* a target's depth renderbuffer: r187 gives every target a depth texture of
  * UnsignedIntType (UnsignedInt248Type with stencil), so 24 bit unless a
  * depth texture asks for another type */
-static void rt_depth_storage(const t3_render_target *rt, int samples) {
-  GLenum fmt = rt->stencil_buffer ? GL_DEPTH24_STENCIL8 : GL_DEPTH_COMPONENT24;
+static void rt_depth_storage(const t3_render_target *rt, int samples, bool reversed) {
+  GLenum fmt = rt->stencil_buffer ? GL_DEPTH24_STENCIL8 : reversed ? GL_DEPTH_COMPONENT32F : GL_DEPTH_COMPONENT24;
   if (!rt->stencil_buffer && rt->depth_texture) {
     if (rt->depth_texture->type == T3_FLOAT_TYPE) fmt = GL_DEPTH_COMPONENT32F;
     else if (rt->depth_texture->type == T3_UNSIGNED_SHORT_TYPE) fmt = GL_DEPTH_COMPONENT16;
@@ -1387,19 +1422,41 @@ static rt_gl *rt_setup(t3_renderer *r, t3_render_target *rt) {
     if (rt->depth_buffer) {
       glGenRenderbuffers(1, &g->msaa_depth);
       glBindRenderbuffer(GL_RENDERBUFFER, g->msaa_depth);
-      rt_depth_storage(rt, samples);
+      rt_depth_storage(rt, samples, r->reversed_depth);
       glFramebufferRenderbuffer(GL_FRAMEBUFFER, rt->stencil_buffer ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT,
                                 GL_RENDERBUFFER, g->msaa_depth);
     }
   }
   /* the color texture */
   texture_gl *tg = texture_gl_of(t);
-  tu_bind(T3_SCRATCH_UNIT, tg->tex, true);
-  texture_params(GL_TEXTURE_2D, t);
-  glTexImage2D(GL_TEXTURE_2D, 0, ifmt, rt->width, rt->height, 0, gl_format(t), gl_type(t->type), NULL);
-  glBindFramebuffer(GL_FRAMEBUFFER, g->fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tg->tex, 0);
-  if (needs_mipmaps(t)) glGenerateMipmap(GL_TEXTURE_2D);
+  if (rt->depth_only) {
+    glBindFramebuffer(GL_FRAMEBUFFER, g->fbo);
+    GLenum none = GL_NONE;
+    glDrawBuffers(1, &none);
+#ifndef T3_WASMCART   /* (the cart ABI's gl module has no glReadBuffer) */
+    glReadBuffer(GL_NONE);
+#endif
+  } else if (rt->is_cube) {
+    /* every face of every level the target has: a PMREM's prefiltered levels, or the full chain */
+    int levels = 1;
+    if (t->mip_levels > 0) levels = t->mip_levels;
+    else if (needs_mipmaps(t)) for (int m = rt->width; m > 1; m >>= 1) levels++;
+    tu_bind_cube(T3_SCRATCH_UNIT, tg->tex, true);
+    texture_params(GL_TEXTURE_CUBE_MAP, t);
+    for (int l = 0; l < levels; l++) for (int f = 0; f < 6; f++)
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, l, ifmt, rt->width >> l, rt->height >> l, 0, gl_format(t), gl_type(t->type), NULL);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, levels - 1);
+    g->face = rt->active_face; g->mip = rt->active_mip;
+    glBindFramebuffer(GL_FRAMEBUFFER, g->fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + g->face, tg->tex, g->mip);
+  } else {
+    tu_bind(T3_SCRATCH_UNIT, tg->tex, true);
+    texture_params(GL_TEXTURE_2D, t);
+    glTexImage2D(GL_TEXTURE_2D, 0, ifmt, rt->width, rt->height, 0, gl_format(t), gl_type(t->type), NULL);
+    glBindFramebuffer(GL_FRAMEBUFFER, g->fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tg->tex, 0);
+    if (needs_mipmaps(t)) glGenerateMipmap(GL_TEXTURE_2D);
+  }
   tg->version = t->version;
   /* setupDepthRenderbuffer: a depth texture, else a renderbuffer */
   if (rt->depth_buffer) {
@@ -1417,7 +1474,7 @@ static rt_gl *rt_setup(t3_renderer *r, t3_render_target *rt) {
     } else {
       glGenRenderbuffers(1, &g->depth_rb);
       glBindRenderbuffer(GL_RENDERBUFFER, g->depth_rb);
-      rt_depth_storage(rt, 0);
+      rt_depth_storage(rt, 0, r->reversed_depth);
       glFramebufferRenderbuffer(GL_FRAMEBUFFER, rt->stencil_buffer ? GL_DEPTH_STENCIL_ATTACHMENT : GL_DEPTH_ATTACHMENT,
                                 GL_RENDERBUFFER, g->depth_rb);
     }
@@ -1450,6 +1507,13 @@ static void rt_finish(t3_renderer *r, t3_render_target *rt) {
     r->cur_fbo = g->msaa_fbo;
   }
   if (needs_mipmaps(t)) {
+    if (rt->is_cube) {
+      /* (CubeCamera.update: when the last face has been drawn) */
+      if (rt->active_face != 5 || rt->active_mip != 0) return;
+      tu_bind_cube(T3_SCRATCH_UNIT, ((texture_gl *)t->_gl)->tex, true);
+      glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+      return;
+    }
     tu_bind(T3_SCRATCH_UNIT, ((texture_gl *)t->_gl)->tex, true);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
@@ -1461,6 +1525,11 @@ static GLuint target_fbo(t3_renderer *r) {
   if (!rt) return own_msaa(r) ? msaa_target(r) : r->screen_fbo;
   rt_gl *g = rt_setup(r, rt);
   GLuint fbo = rt->samples ? g->msaa_fbo : g->fbo;
+  if (rt->is_cube && (g->face != rt->active_face || g->mip != rt->active_mip)) {
+    g->face = rt->active_face; g->mip = rt->active_mip;
+    gl_fbo(r, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + g->face, ((texture_gl *)rt->texture->_gl)->tex, g->mip);
+  }
   if (!r->fb_known || r->cur_fbo != fbo) {
     /* hosts unbind a texture attached to the framebuffer being drawn into */
     if (rt->texture->_gl) tu_forget(((texture_gl *)rt->texture->_gl)->tex);
@@ -1470,7 +1539,7 @@ static GLuint target_fbo(t3_renderer *r) {
 }
 
 /* ── lights (WebGLLights.setup / setupView) ──────────────────────── */
-/* r186 orders a program's lights by object id (LightsNode sortLights) */
+/* r187 orders a program's lights by object id (LightsNode sortLights) */
 static void lights_by_id(t3_light **a, int n) {
   for (int i = 1; i < n; i++) {
     t3_light *x = a[i];
@@ -1483,7 +1552,7 @@ static void setup_lights(t3_renderer *r, const t3_camera *cam) {
   light_state *ls = &r->ls;
   memset(ls, 0, sizeof *ls);
   /* shadow casters first (a stable sort), so a type's first numXShadows
-   * lights are its casters; lights_by_id then orders each type as r186's
+   * lights are its casters; lights_by_id then orders each type as r187's
    * LightsNode does */
   for (int pass = 0; pass < 2; pass++)
     for (int i = 0; i < r->light_count; i++) {
@@ -1591,7 +1660,7 @@ static void apply_blending(const t3_material *m) {
   } else {
     switch (b) {
     case 2: glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE); break;
-    case 3: glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR); break;   /* r186 refuses Subtractive and Multiply without premultipliedAlpha; these are the older straight-alpha functions */
+    case 3: glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR); break;   /* r187 refuses Subtractive and Multiply without premultipliedAlpha; these are the older straight-alpha functions */
     case 4: glBlendFunc(GL_ZERO, GL_SRC_COLOR); break;
     default: glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); break;
     }
@@ -1625,7 +1694,10 @@ static void set_material_state(t3_renderer *r, const t3_material *m) {
   if (dt != r->cur_depth_test) {
     if (dt) {
       if (r->cur_depth_test <= 0) glEnable(GL_DEPTH_TEST);
-      glDepthFunc(gl_depth_func(m->depth_func));
+      /* ReversedDepthFuncs: less and greater trade places */
+      int df = m->depth_func;
+      if (r->reversed_depth) df = df == 2 ? 6 : df == 3 ? 5 : df == 5 ? 3 : df == 6 ? 2 : df;
+      glDepthFunc(gl_depth_func(df));
     } else {
       glDisable(GL_DEPTH_TEST);
     }
@@ -1668,7 +1740,7 @@ static void list_push(render_list *l, render_item it) {
   }
   l->items[l->n++] = it;
 }
-/* the materials of the back-face pass, set to one side for a pass (r186
+/* the materials of the back-face pass, set to one side for a pass (r187
  * mutates material.side the same way) */
 static void backpass_side(t3_renderer *r, t3_side side) {
   for (int i = 0; i < r->backpass.n; i++) ((t3_material *)r->backpass.items[i].material)->side = side;
@@ -1712,7 +1784,7 @@ static bool ext_batches(const t3_renderer *r, uint16_t id) {
 T3_HOT static void push_mesh_item(t3_renderer *r, t3_object *o, t3_geometry *g, t3_material *m, const t3_group *grp,
                            bool can_batch) {
   if (!m || !m->visible) return;
-  /* r186 RenderList: transmission goes with the transparent objects */
+  /* r187 RenderList: transmission goes with the transparent objects */
   bool tr = m->transparent || (m->type == T3_MESH_PHYSICAL_MATERIAL && m->transmission > 0);
   /* (an extension program's hook fills each object's values: its meshes draw one by one,
    * unless the extension said its hook reads nothing of the object) */
@@ -1955,7 +2027,7 @@ static void project_scene(t3_renderer *r, t3_object *root, uint32_t camera_layer
   }
 }
 
-/* r186 RenderList painterSortStable: groupOrder, renderOrder, z, id */
+/* r187 RenderList painterSortStable: groupOrder, renderOrder, z, id */
 static int painter_sort(const void *pa, const void *pb) {
   const render_item *a = pa, *b = pb;
   if (a->render_order != b->render_order) return a->render_order - b->render_order;
@@ -1972,7 +2044,7 @@ static int reverse_painter_sort(const void *pa, const void *pb) {
 }
 
 /* ── auto-instancing ─────────────────────────────────────────────── */
-/* r186's instanced program transforms the normal by mat3(instanceMatrix)
+/* r187's instanced program transforms the normal by mat3(instanceMatrix)
  * divided by the squared column lengths (transformNormal): exact for
  * rotation x any axis scale, wrong under shear, so only shear-free,
  * non-mirrored world matrices are batched. */
@@ -2108,7 +2180,7 @@ static void finish_batches(t3_renderer *r) {
       continue;
     }
     /* a batch of meshes sharing geometry and material is one draw of
-     * r186's instanced program, their world matrices the instance attribute;
+     * r187's instanced program, their world matrices the instance attribute;
      * a frame where nothing moved re-uses the instance buffer untouched */
     it.batch_count = e->count;
     it.batch_offset = r->inst_n;
@@ -2176,6 +2248,8 @@ static void shadow_update_matrices(t3_renderer *r, t3_light *l) {
   t3_mat4 bias = { { 0.5f, 0, 0, 0, 0, 0.5f, 0, 0, 0, 0, 0.5f, 0, 0.5f, 0.5f, 0.5f, 1 } }, tmp;
   t3_mat4_multiply(&tmp, &bias, &c->projection_matrix);
   t3_mat4_multiply(&sh->matrix, &tmp, &c->matrix_world_inverse);
+  /* a reversed camera's z: 1 - z (LightShadow.updateMatrices with reversedDepth) */
+  if (r->reversed_depth) for (int k = 0; k < 4; k++) sh->matrix.e[k * 4 + 2] = sh->matrix.e[k * 4 + 3] - sh->matrix.e[k * 4 + 2];
   t3_mat4_multiply(&r->shadow_proj_screen, &c->projection_matrix, &c->matrix_world_inverse);
   t3_frustum_from_matrix(&r->shadow_frustum, &r->shadow_proj_screen);
 }
@@ -2264,7 +2338,7 @@ static void count_output_pass(t3_renderer *r);
 #include "renderer_wgpu.inc"
 #include "renderer_env.inc"
 
-/* ── r186's output pass: the scene is drawn into a linear target, this pass
+/* ── r187's output pass: the scene is drawn into a linear target, this pass
  * writes it to the screen with the output colour space applied ───────── */
 static GLuint gen_out_target(t3_renderer *r) {
   int w = r->width, h = r->height;
@@ -2278,7 +2352,7 @@ static GLuint gen_out_target(t3_renderer *r) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glBindRenderbuffer(GL_RENDERBUFFER, r->out_depth);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
+  glRenderbufferStorage(GL_RENDERBUFFER, r->reversed_depth ? 0x8CAD /* GL_DEPTH32F_STENCIL8 */ : GL_DEPTH24_STENCIL8, w, h);
   glBindFramebuffer(GL_FRAMEBUFFER, r->out_fbo);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, r->out_tex, 0);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, r->out_depth);
@@ -2292,7 +2366,7 @@ static GLuint gen_out_target(t3_renderer *r) {
   return r->out_fbo;
 }
 
-/* the output pass is r186's own program for the frame's tone mapping and
+/* the output pass is r187's own program for the frame's tone mapping and
  * output colour space (tools/gen-programs.mjs kind "output"), drawn over its
  * QuadMesh triangle */
 static void gen_output_pass(t3_renderer *r) {
@@ -2343,7 +2417,7 @@ static void gen_output_pass(t3_renderer *r) {
   bind_vao(r, r->out_vao);
   glDrawArrays(GL_TRIANGLES, 0, 3);
 }
-/* r186 counts its output pass (one triangle) in renderer.info whenever a
+/* r187 counts its output pass (one triangle) in renderer.info whenever a
  * render to the screen needs one (needsFrameBufferTarget: an sRGB output or
  * tone mapping), so three.c does too, also when it encoded in each program
  * instead */
@@ -2428,7 +2502,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   sort_items(&r->opaque, &r->scratch, painter_sort);
   if (r->opaque_only) r->transparent.n = 0;
   sort_items(&r->transparent, &r->scratch, reverse_painter_sort);
-  /* r186 _renderTransparents: double-sided transmissive objects draw their back
+  /* r187 _renderTransparents: double-sided transmissive objects draw their back
    * faces first (material.side set to BackSide, then FrontSide for the
    * transparent list, then back to DoubleSide) */
   r->backpass.n = 0;
@@ -2449,7 +2523,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
 #endif
   gen_render_shadow_maps(r, scene);
 
-  /* r186 draws into a linear target and encodes in a final pass; with nothing
+  /* r187 draws into a linear target and encodes in a final pass; with nothing
    * blended and no tone mapping the result is the same with the encode done in
    * each program, straight into the screen, without the extra target and pass */
   r->gen_direct = !r->exact_output && !r->target && r->output_color_space == T3_SRGB_COLOR_SPACE && !r->tone_mapping &&
@@ -2474,7 +2548,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
       if (r->cur_depth_write != 1) { glDepthMask(GL_TRUE); r->cur_depth_write = 1; }
       if (bits & GL_DEPTH_BUFFER_BIT) { glClearDepthf(et->clear_depth); glClearStencil(et->clear_stencil); }
       glClear(bits);
-      if (bits & GL_DEPTH_BUFFER_BIT) { glClearDepthf(1); glClearStencil(0); }
+      if (bits & GL_DEPTH_BUFFER_BIT) { glClearDepthf(r->reversed_depth ? 0 : 1); glClearStencil(0); }
     }
   } else if (bg_color || r->auto_clear) {
     t3_color cc = bg_color ? scene->background : r->clear_color;
@@ -2485,7 +2559,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
                       (r->auto_clear ? GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT : 0);
     glClear(bits);
   }
-  backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r186's do) */
+  backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r187's do) */
   gen_prepare(r, cam);
   if (!r->depth_prepass) gen_background(r, scene, cam);
 

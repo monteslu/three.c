@@ -1,5 +1,5 @@
 // e1-extension: three.c's example extension (tools/extensions/tint.mjs) written
-// in r186 TSL. Three objects share one MeshStandardMaterial whose colour is the
+// in r187 TSL. Three objects share one MeshStandardMaterial whose colour is the
 // material colour x a tint uniform in a group of its own (changed every frame)
 // x a texture x a scale per object (onObjectUpdate). three.c draws the
 // captured standard+map+xtint program and fills the three from its hook. A

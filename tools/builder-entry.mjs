@@ -1,5 +1,5 @@
 // The runtime program builder's JS side (src/builder.c runs it in an embedded
-// QuickJS with no host APIs): one r186 capture on the mock GPU, the same code
+// QuickJS with no host APIs): one r187 capture on the mock GPU, the same code
 // as tools/gen-programs.mjs --mock-gpu, then the program model three.c draws
 // from (tools/program-model.mjs). Every capture runs in a fresh runtime:
 // three.js numbers its nodes per process, and the numbers are in the text.
@@ -33,7 +33,7 @@ g.__t3_capture = async (state, backend, probe) => {
   const answers = JSON.parse(g.__t3_answers);
   const THREE = await import('three.webgpu.js');
   core.init({
-    THREE, TSL: null, threeVersion: THREE.REVISION === '186' ? '0.186.1' : THREE.REVISION, probe, debug: false,
+    THREE, TSL: null, threeVersion: THREE.REVISION === '187' ? '0.187.0' : THREE.REVISION, probe, debug: false,
     loadExtension: () => { throw new Error('extensions are not available at runtime'); },
     makeDevice: async (be, features, world) => {
       if (be === 'wgpu') {
@@ -46,7 +46,7 @@ g.__t3_capture = async (state, backend, probe) => {
         }
         return { canvas: m.canvas, device };
       }
-      const gl = mockGL(answers, world.w, world.h);
+      const gl = mockGL({ ...answers, clipControl: features.includes('rdepth') }, world.w, world.h);
       return { canvas: gl.canvas, gl };
     },
   });

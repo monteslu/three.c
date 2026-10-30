@@ -10,16 +10,16 @@
 // the extension declared, by the names after "ext.":
 //   tint       vec3, in a group of its own (sharedUniformGroup): the shape an
 //              embedder's per-frame data takes, the same for every object;
-//   tintScale  float, in r186's default object group: a value per object;
+//   tintScale  float, in r187's default object group: a value per object;
 //   tintMap    a texture (its name "ext.tintMap" is the binding's source),
 //              bound with the object's other textures.
 // The colour is material colour x tint x tintMap x tintScale.
 export const name = 'tint';
 export async function apply({ TSL, THREE, mat, props, sentinel }) {
   const { uniform, texture, uv, materialColor, sharedUniformGroup } = TSL;
-  // (named apart from its uniforms: r186's GLSL names the uniform block after
+  // (named apart from its uniforms: r187's GLSL names the uniform block after
   // the group, and a block named like its member does not compile)
-  // (updated each render, as r186's own renderGroup: a shared group with no
+  // (updated each render, as r187's own renderGroup: a shared group with no
   // update type uploads only when its needsUpdate is set)
   const group = sharedUniformGroup('tintFrame', 0, THREE.NodeUpdateType.RENDER);
   const r = sentinel(), g = sentinel(), b = sentinel();
@@ -30,7 +30,7 @@ export async function apply({ TSL, THREE, mat, props, sentinel }) {
   const scale = uniform(s).setName('tintScale');
   props['ext.tintScale'] = { kind: 'f32', value: [s] };
   // a 2x2 RGBA8 map with a game texture's defaults (linear, mipmapped, clamp:
-  // r186 bakes filter and wrap into the program)
+  // r187 bakes filter and wrap into the program)
   const map = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255, 128, 255, 64, 255, 255, 96, 255, 255, 32, 160, 255, 255]), 2, 2);
   map.magFilter = THREE.LinearFilter; map.minFilter = THREE.LinearMipmapLinearFilter; map.generateMipmaps = true;
   map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping;

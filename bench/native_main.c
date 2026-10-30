@@ -115,7 +115,7 @@ static int wgpu_up(void) {
   if (wgpuAdapterGetInfo(ad, &info) == WGPUStatus_Success)
     snprintf(wg_adapter, sizeof wg_adapter, "%.*s (%.*s)", (int)info.device.length, info.device.data,
              (int)info.description.length, info.description.data);
-  /* r186 asks for every feature the adapter has; the generated programs
+  /* r187 asks for every feature the adapter has; the generated programs
    * assume float32-filterable (a float render target read as a map) */
   WGPUFeatureName feats[] = { WGPUFeatureName_Float32Filterable };
   WGPUDeviceDescriptor dd = { .uncapturedErrorCallbackInfo = { .callback = wg_error_cb }, .requiredFeatureCount = 1, .requiredFeatures = feats };

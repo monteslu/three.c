@@ -1,5 +1,5 @@
 // e3-extension-textures: three.c's example extension with an array texture
-// and an integer texture (tools/extensions/layers.mjs) written in r186 TSL: an
+// and an integer texture (tools/extensions/layers.mjs) written in r187 TSL: an
 // R32UI texture read with textureLoad picks, per cell of the surface, a layer
 // of an RGBA8 DataArrayTexture sampled with texture(...).depth(layer); a
 // float per object (onObjectUpdate) shifts the layers. three.c draws the

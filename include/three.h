@@ -1,5 +1,5 @@
 /* three.c: the three.js API in C99, rendering with the programs three.js
- * r186 generates, on OpenGL ES 3.0 / WebGL2 or on WebGPU
+ * r187 generates, on OpenGL ES 3.0 / WebGL2 or on WebGPU
  * (t3_renderer_use_wgpu).
  *
  * Naming follows three.js: THREE.Mesh is t3_mesh, mesh.position is
@@ -35,9 +35,9 @@
 extern "C" {
 #endif
 
-#define T3_REVISION "186"   /* three.js 0.186.1 */
+#define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.186.22"
+#define T3_VERSION "0.187.0"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -133,7 +133,6 @@ typedef enum { T3_NO_COLOR_SPACE = 0, T3_SRGB_COLOR_SPACE = 1, T3_LINEAR_SRGB_CO
 typedef enum {
   T3_UV_MAPPING = 300, T3_CUBE_REFLECTION_MAPPING = 301, T3_CUBE_REFRACTION_MAPPING = 302,
   T3_EQUIRECTANGULAR_REFLECTION_MAPPING = 303, T3_EQUIRECTANGULAR_REFRACTION_MAPPING = 304,
-  T3_CUBE_UV_REFLECTION_MAPPING = 306, T3_CUBE_UV_REFRACTION_MAPPING = 307
 } t3_mapping;
 typedef enum { T3_REPEAT = 1000, T3_CLAMP_TO_EDGE = 1001, T3_MIRRORED_REPEAT = 1002 } t3_wrapping;
 typedef enum {
@@ -150,7 +149,7 @@ typedef enum {
  * hold unnormalised integers of the texture's type: R32UI is
  * T3_RED_INTEGER_FORMAT + T3_UNSIGNED_INT_TYPE, RG16UI T3_RG_INTEGER_FORMAT +
  * T3_UNSIGNED_SHORT_TYPE, a signed type gives the signed format. A program
- * reads them with r186's textureLoad (texelFetch / textureLoad), never
+ * reads them with r187's textureLoad (texelFetch / textureLoad), never
  * filtered: keep such a texture's filters T3_NEAREST, as DataTexture's are. */
 typedef enum {
   T3_RGBA_FORMAT = 1023, T3_DEPTH_FORMAT = 1026, T3_DEPTH_STENCIL_FORMAT = 1027,
@@ -182,8 +181,13 @@ typedef struct t3_texture {
   /* a CubeTexture: pixels hold the six faces (px, nx, py, ny, pz, nz) one
    * after another; needs_flip_env_map is CubeTexture._needsFlipEnvMap */
   bool is_cube, needs_flip_env_map;
+  /* texture.channel: which UV set a material samples it with, 0 (uv) or 1 (uv1) */
+  int channel;
+  /* a PMREM (t3_pmrem_*: isPMREMTexture): the cube's prefiltered mip levels,
+   * texture.mipmaps.length; 0 for any other texture */
+  int mip_levels;
   /* the GPU makes its contents (a render target's texture, a DepthTexture):
-   * r186's isRenderTargetTexture / isDepthTexture, which flip its sampling */
+   * r187's isRenderTargetTexture / isDepthTexture, which flip its sampling */
   bool gpu_made;
   void *_wgpu;              /* renderer-private: the WebGPU texture */
   /* DataArrayTexture: image.depth, its layer count (pixels hold the layers
@@ -208,7 +212,7 @@ t3_texture *t3_data_texture_new_typed(int w, int h, const void *rgba, t3_texture
 t3_texture *t3_data_texture_new_format(int w, int h, const void *data, t3_texture_format format, t3_texture_type type);
 /* DataArrayTexture(data, w, h, depth): depth layers of w*h texels, one after
  * another, in a format and type (T3_RGBA_FORMAT + T3_UNSIGNED_BYTE_TYPE is
- * three.js's default); sampled per layer by r186's texture(...).depth(layer).
+ * three.js's default); sampled per layer by r187's texture(...).depth(layer).
  * Nearest filtered, no mipmaps, no flipY, as three.js makes it. */
 t3_texture *t3_data_array_texture_new(int w, int h, int depth, const void *data, t3_texture_format format, t3_texture_type type);
 /* the bytes of one texel of a texture's format and type */
@@ -269,6 +273,9 @@ typedef struct {
   bool generate_mipmaps, depth_buffer, stencil_buffer;
   t3_texture *depth_texture;  /* retained by the target; NULL = none */
   int samples;                /* > 1: multisampled (resolved after each render) */
+  /* options.count = 0: no colour attachment, only depth_texture (required) is
+   * drawn. rt->texture is never allocated and must not be read. */
+  bool depth_only;
 } t3_render_target_options;
 
 typedef struct t3_render_target {
@@ -282,11 +289,20 @@ typedef struct t3_render_target {
   bool scissor_test;
   void *_gl;                  /* renderer-private */
   void *_wgpu;                /* renderer-private (WebGPU) */
+  /* a CubeRenderTarget, and the face (0 to 5) and mip level the renderer draws
+   * into (t3_renderer_set_render_target_ex) */
+  bool is_cube;
+  int active_face, active_mip;
+  bool depth_only;            /* t3_render_target_options.depth_only */
 } t3_render_target;
 
 t3_render_target_options t3_render_target_options_default(void);
 /* new RenderTarget(w, h, options); options NULL = the defaults */
 t3_render_target *t3_render_target_new(int w, int h, const t3_render_target_options *options);
+/* new CubeRenderTarget(size, options): six faces in one texture, usable as a
+ * cube map (MeshStandardMaterial.envMap, a CubeCamera's target). Multisampling
+ * is not supported on one. */
+t3_render_target *t3_cube_render_target_new(int size, const t3_render_target_options *options);
 /* RenderTarget.setSize: resizes (GPU storage is remade on next use) and
  * resets viewport and scissor */
 void t3_render_target_set_size(t3_render_target *rt, int w, int h);
@@ -468,13 +484,14 @@ typedef struct t3_material {
   t3_texture *light_map;
   float light_map_intensity;
   /* MeshPhysicalMaterial (T3_MESH_PHYSICAL_MATERIAL; the Standard fields
-   * apply too). As in r186, clearcoat, sheen, iridescence, anisotropy and
-   * transmission each turn on when their strength is above 0. */
+   * apply too). As in r187, clearcoat, sheen, diffuse_roughness, iridescence,
+   * anisotropy and transmission each turn on when their strength is above 0. */
   float ior, specular_intensity;            /* 1.5, 1 */
   t3_color specular_color;                  /* (1, 1, 1) */
   float clearcoat, clearcoat_roughness;     /* 0, 0 */
   t3_texture *clearcoat_normal_map;         /* retained; t3_material_set_texture( T3_CLEARCOAT_NORMAL_MAP ) */
   t3_vec2 clearcoat_normal_scale;           /* (1, 1) */
+  float diffuse_roughness;                  /* 0: Lambert; above 0: EON rough diffuse (dusty, flat at grazing angles), 1 the roughest */
   float sheen, sheen_roughness;             /* 0, 1 */
   t3_color sheen_color;                     /* (0, 0, 0) */
   float iridescence, iridescence_ior;       /* 0, 1.3 */
@@ -576,7 +593,7 @@ typedef struct t3_scene {
   /* scene.background as a texture and scene.environment (retained; set them
    * with the calls below) */
   struct t3_texture *background_texture, *environment;
-  /* r186: scene.backgroundIntensity (1), backgroundBlurriness (0: a cube
+  /* r187: scene.backgroundIntensity (1), backgroundBlurriness (0: a cube
    * background drawn sharp; above 0 through its PMREM), backgroundRotation,
    * environmentIntensity (1), environmentRotation (the generated renderer) */
   float background_intensity, background_blurriness, environment_intensity;
@@ -605,7 +622,7 @@ typedef struct t3_mesh {
 } t3_mesh;
 
 /* Skeleton: bones (retained) with their inverse bind matrices; the bone
- * matrices go to the GPU as a uniform / storage buffer, as r186's skinning node. */
+ * matrices go to the GPU as a uniform / storage buffer, as r187's skinning node. */
 typedef struct t3_skeleton {
   uint32_t _kind; int _refs; void (*_destroy)(void *);   /* misc header (see core.c) */
   t3_object **bones;
@@ -634,7 +651,7 @@ typedef struct t3_instanced_mesh {
   t3_attribute *instance_color;   /* NULL until a color is set */
   void *_gl;
   void *_cull;                    /* renderer-private: culled, sorted instances */
-  /* internal: the instances' bounding sphere in the mesh's space (r186
+  /* internal: the instances' bounding sphere in the mesh's space (r187
    * InstancedMesh.computeBoundingSphere: the geometry's sphere through every
    * instance matrix, united), recomputed when instance_matrix's version, the
    * count, the geometry or bounds change. Culling tests it: an instanced mesh
@@ -661,7 +678,7 @@ typedef struct t3_light_shadow {
   int map_width, map_height;
   t3_mat4 matrix;
   void *_gl;
-  float intensity;              /* LightShadow.intensity (1; r186): how dark the shadow is */
+  float intensity;              /* LightShadow.intensity (1; r187): how dark the shadow is */
 } t3_light_shadow;
 
 typedef struct t3_light {
@@ -741,7 +758,7 @@ t3_object *t3_object_get_by_name(t3_object *root, const char *name);
 void t3_instanced_mesh_set_matrix_at(t3_instanced_mesh *im, int i, const t3_mat4 *m);
 void t3_instanced_mesh_get_matrix_at(t3_instanced_mesh *im, int i, t3_mat4 *m);
 void t3_instanced_mesh_set_color_at(t3_instanced_mesh *im, int i, t3_color c);
-/* r186 InstancedMesh.boundingSphere, set by the caller (mesh space): culling
+/* r187 InstancedMesh.boundingSphere, set by the caller (mesh space): culling
  * tests it instead of computing one from the instance matrices, so it must
  * cover every instance however they move (a chunk of swaying grass: its
  * region, raised by the sway). NULL returns to the computed sphere. */
@@ -959,7 +976,7 @@ typedef enum { T3_BASIC_SHADOW_MAP = 0, T3_PCF_SHADOW_MAP = 1, T3_PCF_SOFT_SHADO
 typedef enum {
   T3_NO_TONE_MAPPING = 0, T3_LINEAR_TONE_MAPPING = 1, T3_REINHARD_TONE_MAPPING = 2, T3_CINEON_TONE_MAPPING = 3,
   T3_ACES_FILMIC_TONE_MAPPING = 4, T3_CUSTOM_TONE_MAPPING = 5,
-  T3_AGX_TONE_MAPPING = 6, T3_NEUTRAL_TONE_MAPPING = 7 /* r186 (the generated renderer) */
+  T3_AGX_TONE_MAPPING = 6, T3_NEUTRAL_TONE_MAPPING = 7 /* r187 (the generated renderer) */
 } t3_tone_mapping;
 
 typedef struct t3_render_info {
@@ -982,7 +999,7 @@ t3_renderer *t3_renderer_new(int width, int height);
 void t3_renderer_destroy(t3_renderer *r);
 void t3_renderer_set_size(t3_renderer *r, int width, int height);
 /* renderer.setViewport / setScissor / setScissorTest: in pixels, y measured
- * from the top, as three.js r186 on both backends. */
+ * from the top, as three.js r187 on both backends. */
 void t3_renderer_set_viewport(t3_renderer *r, int x, int y, int w, int h);
 void t3_renderer_set_scissor(t3_renderer *r, int x, int y, int w, int h);
 void t3_renderer_set_scissor_test(t3_renderer *r, bool on);
@@ -997,7 +1014,7 @@ void t3_renderer_set_framebuffer(t3_renderer *r, unsigned fbo);
 void t3_renderer_clear(t3_renderer *r, bool color, bool depth, bool stencil);
 void t3_renderer_set_clear_color(t3_renderer *r, uint32_t hex, float alpha);
 void t3_renderer_set_shadow_map(t3_renderer *r, bool enabled, t3_shadow_map_type type);
-/* r186 shadowMap.autoUpdate (default true): off, a light's shadow map is
+/* r187 shadowMap.autoUpdate (default true): off, a light's shadow map is
  * drawn once after each t3_renderer_shadow_needs_update (shadowMap.needsUpdate)
  * by the first render that uses it, so several renders of one scene in a
  * frame (a depth prepass, then the scene) draw it once */
@@ -1055,6 +1072,11 @@ bool t3_renderer_clears_target(const t3_renderer *r);
 /* renderer.setRenderTarget: render (and clear) into rt until set back
  * to NULL (the screen). The renderer does not retain rt. */
 void t3_renderer_set_render_target(t3_renderer *r, t3_render_target *rt);
+/* setRenderTarget(rt, activeCubeFace, activeMipmapLevel): which face and mip
+ * level of a cube target to draw into; its viewport and scissor become that
+ * level's. A cube target with generate_mipmaps builds its chain after a render
+ * into face 5 at level 0 (the last face a CubeCamera draws). */
+void t3_renderer_set_render_target_ex(t3_renderer *r, t3_render_target *rt, int face, int mip);
 t3_render_target *t3_renderer_get_render_target(const t3_renderer *r);
 void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *camera);
 /* Render the opaque queue only, including alpha-tested cutouts. Transparent
@@ -1113,19 +1135,19 @@ float t3_srgb_to_linear(float c);
 float t3_linear_to_srgb(float c);
 /* GLES: with nothing blended, no tone mapping and an sRGB output the
  * renderer encodes in each program and draws straight to the screen
- * (r186 draws into an RGBA16F target and encodes in an output pass; same
+ * (r187 draws into an RGBA16F target and encodes in an output pass; same
  * formula, ~0.07 ms of GPU time saved at 720p). The two differ only where
  * the driver's rounding of a different program changes a sparkle (specular
- * aliasing at grazing angles). exact: always r186's target and pass. */
+ * aliasing at grazing angles). exact: always r187's target and pass. */
 void t3_renderer_set_exact_output(t3_renderer *r, bool on);
-/* A project's own table of r186 programs (tools/gen-project-table.mjs writes
+/* A project's own table of r187 programs (tools/gen-project-table.mjs writes
  * <name>_gl.c and <name>_wgpu.c, each defining `const struct t3_gen_table
  * <name>_gl` / `_wgpu`): searched before three.c's own for every renderer.
  * Either may be NULL. Call before the first render. With a project table,
  * three.c can be built with only its core table (T3_TABLE=core) */
 struct t3_gen_table;
 void t3_register_program_table(const struct t3_gen_table *gl_table, const struct t3_gen_table *wgpu_table);
-/* The renderer draws with the programs three.js r186's node renderer
+/* The renderer draws with the programs three.js r187's node renderer
  * generates (src/gen). A draw whose material state the table lacks is
  * skipped; this names those states, one per line, in the generator's syntax:
  * add them to tools/gen-states.txt and regenerate. */
@@ -1133,7 +1155,7 @@ const char *t3_renderer_generated_missing(const t3_renderer *r);
 
 /* ── extension programs ───────────────────────────────────────────────
  * A generator extension (tools/extensions/<name>.mjs, or a project's own
- * module through --extend) adds r186 TSL to a material before its program is
+ * module through --extend) adds r187 TSL to a material before its program is
  * captured: uniform() and texture() nodes, colorNode and the rest, as a
  * three.js application writes them. The state carries x<name>
  * ("standard+map+xtint"), and the captured program lands in a table like any
@@ -1143,15 +1165,15 @@ const char *t3_renderer_generated_missing(const t3_renderer *r);
  * The values the extension declared as "ext.<name>" are filled at run time,
  * on GLES and WebGPU alike, by a hook the application registers for the
  * extension's name. The hook runs for each draw of a program with that
- * extension, as r186's onObjectUpdate does (and may run more than once for one
+ * extension, as r187's onObjectUpdate does (and may run more than once for one
  * draw, so it should only set values): it sets each uniform and texture by
  * its name. A uniform the extension put in a group of its own
- * (sharedUniformGroup) is uploaded only when its bytes change; one in r186's
+ * (sharedUniformGroup) is uploaded only when its bytes change; one in r187's
  * default object group travels with the draw. A draw whose extension has no
  * hook, or whose hook left one of its textures unset, is skipped and noted
  * in the renderer's error. Meshes with an extension are not auto-instanced
  * (t3_renderer_set_auto_instancing) unless t3_renderer_set_extension_batching
- * says the hook reads nothing of the object. As in r186,
+ * says the hook reads nothing of the object. As in r187,
  * a shadow caster draws with the material's extension too (state
  * depth+x<name>), and the same hook fills it. */
 /* the extension a material's program carries: name as in the state's x<name>
@@ -1177,7 +1199,7 @@ const t3_material *t3_extension_material(const t3_extension_ctx *c);
  * uniform (also when the driver optimised it out) or n does not fit it */
 bool t3_extension_set_uniform(t3_extension_ctx *c, const char *name, const float *v, int n);
 /* texture "ext.<name>", sampled as the extension's texture() node samples it
- * (a DepthTexture the extension samples with compare, r186's
+ * (a DepthTexture the extension samples with compare, r187's
  * texture(depth).compare(ref), gets a LessEqual comparison sampler on WebGPU,
  * linear unless the texture is nearest filtered; on GLES the GL texture's own
  * compare mode applies); false when the program has no such texture */
@@ -1189,7 +1211,7 @@ void t3_renderer_use_wgpu(t3_renderer *r, void *device, void *queue, int out_for
 /* the last render's output texture as RGBA8 rows (top row first), blocking */
 bool t3_renderer_wgpu_read(t3_renderer *r, uint8_t *rgba);
 /* WebGPU submits: by default each render (and clear) submits its own command
- * buffer, as r186 does. Deferred: renders record into one open command
+ * buffer, as r187 does. Deferred: renders record into one open command
  * buffer and t3_renderer_wgpu_submit sends it (one queue submit per frame;
  * Dawn's submit costs ~25 us). An embedder's encoder (WGPUCommandEncoder):
  * renders record into it and never submit; the embedder submits it and then
@@ -1273,10 +1295,11 @@ void t3_renderer_set_external_encoder(t3_renderer *r, uintptr_t wgpu_command_enc
 void t3_renderer_render_depth_to(t3_renderer *r, t3_scene *scene, t3_camera *camera, const t3_external_target *depth_only);
 
 /* ── PMREMGenerator ──────────────────────────────────────────────── */
-/* three.js r186's PMREMGenerator: prefiltered radiance environment maps in
- * the cube-UV layout (a half-float render target whose texture has
- * T3_CUBE_UV_REFLECTION_MAPPING), for MeshStandardMaterial.envMap,
- * scene.environment or scene.background. A cube or equirectangular envMap
+/* three.js r187's PMREMGenerator: prefiltered radiance environment maps as a
+ * half-float cube render target whose mip levels hold GGX-filtered radiance
+ * from a mirror at level 0 to roughness 1 (the texture's mip_levels says how
+ * many), for MeshStandardMaterial.envMap, scene.environment or
+ * scene.background. A cube or equirectangular envMap
  * gets one made automatically, as PMREMNode does. The targets returned are
  * the caller's (t3_release them). */
 typedef struct t3_pmrem_generator t3_pmrem_generator;
@@ -1287,8 +1310,8 @@ t3_render_target *t3_pmrem_from_equirectangular(t3_pmrem_generator *g, t3_textur
 /* fromScene(scene, sigma, near, far): renders the scene from the origin into
  * the six faces, a 256 cube */
 t3_render_target *t3_pmrem_from_scene(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far);
-/* fromScene's options (r186): size (the cube's face size; 0 = 256; rounded
- * down to a power of two in 16..1024), position (where the cube camera
+/* fromScene's options (r187): size (the cube's face size; 0 = 256; rounded
+ * down to a power of two, at least 256), position (where the cube camera
  * renders from) and render_target: a target an earlier call returned, drawn
  * into again instead of a new one being made (when it is the size `size`
  * allocates; otherwise a new target is returned). Either way the result is a
@@ -1296,7 +1319,8 @@ t3_render_target *t3_pmrem_from_scene(t3_pmrem_generator *g, t3_scene *scene, fl
  * keeps one target: rt = t3_pmrem_from_scene_ex(.., &(t3_pmrem_scene_options){
  * .size = 64, .position = p, .render_target = old }); t3_release(old).
  * Costs six renders of the scene at size x size, the blur when sigma > 0, and
- * the GGX filter over the LODs (a dozen small passes). */
+ * the GGX filter over the mip levels (six passes a level, 256 samples a texel
+ * on the sharp levels). */
 typedef struct t3_pmrem_scene_options { int size; t3_vec3 position; t3_render_target *render_target; } t3_pmrem_scene_options;
 t3_render_target *t3_pmrem_from_scene_ex(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far,
                                          const t3_pmrem_scene_options *options);
@@ -1310,6 +1334,17 @@ const t3_render_info *t3_renderer_info(t3_renderer *r);
  * without stalling) into t3_renderer_info's gpu_ms; off by default. In a
  * WebGL host this needs EXT_disjoint_timer_query_webgl2 enabled by the host. */
 void t3_renderer_set_gpu_timing(t3_renderer *r, bool on);
+/* new WebGPURenderer({ reversedDepthBuffer }): depth runs from 1 at the near
+ * plane to 0 at the far plane in a 32-bit float buffer, which spreads precision
+ * evenly out to the horizon (no z-fighting far away, and a much farther far
+ * plane). Set it before the first render. WebGPU always has it; GLES needs
+ * EXT_clip_control, and without it (a cart's GL has no such call) the call notes
+ * that and leaves it off, as three.js does on a context without the extension.
+ * On GLES it sets the context's clip control, and the default framebuffer keeps
+ * whatever depth format it was made with. An external target's depth clear value
+ * and format stay the embedder's: clear to 0 and use a 32-bit float format.
+ * Shadow states take programs of their own (+rdepth in a table). */
+void t3_renderer_set_reversed_depth(t3_renderer *r, bool on);
 /* The last shader compile / link error, or NULL. */
 const char *t3_renderer_last_error(t3_renderer *r);
 

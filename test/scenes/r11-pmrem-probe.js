@@ -8,8 +8,8 @@ renderer.setSize(1280, 720);
 renderer.setClearColor(0x000000, 1);
 const P = new THREE.Vector3(6, 2, -4);
 const capture = new THREE.Scene();
-// no background colour: r186 draws its solid-colour box round the origin, not
-// round options.position (an r186 defect three.c does not copy), so the probe
+// no background colour: r187 draws its solid-colour box round the origin, not
+// round options.position (an r187 defect three.c does not copy), so the probe
 // sees the clear colour behind the boxes on both
 const colours = [0xff4040, 0x40ff40, 0x4040ff, 0xffff40, 0xff40ff, 0x40ffff];
 const dirs = [[3, 0, 0], [-3, 0, 0], [0, 3, 0], [0, -3, 0], [0, 0, 3], [0, 0, -3]];

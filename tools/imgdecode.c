@@ -1,5 +1,5 @@
 /* Image bytes on stdin -> "w h\n" + RGBA8 rows on stdout (stb_image), for
- * the Node reference renders (tools/ref-r186.mjs builds it on first use into
+ * the Node reference renders (tools/ref-r187.mjs builds it on first use into
  * build/native/): Node has no image decoder. */
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_STDIO

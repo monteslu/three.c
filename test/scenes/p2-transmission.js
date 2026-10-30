@@ -1,7 +1,7 @@
-// p2-transmission: MeshPhysicalMaterial transmission (r186's framebuffer
+// p2-transmission: MeshPhysicalMaterial transmission (r187's framebuffer
 // copy, sampled at a roughness-dependent mip): glass blocks in front of a
 // striped wall: clear, frosted (rough), thick tinted (attenuation), and a
-// double-sided one (r186's back-face pass first). A directional light.
+// double-sided one (r187's back-face pass first). A directional light.
 const renderer = new THREE.WebGPURenderer();
 renderer.setSize(1280, 720);
 renderer.setClearColor(0x202830, 1);

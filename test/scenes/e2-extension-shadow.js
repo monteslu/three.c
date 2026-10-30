@@ -1,6 +1,6 @@
 // e2-extension-shadow: three.c's example extension that moves vertices
-// (tools/extensions/swell.mjs) written in r186 TSL: each vertex pushed along
-// its normal by a value per object (onObjectUpdate). r186 draws the shadow
+// (tools/extensions/swell.mjs) written in r187 TSL: each vertex pushed along
+// its normal by a value per object (onObjectUpdate). r187 draws the shadow
 // pass with the material's positionNode, so the shadows on the ground are the
 // swollen shapes; three.c draws them with the captured depth+xswell caster and
 // fills swell from its hook for both passes. The plain sphere casts with the

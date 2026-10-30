@@ -3,11 +3,11 @@
 // read with textureLoad, picks for each cell of the surface a layer of an
 // RGBA8 DataArrayTexture, sampled with texture(...).depth(layer). A float
 // uniform, layerShift, moves every cell to the next layer.
-//   layerIndex  RedIntegerFormat + UnsignedIntType, 4 x 4 (R32UI; r186's TSL reads
+//   layerIndex  RedIntegerFormat + UnsignedIntType, 4 x 4 (R32UI; r187's TSL reads
 //               an integer texture as one only for a 32-bit type)
 //   layerMap    DataArrayTexture, 4 x 4 x 4, RGBA8, linear filtered
-//   layerShift  float, in r186's default object group
-// A texture's settings are part of the program (r186 reads a nearest-filtered
+//   layerShift  float, in r187's default object group
+// A texture's settings are part of the program (r187 reads a nearest-filtered
 // texture with textureLoad, an integer one never filtered): the application's
 // textures must have the settings these have.
 export const name = 'layers';

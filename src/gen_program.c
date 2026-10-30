@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* three.c's fixed attribute locations (gen_program.h) by the names r186's
+/* three.c's fixed attribute locations (gen_program.h) by the names r187's
  * generated programs use. nodeAttribute0..3 are the four vec4 columns of the
- * instance matrix (r186's instanced-attribute path), like A_INSTANCE_MATRIX. */
+ * instance matrix (r187's instanced-attribute path), like A_INSTANCE_MATRIX. */
 static int fixed_location(const char *name) {
   if (!strcmp(name, "position")) return A_POSITION;
   if (!strcmp(name, "normal")) return A_NORMAL;
@@ -106,7 +106,7 @@ static const struct { const char *tail; uint8_t op; } OPS[] = {
   { "material.specular", GOP_MAT_SPECULAR }, { "material.shininess", GOP_MAT_SHININESS }, { "material.ior", GOP_MAT_IOR },
   { "material.clearcoat", GOP_MAT_CLEARCOAT }, { "material.clearcoatRoughness", GOP_MAT_CLEARCOAT_R },
   { "material.specularIntensity", GOP_MAT_SPEC_INTENSITY }, { "material.specularColor", GOP_MAT_SPEC_COLOR },
-  { "material.clearcoatNormalScale", GOP_MAT_CC_NORMAL_SCALE }, { "material.sheen", GOP_MAT_SHEEN },
+  { "material.clearcoatNormalScale", GOP_MAT_CC_NORMAL_SCALE }, { "material.sheen", GOP_MAT_SHEEN }, { "material.diffuseRoughness", GOP_MAT_DIFFUSE_ROUGHNESS },
   { "material.sheenColor", GOP_MAT_SHEEN_COLOR }, { "material.sheenRoughness", GOP_MAT_SHEEN_R },
   { "material.iridescence", GOP_MAT_IRID }, { "material.iridescenceIOR", GOP_MAT_IRID_IOR },
   { "material.iridescenceThicknessMax", GOP_MAT_IRID_THICK_MAX }, { "material.anisotropyVector", GOP_MAT_ANISO_VEC },
@@ -118,10 +118,10 @@ static const struct { const char *tail; uint8_t op; } OPS[] = {
   { "material.envMapIntensity", GOP_ENV_INTENSITY }, { "scene.environmentIntensity", GOP_ENV_INTENSITY },
   { "material.envMapRotation", GOP_ENV_ROTATION }, { "scene.environmentRotation", GOP_ENV_ROTATION },
   { "material.reflectivity", GOP_MAT_REFLECTIVITY }, { "material.refractionRatio", GOP_MAT_REFRACTION },
-  { "cubeuv.texelWidth", GOP_CUBEUV_TW }, { "cubeuv.texelHeight", GOP_CUBEUV_TH }, { "cubeuv.maxMip", GOP_CUBEUV_MAXMIP },
+  { "pmrem.maxLod", GOP_PMREM_MAXLOD }, { "pmrem.size", GOP_PMREM_SIZE },
   { "scene.backgroundIntensity", GOP_BG_INTENSITY }, { "scene.backgroundRotationT", GOP_BG_ROTATION },
   { "scene.backgroundBlurriness", GOP_BG_BLUR }, { "background.matrix", GOP_BG_MATRIX }, { "background.flipY", GOP_BG_FLIPY },
-  { "pmrem.roughness", GOP_PMREM_ROUGH }, { "pmrem.mipInt", GOP_PMREM_MIP }, { "pmrem.sigma", GOP_PMREM_SIGMA },
+  { "pmrem.roughness", GOP_PMREM_ROUGH }, { "pmrem.lodBias", GOP_PMREM_LODBIAS }, { "pmrem.sourceLod", GOP_PMREM_SOURCELOD }, { "pmrem.sigma", GOP_PMREM_SIGMA },
   { "pmrem.source.flipY", GOP_PMREM_FLIPY }, { "envMap.flipY", GOP_ENV_FLIPY }, { "environment.flipY", GOP_ENV_FLIPY },
 };
 
@@ -147,11 +147,11 @@ static bool parse_op(const char *path, uint8_t *op, uint8_t *idx, uint8_t *sub) 
   /* "<type>[i].shadow.<field>" */
   {
     static const char *const types[] = { "directional[].shadow.", "point[].shadow.", "spot[].shadow." };
-    static const char *const fields[] = { "bias", "normalBias", "radius", "intensity", "mapSize", "matrix" };
+    static const char *const fields[] = { "bias", "normalBias", "radius", "intensity", "mapSize", "matrix", "near", "far" };
     for (int t = 0; t < 3; t++) {
       size_t tl = strlen(types[t]);
       if (strncmp(norm, types[t], tl)) continue;
-      for (int f = 0; f < 6; f++)
+      for (int f = 0; f < 8; f++)
         if (!strcmp(norm + tl, fields[f])) { *op = GOP_SHADOW; *idx = (uint8_t)index; *sub = (uint8_t)(t << 4 | f); return true; }
     }
   }
@@ -179,7 +179,7 @@ static bool parse_op(const char *path, uint8_t *op, uint8_t *idx, uint8_t *sub) 
 
 /* the fragment source writing sRGB itself: the generated main writes linear
  * `fragColor`; that becomes a plain variable and a last statement encodes it
- * with r186's sRGB transfer (the same formula its output pass uses) */
+ * with r187's sRGB transfer (the same formula its output pass uses) */
 static char *encode_output(const char *src, const char *state, char *err, size_t errcap) {
   const char *decl = "layout( location = 0 ) out vec4 fragColor;";
   const char *d = strstr(src, decl);
@@ -187,7 +187,7 @@ static char *encode_output(const char *src, const char *state, char *err, size_t
   if (!d || !end || end < d) { snprintf(err, errcap, "%s: fragment output not where expected", state); return NULL; }
   const char *repl = "layout( location = 0 ) out vec4 t3_fragOut;\nvec4 fragColor;\n"
                      "vec3 t3_oetf( vec3 v ) { return mix( pow( v, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), v * 12.92, vec3( lessThanEqual( v, vec3( 0.0031308 ) ) ) ); }";
-  /* as r186's output pass: alpha clamped, unpremultiplied (0 where alpha
+  /* as r187's output pass: alpha clamped, unpremultiplied (0 where alpha
    * is 0), encoded, premultiplied again */
   const char *tail = "\t{ float t3_a = clamp( fragColor.a, 0.0, 1.0 );\n"
                      "\t  vec3 t3_c = t3_a == 0.0 ? vec3( 0.0 ) : fragColor.rgb / vec3( t3_a );\n"
@@ -222,7 +222,7 @@ static char *subst(char *text, const char *from, const char *to, int *n) {
 }
 
 /* The program text with the object's template values in place of the
- * capture's (src->tpl): r186 bakes the bone count into the bone-matrix array
+ * capture's (src->tpl): r187 bakes the bone count into the bone-matrix array
  * size, the morph count into the influence array size and the morph loop, the
  * morph texture's row width into the vertex-index arithmetic. The capture used
  * values that occur nowhere else; each pattern must be found, or the build
@@ -583,7 +583,7 @@ void t3_gen_common(t3_gen_gl *g) {
     else if (!strcmp(n, "skinWeight")) slot = T3_ATTR_SKIN_WEIGHT;
     g->attr_slot[a] = slot;
   }
-  /* constants: the bytes r186 uploaded for uniforms nothing varies */
+  /* constants: the bytes r187 uploaded for uniforms nothing varies */
   for (int k = 0; k < src->n_constants; k++) {
     const t3_gen_constant *c = &src->constants[k];
     if (g->mirror[c->group]) memcpy(g->mirror[c->group] + c->offset, c->bytes, c->length);

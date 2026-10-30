@@ -10,6 +10,9 @@
 #endif
 #include "wasmcart.h"
 /* constants wasmcart.h does not define */
+#ifndef GL_TEXTURE_MAX_LEVEL
+#define GL_TEXTURE_MAX_LEVEL 0x813D
+#endif
 #ifndef GL_UNPACK_ALIGNMENT
 #define GL_UNPACK_ALIGNMENT 0x0CF5
 #endif

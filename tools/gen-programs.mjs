@@ -22,7 +22,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-export const THREE_VERSION = '0.186.1';
+export const THREE_VERSION = '0.187.0';
 const REV = 'r' + THREE_VERSION.split('.')[1];
 
 const opt = { states: 'all', backend: 'both', out: join(ROOT, 'build', 'gen-programs'), check: false, single: false };
@@ -111,7 +111,7 @@ async function makeDevice(backend, features, world) {
     return { canvas, device };
   }
   if (GPU_MODE === 'mock') {
-    const gl = mockGpu.mockGL(JSON.parse(readFileSync(GPU_FILE, 'utf8')), world.w, world.h);
+    const gl = mockGpu.mockGL({ ...JSON.parse(readFileSync(GPU_FILE, 'utf8')), clipControl: features.includes('rdepth') }, world.w, world.h);
     return { canvas: gl.canvas, gl };
   }
   const { createWebGL2Context } = await import(webglNodeUrl());
@@ -198,7 +198,7 @@ for (const state of states) for (const be of backends) {
     }
   }
 }
-// the DFG LUT (r186's precomputed BRDF scale/bias, 16x16 RG16F, bound by the
+// the DFG LUT (r187's precomputed BRDF scale/bias, 16x16 RG16F, bound by the
 // standard/physical programs as "dfg_lut"): its data is a literal in the
 // package source, copied out as is
 if (!opt.single) {

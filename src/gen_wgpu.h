@@ -1,4 +1,4 @@
-/* The WebGPU side of r186's generated programs (src/gen/programs_wgpu.c):
+/* The WebGPU side of r187's generated programs (src/gen/programs_wgpu.c):
  * shader modules from the captured WGSL, bind group layouts from the
  * manifest, pipelines per render state, and the frame's resources (vertex
  * and index buffers, textures, samplers, the streamed uniform data).
@@ -37,6 +37,7 @@ typedef struct {
   uint8_t strides[12];    /* the geometry's item size for each non-instance attribute, manifest order */
   uint8_t samples;        /* 0 or 1: single sampled, else the MSAA count */
   uint8_t flip_y;         /* clip y negated, front face CW: a target stored bottom-up (t3_external_target.flip_y) */
+  uint8_t reversed;       /* reversedDepthBuffer: the depth compare mirrored */
   WGPUTextureFormat color, depth;
 } t3_wgpu_state;
 
@@ -109,7 +110,7 @@ typedef struct {
 void t3_wgpu_render_target(t3_wgpu *w, t3_render_target *rt, t3_wgpu_rt *out);
 /* after a render into rt: its texture's mipmaps */
 void t3_wgpu_render_target_done(t3_wgpu *w, t3_render_target *rt);
-/* transmission's framebuffer copy (r186 ViewportTextureNode): src is the colour
+/* transmission's framebuffer copy (r187 ViewportTextureNode): src is the colour
  * attachment just drawn into, with no pass open; returns the mipmapped copy */
 WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView src, WGPUTextureFormat fmt, int width, int height, bool flip);
 void t3_wgpu_render_target_free(t3_render_target *rt);
@@ -118,7 +119,7 @@ void t3_wgpu_render_target_free(t3_render_target *rt);
  * kept in *slot, its view for sampling (2D or cube) and one attachment view
  * per face */
 WGPUTextureView t3_wgpu_depth_map(t3_wgpu *w, void **slot, int width, int height, bool cube, WGPUTextureView *face_views);
-/* r186's shadow sampler: LessEqual comparison, linear (PCF) or nearest */
+/* r187's shadow sampler: LessEqual comparison, linear (PCF) or nearest */
 WGPUSampler t3_wgpu_compare_sampler(t3_wgpu *w, bool linear);
 /* an RGBA32Float 2D array (morph targets), remade when version changes */
 WGPUTextureView t3_wgpu_array_texture(t3_wgpu *w, void **slot, uint32_t version, int width, int height, int layers, const float *data);
@@ -130,6 +131,9 @@ bool t3_wgpu_read_rgba8(t3_wgpu *w, void *texture_slot, int width, int height, u
 WGPUDevice t3_wgpu_device(t3_wgpu *w);
 /* the device lacks core-features-and-limits (WebGPU compatibility mode, as wasmcart gives carts) */
 bool t3_wgpu_compat(t3_wgpu *w);
+/* reversedDepthBuffer: depth clears to 0, shadow compares mirror, the renderer's own depth buffers are 32-bit float */
+void t3_wgpu_set_reversed_depth(t3_wgpu *w, bool on);
+WGPUTextureFormat t3_wgpu_depth_format(const t3_wgpu *w);
 
 #endif
 #endif

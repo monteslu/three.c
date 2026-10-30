@@ -1,4 +1,4 @@
-// A project's own table of r186 programs: the states it draws, captured from
+// A project's own table of r187 programs: the states it draws, captured from
 // three.js (tools/gen-programs.mjs) and emitted as C (tools/emit-programs.mjs)
 // under the project's name, for t3_register_program_table. Captures are
 // cached, so a rerun only captures the states it has not seen.
@@ -52,14 +52,14 @@ const listed = read(STATES);
 const fromLogs = all('--missing').flatMap((f) => read(resolve(f)));
 const added = [...new Set(fromLogs)].filter((s) => !listed.includes(s));
 if (added.length) {
-  const text = existsSync(STATES) ? readFileSync(STATES, 'utf8').replace(/\n?$/, '\n') : '# r186 program states this project draws (tools/gen-project-table.mjs)\n';
+  const text = existsSync(STATES) ? readFileSync(STATES, 'utf8').replace(/\n?$/, '\n') : '# r187 program states this project draws (tools/gen-project-table.mjs)\n';
   writeFileSync(STATES, text + added.join('\n') + '\n');
   console.log(`${STATES}: +${added.length} from the missing logs`);
 }
 let states = [...new Set([...listed, ...added])];
 if (!states.length) throw new Error(`${STATES}: no states`);
 
-// a state name: kind+features+lDPSH+sDPS+z<n>+x<ext> (tools/gen-programs.mjs parseState)
+// a state name: kind+features+lDPSH+sDPS+x<ext> (tools/gen-programs.mjs parseState)
 function parse(st) {
   const [kind, ...toks] = st.split('+');
   let lights = null, cast = null;

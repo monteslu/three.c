@@ -1,4 +1,4 @@
-// The capture of one r186 program state on one backend, independent of where
+// The capture of one r187 program state on one backend, independent of where
 // it runs: tools/gen-programs.mjs runs it under Node (on real devices or the
 // mock GPU), and three.c's runtime builder runs it under QuickJS. The host
 // supplies three.js and the devices:
@@ -27,31 +27,30 @@ const KINDS = {
   basic: () => new THREE.MeshBasicMaterial(), lambert: () => new THREE.MeshLambertMaterial(),
   phong: () => new THREE.MeshPhongMaterial(), standard: () => new THREE.MeshStandardMaterial(),
   physical: () => new THREE.MeshPhysicalMaterial(),
-  // the shadow pass: the caster program r186 draws depth with (its
+  // the shadow pass: the caster program r187 draws depth with (its
   // scene.overrideMaterial); captured from the mesh's shadow-pass draw with
   // one directional shadow. The material here is only the main pass's.
   depth: () => new THREE.MeshStandardMaterial(),
   // the non-mesh kinds: drawn as Points / Line / Sprite objects; normal = MeshNormalMaterial
-  // r186's node renderer draws a Points object as 1-pixel GL points whatever the
+  // r187's node renderer draws a Points object as 1-pixel GL points whatever the
   // material (PointsNodeMaterial.setupVertex: builder.object.isPoints -> gl_PointSize
   // = 1.0; size is ignored); sized, attenuated points are PointsNodeMaterial on a
   // Sprite ("psprite": size, sizeAttenuation, rotation, the sprite's center)
   points: () => new THREE.PointsMaterial(), psprite: () => new THREE.PointsNodeMaterial(),
   line: () => new THREE.LineBasicMaterial(),
   sprite: () => new THREE.SpriteMaterial(), normal: () => new THREE.MeshNormalMaterial(),
-  // r186's OUTPUT PASS (tone mapping + output colour space over the linear
+  // r187's OUTPUT PASS (tone mapping + output colour space over the linear
   // framebuffer target): captured from the pass's own draw
   output: () => new THREE.MeshBasicMaterial(),
   // AUXILIARY programs the renderer draws itself, captured from their own
   // draws (see auxCapture): the scene background (a cube texture, a PMREM /
   // blurred one, a 2D texture), and the PMREM generator's passes (a cube map
-  // or an equirect to cube-UV, the GGX filter and the blur; the last two bake
-  // the target's size: +z<lodMax>)
+  // or an equirect to a cube, the GGX filter, the integration and the blur)
   bgcube: () => new THREE.MeshBasicMaterial(), bgpmrem: () => new THREE.MeshBasicMaterial(), bg2d: () => new THREE.MeshBasicMaterial(),
   pmremcube: () => new THREE.MeshBasicMaterial(), pmremequi: () => new THREE.MeshBasicMaterial(),
-  pmremggx: () => new THREE.MeshBasicMaterial(), pmremblur: () => new THREE.MeshBasicMaterial(),
+  pmremggx: () => new THREE.MeshBasicMaterial(), pmremintegration: () => new THREE.MeshBasicMaterial(), pmremblur: () => new THREE.MeshBasicMaterial(),
 };
-const AUX = new Set(['bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremblur']);
+const AUX = new Set(['bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremintegration', 'pmremblur']);
 const TONE = { tmlinear: 'LinearToneMapping', tmreinhard: 'ReinhardToneMapping', tmcineon: 'CineonToneMapping',
                tmaces: 'ACESFilmicToneMapping', tmagx: 'AgXToneMapping', tmneutral: 'NeutralToneMapping' };
 const NON_MESH = new Set(['points', 'psprite', 'line', 'sprite']);
@@ -67,24 +66,29 @@ const FEATURES = {
   inst: () => {},           // the mesh is an InstancedMesh
   flat: (m) => { m.flatShading = true; },
   trans: (m) => { m.transparent = true; m.opacity = 0.5; },
-  // r186 puts instance matrices in a uniform buffer while count * 64 bytes fits
+  // r187 puts instance matrices in a uniform buffer while count * 64 bytes fits
   // the backend's uniform limit (WebGPU 64 KB: 1024 instances; WebGL2
   // GL_MAX_UNIFORM_BLOCK_SIZE, 16 KB: 256) and in interleaved instanced
   // attributes beyond that (Instance.js): a game's big batches get the
   // attribute program, so both are captured (inst = 4 instances, instbig = 2000)
   instbig: () => {},
   icol: () => {},
-  // MeshPhysicalMaterial's optional lobes: r186 compiles each in when its strength is above 0
+  // MeshPhysicalMaterial's optional lobes: r187 compiles each in when its strength is above 0
   cc: (m) => { needs(m, 'clearcoat'); m.clearcoat = 0.5; },
   ccn: (m) => { needs(m, 'clearcoatNormalMap'); m.clearcoatNormalMap = dataTexture(); },
   sheen: (m) => { needs(m, 'sheen'); m.sheen = 0.5; },
+  eon: (m) => { needs(m, 'diffuseRoughness'); m.diffuseRoughness = 0.5; },
   irid: (m) => { needs(m, 'iridescence'); m.iridescence = 0.5; },
   aniso: (m) => { needs(m, 'anisotropy'); m.anisotropy = 0.5; },
   transm: (m) => { needs(m, 'transmission'); m.transmission = 0.5; },           // the InstancedMesh has instance colours (setColorAt): an instanced vec3 attribute
   // the other maps, each its own texture so the manifest names its source;
   // a feature a material kind lacks is an error (the table never pairs them)
   nmap: (m) => { needs(m, 'normalMap'); m.normalMap = dataTexture(); },
-  ao: (m) => { needs(m, 'aoMap'); m.aoMap = dataTexture(); },             // samples uv1 (aoMap.channel is 1 in r186): the geometry gets a uv1
+  ao: (m) => { needs(m, 'aoMap'); m.aoMap = dataTexture(); },
+  // texture.channel = 1 (the second UV set) on a map a feature above has set
+  rdepth: () => {},   // the renderer's reversedDepthBuffer (WebGPU; a program differs only where it reads depth: shadows)
+  c1map: (m) => { m.map.channel = 1; }, c1nmap: (m) => { m.normalMap.channel = 1; }, c1ao: (m) => { m.aoMap.channel = 1; }, c1emap: (m) => { m.emissiveMap.channel = 1; },
+  c1rmap: (m) => { m.roughnessMap.channel = 1; }, c1mmap: (m) => { m.metalnessMap.channel = 1; }, c1amap: (m) => { m.alphaMap.channel = 1; }, c1lmap: (m) => { m.lightMap.channel = 1; },
   emap: (m) => { needs(m, 'emissiveMap'); m.emissiveMap = dataTexture(); },
   rmap: (m) => { needs(m, 'roughnessMap'); m.roughnessMap = dataTexture(); },
   mmap: (m) => { needs(m, 'metalnessMap'); m.metalnessMap = dataTexture(); },
@@ -98,16 +102,16 @@ const FEATURES = {
   cenv: (m) => { needs(m, 'envMap'); m.envMap = cubeTexture(THREE.CubeReflectionMapping); },
   refr: (m) => { m.envMap.mapping = THREE.CubeRefractionMapping; },    // after cenv
   mix: (m) => { m.combine = THREE.MixOperation; },
-  // material.side: r186 bakes it into the program (negateOnBackSide: DoubleSide
+  // material.side: r187 bakes it into the program (negateOnBackSide: DoubleSide
   // multiplies normals, tangents and bitangents by faceDirection, BackSide negates them)
-  // captured on a COMPATIBILITY device (no core-features-and-limits): r186's
+  // captured on a COMPATIBILITY device (no core-features-and-limits): r187's
   // WGSL differs there for a DepthTexture map (texture_2d<f32>, textureLoad .x);
   // wasmcart's WebGPU tier gives carts a compatibility device
   cm: () => {},
   ds: (m) => { m.side = THREE.DoubleSide; },
   bs: (m) => { m.side = THREE.BackSide; },
   add: (m) => { m.combine = THREE.AddOperation; },
-  env: () => {},      // material.envMap = a PMREM of a small scene (r186's cube-UV sampling); envMapIntensity, envMapRotation
+  env: () => {},      // material.envMap = a PMREM of a small scene (a cube with a mip chain); envMapIntensity, envMapRotation
   senv: () => {},     // scene.environment instead: scene.environmentIntensity / environmentRotation feed the same uniforms
   lmap: (m) => { needs(m, 'lightMap'); m.lightMap = dataTexture(); },
   skin: () => {},     // a SkinnedMesh with a two-bone skeleton (bone texture, bind matrices)
@@ -116,7 +120,7 @@ const FEATURES = {
   // output pass keys (applied to the renderer in capture())
   tmlinear: () => {}, tmreinhard: () => {}, tmcineon: () => {}, tmaces: () => {}, tmagx: () => {}, tmneutral: () => {}, lin: () => {},
   rep: (m) => { m.map.wrapS = m.map.wrapT = THREE.RepeatWrapping; },      // after map
-  nearest: (m) => { m.map.magFilter = m.map.minFilter = THREE.NearestFilter; m.map.generateMipmaps = false; },   // after map: r186 emits textureLoad
+  nearest: (m) => { m.map.magFilter = m.map.minFilter = THREE.NearestFilter; m.map.generateMipmaps = false; },   // after map: r187 emits textureLoad
   // the map is a render target's DepthTexture: on WebGPU a texture_depth_2d
   // read with textureLoad (a render target's colour texture compiles exactly
   // as a DataTexture map does)
@@ -158,7 +162,7 @@ function allStates() {
   out.push('standard+xmosaic');   // an extension with more textures than a bind group used to hold, one read in both stages
   for (const kind of LIT) out.push(`${kind}+shadow`);
   out.push('standard+l0100+shadow', 'standard+l0010+shadow');   // point (cube depth) and spot shadows
-  // (Lambert / Phong take no PMREM environment in r186: their envMap is the classic cube / equirect reflection, a later feature)
+  // (Lambert / Phong take no PMREM environment in r187: their envMap is the classic cube / equirect reflection, a later feature)
   for (const kind of ['standard', 'physical']) out.push(`${kind}+env`, `${kind}+senv`);
   out.push('standard+map+env', 'standard+map+nmap+ao+emap+rmap+mmap+senv');
   for (const kind of ['basic', 'lambert', 'phong', 'standard']) out.push(`${kind}+lmap`);
@@ -168,15 +172,17 @@ function allStates() {
   for (const kind of ['basic', 'lambert', 'phong', 'standard', 'physical']) out.push(`${kind}+instbig+icol`);
   out.push('standard+instbig+icol+shadow');
   // MeshPhysicalMaterial's lobes, alone and together
-  out.push('physical+cc', 'physical+cc+ccn', 'physical+sheen', 'physical+irid', 'physical+aniso', 'physical+cc+sheen+irid');
+  out.push('physical+cc', 'physical+cc+ccn', 'physical+sheen', 'physical+irid', 'physical+aniso', 'physical+cc+sheen+irid', 'physical+eon', 'physical+map+eon');
+  // the second UV set
+  out.push('standard+map+c1map', 'standard+ao+c1ao', 'standard+map+ao+c1ao', 'standard+lmap+c1lmap', 'standard+map+lmap+c1lmap', 'standard+map+ao+lmap+c1ao+c1lmap',
+    'standard+map+nmap+ao+rmap+mmap+c1ao', 'lambert+lmap+c1lmap', 'phong+lmap+c1lmap', 'basic+lmap+c1lmap', 'basic+map+c1map');
   // double-sided and back-sided materials (glTF doubleSided is common)
   for (const kind of ['basic', 'lambert', 'phong', 'standard', 'physical']) out.push(`${kind}+ds`, `${kind}+map+ds`, `${kind}+bs`);
   out.push('standard+map+nmap+ao+emap+rmap+mmap+ds', 'normal+ds');
   // the classic cube environment
   for (const kind of ['basic', 'lambert', 'phong']) out.push(`${kind}+cenv`, `${kind}+cenv+mix`, `${kind}+cenv+add`, `${kind}+cenv+refr`);
-  // backgrounds and the PMREM generator (cube sizes 16 .. 1024)
-  out.push('bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi');
-  for (let z = 4; z <= 10; z++) out.push(`pmremggx+z${z}`, `pmremblur+z${z}`);
+  // backgrounds and the PMREM generator
+  out.push('bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremintegration', 'pmremblur');
   return out;
 }
 // A state name is kind+feature+...; two more token kinds: lDPSH (digits:
@@ -192,21 +198,17 @@ function parseState(stateName) {
   const lightsTok = tokens.find((t) => /^l\d{4}$/.test(t));
   const extTok = tokens.find((t) => /^x[a-z0-9_]+$/.test(t));
   // sDPS: how many of each type's lights cast (the first ones in creation order:
-  // r186 orders a program's lights by object id); absent = all of them
+  // r187 orders a program's lights by object id); absent = all of them
   const castTok = tokens.find((t) => /^s\d{3}$/.test(t));
-  // z<lodMax>: the PMREM target size a pmremggx / pmremblur program bakes
-  const zTok = tokens.find((t) => /^z\d+$/.test(t));
-  if (zTok && !(kind === 'pmremggx' || kind === 'pmremblur')) throw new Error(`${stateName}: z<lodMax> is for pmremggx / pmremblur`);
-  if (!zTok && (kind === 'pmremggx' || kind === 'pmremblur')) throw new Error(`${stateName}: needs z<lodMax>`);
-  const features = tokens.filter((t) => t !== lightsTok && t !== extTok && t !== castTok && t !== zTok);
+  const features = tokens.filter((t) => t !== lightsTok && t !== extTok && t !== castTok);
   for (const f of features) if (!(f in FEATURES)) throw new Error(`${stateName}: unknown feature ${f}`);
   const lights = lightsTok ? lightsTok.slice(1).split('').map(Number) : LIT.has(kind) ? [1, 1, 0, 0] : kind === 'depth' ? [1, 0, 0, 0] : [0, 0, 0, 0];
   if (kind === 'depth' && lightsTok) throw new Error(`${stateName}: the depth kind takes no light vector`);
   const cast = castTok ? castTok.slice(1).split('').map(Number) : null;
   if (cast && !features.includes('shadow')) throw new Error(`${stateName}: sDPS needs +shadow`);
-  return { kind, features, lights, cast, extension: extTok ? extTok.slice(1) : null, lod: zTok ? +zTok.slice(1) : null };
+  return { kind, features, lights, cast, extension: extTok ? extTok.slice(1) : null };
 }
-// ── texture binding layout, as r186's WebGPU backend classifies it ────
+// ── texture binding layout, as r187's WebGPU backend classifies it ────
 // (WebGPUBindingUtils.createBindingsLayout): the manifest needs the sample
 // type and dimension, not just a name, so integer textures (an engine's
 // clustered-light data, say: RG32UI records, R32UI index lists, texelFetch,
@@ -229,7 +231,7 @@ function textureLayout(b, features = []) {
 let sentinelSeed = 0;
 // template parameter values at capture (see TEMPLATE PARAMETERS in capture())
 const TPL = { bones: 7, morphs: 3, morphWidth: 667 };   // 667 = SphereGeometry(1, 28, 22)'s vertex count
-// (no clipping states: r186's node renderer ignores material / renderer clippingPlanes; its clipping is ClippingGroup)
+// (no clipping states: r187's node renderer ignores material / renderer clippingPlanes; its clipping is ClippingGroup)
 // Two capture "worlds": the primary and a probe that differs in everything the
 // renderer's environment can vary (drawing-buffer size, viewport, sentinel
 // seed). A uniform no property explains is a CONSTANT when both worlds upload
@@ -246,7 +248,7 @@ function cubeTexture(mapping) {
 }
 function dataTexture() {
   // a 2x2 RGBA8 texture with the Texture class DEFAULTS (linear, mipmapped,
-  // clamp): r186 bakes filter and wrap into the program (textureLoad for a
+  // clamp): r187 bakes filter and wrap into the program (textureLoad for a
   // nearest/unmipmapped map, a tsl_coord_<wrapS>S_<wrapT>T function for the
   // wrap), so the capture must use the settings a game texture has. DataTexture
   // itself defaults to nearest/no mipmaps, which is why these are set.
@@ -261,17 +263,19 @@ const fround = (x) => Math.fround(x);
 // ── one state on one backend ─────────────────────────────────────────
 async function capture(stateName, backend) {
   sentinelSeed = WORLD.seed;
-  const { kind, features, lights, cast, extension, lod } = parseState(stateName);
+  const { kind, features, lights, cast, extension } = parseState(stateName);
   // the device comes from the host: a real one (webgpu-node / webgl-node) or a
   // mock (tools/mock-gpu.mjs); for 'cm' a compatibility-mode WebGPU device
   const { canvas, gl, device } = await HOST.makeDevice(backend, features, WORLD);
   let renderer;
-  if (backend === 'wgpu') renderer = new THREE.WebGPURenderer({ canvas, antialias: false, forceWebGL: false, powerPreference: 'high-performance', ...(device ? { device } : {}) });
+  if (backend === 'wgpu') renderer = new THREE.WebGPURenderer({ canvas, antialias: false, forceWebGL: false, reversedDepthBuffer: features.includes('rdepth'), powerPreference: 'high-performance', ...(device ? { device } : {}) });
   else {
     canvas.getContext = (k) => (k === 'webgl2' ? gl : null);
-    renderer = new THREE.WebGPURenderer({ canvas, context: gl, antialias: false, forceWebGL: true });
+    renderer = new THREE.WebGPURenderer({ canvas, context: gl, antialias: false, forceWebGL: true, reversedDepthBuffer: features.includes('rdepth') });
   }
   await renderer.init();
+  // (WebGLBackend turns it off without EXT_clip_control: such a capture would be the forward program)
+  if (features.includes('rdepth') && !renderer.reversedDepthBuffer) throw new Error(`${stateName}/${backend}: reversedDepthBuffer did not take`);
   if (HOST.afterInit) await HOST.afterInit(renderer, backend, features);
   renderer.setViewport(WORLD.vx, WORLD.vy, WORLD.vw, WORLD.vh);
   let exposure = null;
@@ -317,10 +321,11 @@ async function capture(stateName, backend) {
     if (features.includes('cc')) { setNum(mat, 'clearcoat', 'material.clearcoat'); setNum(mat, 'clearcoatRoughness', 'material.clearcoatRoughness'); }
     if (features.includes('ccn')) { const nx = sentinel(), ny = sentinel(); mat.clearcoatNormalScale.set(nx, ny); props['material.clearcoatNormalScale'] = { kind: 'vec2', value: [nx, ny] }; }
     if (features.includes('sheen')) { setNum(mat, 'sheen', 'material.sheen'); setColor(mat, 'sheenColor', 'material.sheenColor'); setNum(mat, 'sheenRoughness', 'material.sheenRoughness'); }
+    if (features.includes('eon')) setNum(mat, 'diffuseRoughness', 'material.diffuseRoughness');
     if (features.includes('irid')) {
       setNum(mat, 'iridescence', 'material.iridescence');
       const v = 1.2 + sentinel(); mat.iridescenceIOR = v; props['material.iridescenceIOR'] = { kind: 'f32', value: [v] };
-      const t = 300 + sentinel(); mat.iridescenceThicknessRange[1] = t; props['material.iridescenceThicknessMax'] = { kind: 'f32', value: [t] };
+      const t = 300 + sentinel(); mat.iridescenceThicknessMaximum = t; props['material.iridescenceThicknessMax'] = { kind: 'f32', value: [t] };
     }
     if (features.includes('aniso')) {
       const a = sentinel(), rot = sentinel(); mat.anisotropy = a; mat.anisotropyRotation = rot;
@@ -411,6 +416,17 @@ async function capture(stateName, backend) {
         props[`${type}[${i}].shadow.radius`] = { kind: 'f32', value: [rad] };
         props[`${type}[${i}].shadow.intensity`] = { kind: 'f32', value: [inten] };
         props[`${type}[${i}].shadow.mapSize`] = { kind: 'vec2', value: ms };
+        if (type === 'point') {
+          // PointShadowFilter reads the shadow camera's near and far (far is the
+          // light's distance when it has one: the camera's pinned to its own
+          // value here so that the two fingerprints differ)
+          const near = 0.25 + sentinel() / 100, far = 200 + sentinel();
+          sh.camera.near = near;
+          Object.defineProperty(sh.camera, 'far', { get: () => far, set: () => {} });
+          sh.camera.updateProjectionMatrix();
+          props[`point[${i}].shadow.near`] = { kind: 'f32', value: [near], optional: true };
+          props[`point[${i}].shadow.far`] = { kind: 'f32', value: [far], optional: true };
+        }
       }
     }
   }
@@ -424,14 +440,14 @@ async function capture(stateName, backend) {
     const fr = sentinel(), fg = sentinel(), fb = sentinel(); fog.color.setRGB(fr, fg, fb, THREE.LinearSRGBColorSpace); props['fog.color'] = { kind: 'vec3', value: [fr, fg, fb] };
     const fn = 1 + sentinel(), ff = 10 + sentinel(); fog.near = fn; fog.far = ff; props['fog.near'] = { kind: 'f32', value: [fn] }; props['fog.far'] = { kind: 'f32', value: [ff] };
   }
-  // TEMPLATE PARAMETERS: r186 bakes some per-object counts into the program text
+  // TEMPLATE PARAMETERS: r187 bakes some per-object counts into the program text
 // (bone count as a uniform array size, morph target count as a loop bound and
 // array size, the morph texture's row width). They are captured at values that
 // appear nowhere else in the program, recorded in the manifest, and substituted
 // by the renderer for the object at hand (gen_program.c).
 const geo = features.includes('morph') || features.includes('morphn') ? new THREE.SphereGeometry(1, 28, 22) : new THREE.BoxGeometry(1, 1, 1);
 if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWidth) throw new Error('morph capture geometry changed size');
-  if (mat.aoMap) geo.setAttribute('uv1', geo.attributes.uv.clone());
+  if (features.some((f) => f.startsWith('c1'))) geo.setAttribute('uv1', geo.attributes.uv.clone());
   if (features.includes('tan')) geo.computeTangents();
   if (features.includes('vcol')) { const n = geo.attributes.position.count; geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(0.5), 3)); }
   if (features.includes('morphn') && !features.includes('morph')) throw new Error(`${stateName}: morphn goes with morph`);
@@ -502,7 +518,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
   props['renderer.halfHeight'] = { kind: 'f32', value: [WORLD.h / 2], optional: true };
   props['camera.worldMatrix'] = { kind: 'mat4', value: Array.from(camera.matrixWorld.elements), optional: true };
   if (features.includes('transm')) { camera.updateMatrixWorld(); const cp = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld); props['camera.position'] = { kind: 'vec3', value: [cp.x, cp.y, cp.z], optional: true }; }   // (also the translation of camera.worldMatrix)
-  // the normal matrix r186 uploads: Matrix3.getNormalMatrix(object.matrixWorld) (ModelNode.js)
+  // the normal matrix r187 uploads: Matrix3.getNormalMatrix(object.matrixWorld) (ModelNode.js)
   props['object.normalMatrix'] = { kind: 'mat3', value: Array.from(new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld).elements), optional: true };   // only programs that transform normals have it
   for (const [path, pos] of viewPos) {
     const v = pos.clone().applyMatrix4(camera.matrixWorldInverse);
@@ -519,19 +535,15 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     const own = features.includes('env');
     // a PMREM (prefiltered mip-mapped radiance environment) of a small lit
     // scene, as a game would make from an equirect or a cube; three.js's own
-    // generator on this backend, so the capture samples the layout the
-    // programs expect (cube-UV). Its own draws pass through the hook untouched.
+    // generator on this backend, so the capture samples what the programs
+    // expect (a cube with a mip chain). Its own draws pass through the hook untouched.
     const pm = new THREE.PMREMGenerator(renderer);
     const envScene = new THREE.Scene();
     const sky = new THREE.Mesh(new THREE.SphereGeometry(10, 8, 6), new THREE.MeshBasicMaterial({ color: 0x8090ff, side: THREE.BackSide }));
     envScene.add(sky);
-    const rt = pm.fromScene(envScene, 0.04, 0.1, 100, { size: PROBE ? 128 : 256 });   // (the cube-UV size uniforms differ between worlds)
-    {
-      const h = rt.texture.image.height, mm = Math.log2(h) - 2;
-      props['cubeuv.texelWidth'] = { kind: 'f32', value: [1 / (3 * Math.max(Math.pow(2, mm), 112))] };
-      props['cubeuv.texelHeight'] = { kind: 'f32', value: [1 / h] };
-      props['cubeuv.maxMip'] = { kind: 'f32', value: [mm] };
-    }
+    const rt = pm.fromScene(envScene, 0.04, 0.1, 100, { size: PROBE ? 512 : 256 });   // (the PMREM size uniforms differ between worlds)
+    props['pmrem.maxLod'] = { kind: 'f32', value: [rt.texture.mipmaps.length - 1] };
+    props['pmrem.size'] = { kind: 'f32', value: [rt.texture.mipmaps[0].width], optional: true };
     if (own) { needs(mat, 'envMap'); mat.envMap = rt.texture; } else scene.environment = rt.texture;
     // the rotation uniform is the transposed rotation matrix (MaterialProperties.js), a mat4
     const rx = sentinel(), ry = sentinel(), rz = sentinel();
@@ -540,7 +552,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     const m = new THREE.Matrix4().makeRotationFromEuler(rot).transpose();
     props[own ? 'material.envMapRotation' : 'scene.environmentRotation'] = { kind: 'mat4', value: Array.from(m.elements) };
   }
-  // the depth kind keeps only the caster program's inputs (an extension's among them: r186
+  // the depth kind keeps only the caster program's inputs (an extension's among them: r187
   // draws a caster with the material's positionNode and colorNode alpha)
   if (kind === 'depth') for (const k of Object.keys(props)) if (!/^(object\.|skin\.|morph\.|ext\.)/.test(k)) delete props[k];
   if (kind === 'output') {
@@ -593,18 +605,20 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     camera.position.set(sentinel(), 0.2, 4); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
     let want = null;      // (renderObject) -> is it the draw to capture
     const pm = kind.startsWith('pmrem') ? new THREE.PMREMGenerator(renderer) : null;
+    // the box and the cube camera away from the origin, so that the box's matrix
+    // and every face's view are values nothing else has (a pass at the origin
+    // has an identity for both on the last face)
+    if (pm) { pm._boxMesh.position.set(sentinel(), sentinel(), sentinel()); pm._cubeCamera.position.set(sentinel(), sentinel(), sentinel()); }
     const smallScene = () => { const sc = new THREE.Scene(); sc.add(new THREE.Mesh(new THREE.SphereGeometry(10, 8, 6), new THREE.MeshBasicMaterial({ color: 0x8090ff, side: THREE.BackSide }))); return sc; };
     if (kind.startsWith('bg')) {
       if (kind === 'bgcube') scene.background = cubeTexture(THREE.CubeReflectionMapping);
       else if (kind === 'bgpmrem') {
         const pg = new THREE.PMREMGenerator(renderer);
-        const size = PROBE ? 128 : 256;
+        const size = PROBE ? 512 : 256;
         scene.background = pg.fromScene(smallScene(), 0.04, 0.1, 100, { size }).texture;
         const v = sentinel(); scene.backgroundBlurriness = v; props['scene.backgroundBlurriness'] = { kind: 'f32', value: [v] };
-        const h = scene.background.image.height, mm = Math.log2(h) - 2;
-        props['cubeuv.texelWidth'] = { kind: 'f32', value: [1 / (3 * Math.max(Math.pow(2, mm), 112))] };
-        props['cubeuv.texelHeight'] = { kind: 'f32', value: [1 / h] };
-        props['cubeuv.maxMip'] = { kind: 'f32', value: [mm] };
+        props['pmrem.maxLod'] = { kind: 'f32', value: [scene.background.mipmaps.length - 1] };
+        props['pmrem.size'] = { kind: 'f32', value: [scene.background.mipmaps[0].width], optional: true };
       } else {
         const t = dataTexture(); scene.background = t;
         t.offset.set(sentinel(), sentinel()); t.repeat.set(1 + sentinel(), 1 + sentinel()); t.updateMatrix();
@@ -627,26 +641,42 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     } else if (kind === 'pmremcube' || kind === 'pmremequi') {
       want = (r) => r.material && r.material.name === (kind === 'pmremcube' ? 'PMREM_cubemap' : 'PMREM_equirect');
     } else if (kind === 'pmremggx') {
-      const n = lod + 3, target = 1 / (n - 1);
-      props['pmrem.roughness'] = { kind: 'f32', value: [target * target * 1.25] };
-      props['pmrem.mipInt'] = { kind: 'f32', value: [lod] };
       want = (r) => r.material && r.material.name === 'PMREM_ggx';
+    } else if (kind === 'pmremintegration') {
+      want = (r) => r.material && r.material.name === 'PMREM_integration';
     } else if (kind === 'pmremblur') {
       props['pmrem.sigma'] = { kind: 'f32', value: [0.3 / Math.SQRT2] };
-      props['pmrem.mipInt'] = { kind: 'f32', value: [lod] };
       want = (r) => r.material && r.material.name === 'PMREM_blur';
     }
     let got = null;
     const origDraw = renderer.backend.draw.bind(renderer.backend);
-    renderer.backend.draw = (r, info) => { if (!got && want(r)) got = r; return origDraw(r, info); };
+    // (a PMREM pass draws one box per face and level: the buffers hold the last draw's values)
+    renderer.backend.draw = (r, info) => { if ((!got || kind.startsWith('pmrem')) && want(r)) got = r; return origDraw(r, info); };
+    // every level's roughness a value nothing else has, so the fingerprint can find it
+    const lodToRoughness = THREE.PMREMGenerator.lodToRoughness, rough = 0.25 + sentinel() / 1000;
+    const pmSize = PROBE ? 512 : 256;
+    if (kind === 'pmremggx' || kind === 'pmremintegration') {
+      THREE.PMREMGenerator.lodToRoughness = () => rough;
+      props['pmrem.roughness'] = { kind: 'f32', value: [rough] };
+      if (kind === 'pmremggx') props['pmrem.lodBias'] = { kind: 'f32', value: [Math.log2(pmSize) + 0.5 * Math.log2(6 / (256 * Math.pow(rough, 4))) + 0.5] };
+      else props['pmrem.sourceLod'] = { kind: 'f32', value: [Math.log2(pmSize / 16)] };
+    }
     if (kind.startsWith('bg')) renderer.render(scene, camera);
     else if (kind === 'pmremcube') pm.fromCubemap(cubeTexture(THREE.CubeReflectionMapping));
     else if (kind === 'pmremequi') { const e = dataTexture(); e.mapping = THREE.EquirectangularReflectionMapping; pm.fromEquirectangular(e); }
-    else if (kind === 'pmremggx') pm.fromScene(smallScene(), 0, 0.1, 100, { size: 1 << lod });
-    else pm.fromScene(smallScene(), 0.3, 0.1, 100, { size: 1 << lod });
+    else if (kind === 'pmremggx' || kind === 'pmremintegration') pm.fromScene(smallScene(), 0, 0.1, 100, { size: pmSize });
+    else pm.fromScene(smallScene(), 0.3, 0.1, 100, { size: pmSize });
+    THREE.PMREMGenerator.lodToRoughness = lodToRoughness;
     if (backend === 'wgpu') await new Promise((r) => setTimeout(r, 20)); else gl.finish();
     if (!got) throw new Error(`${stateName}/${backend}: the ${kind} draw was not seen`);
     if (kind.startsWith('bg')) props['camera.projectionMatrix'] = { kind: 'mat4', value: Array.from(camera.projectionMatrix.elements) };
+    // the cube camera's last face: the last draw's values
+    if (kind.startsWith('pmrem')) {
+      props['camera.matrixWorldInverse'] = { kind: 'mat4', value: Array.from(got.camera.matrixWorldInverse.elements) };
+      props['camera.worldMatrix'] = { kind: 'mat4', value: Array.from(got.camera.matrixWorld.elements), optional: true };
+      props['object.matrixWorld'] = { kind: 'mat4', value: Array.from(pm._boxMesh.matrixWorld.elements), optional: true };
+      props['camera.position'] = { kind: 'vec3', value: new THREE.Vector3().setFromMatrixPosition(got.camera.matrixWorld).toArray(), optional: true };
+    }
     return { scene, mat: got.material, mesh: got.object, ro: got, props };
   }
   // the bindings and the fingerprint
@@ -681,7 +711,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
         // (a uniform array, e.g. morph influences, is a buffer binding too: its bytes are searched like a uniform struct's)
         let bytes = null;
         try { const raw = bufOf(b); if (raw) bytes = new Uint8Array(raw).slice(); } catch (e) { bytes = null; }
-        // what the buffer carries, by its size (r186 names them NodeBuffer_<id>):
+        // what the buffer carries, by its size (its shader name says nothing):
         // instance matrices (count x mat4), bone matrices (bones x mat4), morph
         // influences (targets x 16 bytes, a std140 float array)
         const bl = b.byteLength ?? b.buffer?.byteLength ?? null;
@@ -696,10 +726,10 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     groups.push(G);
   }
   // A buffer binding's object name (UniformBuffer_0) is not its shader name
-  // (NodeBuffer_<id>): read the declarations, in order, and check the counts
+  // (a block holding one array): read the declarations, in order, and check the counts
   {
     const code = Object.values(stagesText()).join('\n');
-    const declared = [...code.matchAll(backend === 'wgpu' ? /var<(?:uniform|storage[^>]*)>\s+(NodeBuffer_\d+)\b/g : /^uniform (NodeBuffer_\d+) \{/gm)].map((m) => m[1]);
+    const declared = [...code.matchAll(backend === 'wgpu' ? /struct (\w+)Struct \{\s*value : array<[^;]*;\s*@binding[^\n]*\n\s*var<(?:uniform|storage[^>]*)>\s+\1\b/g : /^uniform (\w+) \{\s*\n\s*\w+ \w+\[\d*\];\s*\n\}/gm)].map((m) => m[1]);
     const bufs = groups.flatMap((G) => G.bindings.filter((B) => B.kind === 'buffer'));
     const uniq = [...new Set(declared)];
     if (uniq.length !== bufs.length) throw new Error(`${stateName}/${backend}: ${bufs.length} buffer binding(s) but ${uniq.length} NodeBuffer declaration(s) in the shaders`);
@@ -711,7 +741,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
   for (const [path, p] of Object.entries(props)) {
     const want = p.value.map(fround);
     const stride = p.kind === 'mat3' ? 4 : 1, cols = p.kind === 'mat3' ? 3 : 1, per = p.kind === 'mat3' ? 3 : want.length;
-    // every place the value is uploaded: r186 can hold the same quantity in
+    // every place the value is uploaded: r187 can hold the same quantity in
     // several uniforms (a normal matrix for world and for view); the first is
     // the property, the others are `path#1`, `path#2` ...
     const hits = [];
@@ -757,7 +787,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
       pend = null;
     }
   }
-  // COVERAGE: every uniform r186 uploads must be explained by a found property;
+  // COVERAGE: every uniform r187 uploads must be explained by a found property;
   // one that is not is data the renderer would leave zero (a Lambert whose
   // normal matrix was missing drew with no direct light and no failed check).
   // Its uploaded bytes are kept: the parent compares them with a probe capture

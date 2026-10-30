@@ -1,10 +1,10 @@
-// Four three.js r186 defects, reproduced with three.js alone (no three.c) in
-// headless Chromium, each next to the control that shows the correct result:
+// A three.js r187 defect, reproduced with three.js alone (no three.c) in
+// headless Chromium, next to the control that shows the correct result:
 // the object alone in a fresh renderer. three.c draws what the controls draw.
 //
-//   node tools/r186-defects/run.mjs [page,...]
+//   node tools/r187-defects/run.mjs [page,...]
 //
-// r186 comes from build/three-r186 (tools/gen-programs.mjs downloads it);
+// r187 comes from build/three-r187 (tools/gen-programs.mjs downloads it);
 // THREE_DEV=<a three.js checkout with build/> adds a column for that build.
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
@@ -14,7 +14,7 @@ import { pkgEntry } from '../deps.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ROOT = resolve(HERE, '..', '..');
 const { chromium } = await import(pkgEntry('playwright'));
-const TREES = { r186: join(ROOT, 'build', 'three-r186', 'package') };
+const TREES = { r187: join(ROOT, 'build', 'three-r187', 'package') };
 if (process.env.THREE_DEV) TREES.dev = resolve(process.env.THREE_DEV);
 const MIME = { '.js': 'text/javascript', '.html': 'text/html' };
 const server = createServer((q, s) => {
@@ -27,16 +27,13 @@ const server = createServer((q, s) => {
 }).listen(0);
 const port = server.address().port;
 const CASES = {
-  sprite: ['alone', 'withA'],
-  phong: ['mixAlone', 'addAlone', 'together'],
-  envmap: ['redAlone', 'blueAlone', 'together', 'pmremRedAlone', 'pmremBlueAlone', 'pmremTogether'],
   depthmap: ['greenAlone', 'depthFirst', 'greenFirst'],
 };
 for (const backend of ['webgl', 'webgpu']) {
   const browser = await chromium.launch({ args: backend === 'webgpu' ? ['--enable-unsafe-webgpu'] : ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=gl'] });
   for (const page of (process.argv[2] || Object.keys(CASES).join(',')).split(','))
     for (const v of Object.keys(TREES)) for (const c of CASES[page]) {
-      const pg = await browser.newPage();   // a fresh renderer per case: r186 caches programs across scenes
+      const pg = await browser.newPage();   // a fresh renderer per case: r187 caches programs across scenes
       const errs = [];
       pg.on('pageerror', (e) => errs.push(String(e)));
       pg.on('console', (m) => m.type() === 'error' && errs.push(m.text()));

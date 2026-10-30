@@ -1,7 +1,7 @@
 // r5-pmrem: PMREMGenerator from a CubeTexture, from an equirectangular
 // DataTexture and from a scene (with a colour background and a blur sigma);
 // rows of MeshStandardMaterial spheres from mirror to rough read each one, and
-// the cubemap's PMREM is also the scene background (CubeUV on the box).
+// the cubemap's PMREM is also the scene background (a cube on the box).
 const renderer = new THREE.WebGPURenderer();
 renderer.setSize(1280, 720);
 renderer.setClearColor(0x000000, 1);

@@ -25,7 +25,7 @@ const specs = [
   { color: 0x2050c0, roughness: 0.6, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05 },
   { color: 0x20a050, roughness: 0.6, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.2, clearcoatNormalMap: bumps, clearcoatNormalScale: new THREE.Vector2(0.8, 0.8) },
   { color: 0x602040, roughness: 0.8, metalness: 0, sheen: 1, sheenColor: new THREE.Color(0xffa0c0), sheenRoughness: 0.4 },
-  { color: 0x202020, roughness: 0.25, metalness: 0.9, iridescence: 1, iridescenceIOR: 1.6, iridescenceThicknessRange: [100, 520] },
+  { color: 0x202020, roughness: 0.25, metalness: 0.9, iridescence: 1, iridescenceIOR: 1.6, iridescenceThicknessMinimum: 100, iridescenceThicknessMaximum: 520 },
   { color: 0xb0b0b0, roughness: 0.4, metalness: 1, anisotropy: 0.8, anisotropyRotation: 0.6 },
 ];
 const balls = [];

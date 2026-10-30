@@ -1,4 +1,4 @@
-// A GPU that draws nothing, for capturing r186's programs without one.
+// A GPU that draws nothing, for capturing r187's programs without one.
 //
 // tools/gen-programs.mjs reads each program's text and every uniform byte from
 // three.js's own CPU-side state, so the device under it only has to accept
@@ -78,8 +78,10 @@ export function mockGL(env, width, height) {
     canvas,
     drawingBufferWidth: width, drawingBufferHeight: height,
     getParameter: (p) => { const v = g.params[p]; if (v && v.typed) return new globalThis[v.typed](v.values); if (v && v.object) return obj(); return v ?? null; },
-    getExtension: (n) => (n in g.extensions && g.extensions[n] ? obj(g.extensions[n]) : null),
-    getSupportedExtensions: () => g.supported ?? Object.keys(g.extensions).filter((k) => g.extensions[k]),
+    // EXT_clip_control: webgl-node has none to record; a +rdepth capture asks for it, the program does not depend on the host's
+    getExtension: (n) => (n === 'EXT_clip_control' && env.clipControl ? obj({ LOWER_LEFT_EXT: 0x8CA1, ZERO_TO_ONE_EXT: 0x935F, NEGATIVE_ONE_TO_ONE_EXT: 0x935E, clipControlEXT() {} })
+      : n in g.extensions && g.extensions[n] ? obj(g.extensions[n]) : null),
+    getSupportedExtensions: () => (g.supported ?? Object.keys(g.extensions).filter((k) => g.extensions[k])).concat(env.clipControl ? ['EXT_clip_control'] : []),
     getShaderPrecisionFormat: (s, p) => g.precision[key(s, p)] ?? { rangeMin: 127, rangeMax: 127, precision: 23 },
     getContextAttributes: () => g.attributes,
     isContextLost: () => false,
@@ -109,7 +111,7 @@ export function mockGL(env, width, height) {
 // WebGPU: an adapter with the recorded features and limits, a device that
 // accepts everything and keeps buffer contents (three.js maps a few back)
 // name: which recorded device ('default', or 'compat' for a capture that asks
-// for a compatibility-mode device itself); r186 asks for featureLevel
+// for a compatibility-mode device itself); r187 asks for featureLevel
 // 'compatibility' either way, so the request cannot tell them apart
 export function mockWGPU(env, width, height, name = 'default') {
   const rec = env.wgpu[name] ?? env.wgpu.default;

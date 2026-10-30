@@ -1,4 +1,4 @@
-// Shared by the r186 defect pages: three.js (r186, or a dev build) and a renderer
+// Shared by the r187 defect pages: three.js (r187, or a dev build) and a renderer
 // on the asked backend; every check renders into a RenderTarget and reads it.
 const q = new URLSearchParams(location.search);
 export const VER = q.get('v'), BACKEND = q.get('b'), CASE = q.get('c');

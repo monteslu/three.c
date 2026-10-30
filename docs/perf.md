@@ -71,7 +71,7 @@ CPU per frame, in ms:
 - A material state's first draw costs about 10 ms on a cold cache on either
   backend, and up to 36 ms; at 60 fps that is a dropped frame or two each
   time. A game meeting materials mid-play hitches until async compile
-  (`t3_renderer_compile_async` / `poll`, r186's `compileAsync`) lands.
+  (`t3_renderer_compile_async` / `poll`, r187's `compileAsync`) lands.
 - WebGPU's warm-cache stalls are close to its cold ones (327 vs 546 ms) while
   GL's warm cache removes 90% (44 vs 435 ms): render pipelines are not
   reused across runs on the WebGPU side. A pipeline cache (Dawn's blob cache)

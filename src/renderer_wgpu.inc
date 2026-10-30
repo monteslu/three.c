@@ -1,8 +1,8 @@
 /* The WebGPU frame (included by renderer.c after renderer_gen.inc; built
  * with T3_WGPU). The CPU side of a render is the one the GLES path runs
  * (scene walk, lists, sorting, batching, lights, the generated programs'
- * fills); here the draws are recorded on a WebGPU pass into r186's linear
- * RGBA16F target, and r186's own output pass writes the output texture. */
+ * fills); here the draws are recorded on a WebGPU pass into r187's linear
+ * RGBA16F target, and r187's own output pass writes the output texture. */
 #ifdef T3_WGPU
 
 static WGPUTextureView wgpu_dfg(t3_renderer *r) {
@@ -95,7 +95,7 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
       case T3_SRC_EXT: {   /* (gen_fill_ext has checked it is set) */
         t3_texture *tx = gl->ext_tex[arg].tex;
         views[nt] = t3_wgpu_texture(w, tx);
-        /* a DepthTexture the extension samples with compare (r186's
+        /* a DepthTexture the extension samples with compare (r187's
          * texture(depth).compare(ref), a comparison sampler in the layout):
          * a LessEqual comparison sampler, linear unless the texture is nearest */
         samplers[nt] = L->textures[t].compare_sampler ? t3_wgpu_compare_sampler(w, tx->mag_filter != T3_NEAREST)
@@ -124,11 +124,11 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
 }
 
 /* one draw with program gl; state: the material whose render state (side,
- * depth, blending) applies (a shadow caster's is a copy with r186's shadow
+ * depth, blending) applies (a shadow caster's is a copy with r187's shadow
  * side) */
 /* transmission's framebuffer copy on WebGPU: the pass ends, the colour
  * attachment drawn so far is copied (with its mipmaps), and the pass goes on
- * with LOAD, as r186 WebGPUBackend.copyFramebufferToTexture */
+ * with LOAD, as r187 WebGPUBackend.copyFramebufferToTexture */
 static void wgpu_viewport_copy(t3_renderer *r, int which) {
   if (r->vp_done[which]) return;
   r->vp_done[which] = true;
@@ -167,6 +167,7 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   memset(&st, 0, sizeof st);
   st.topology = o->type == T3_LINE_SEGMENTS ? 1 : o->type == T3_LINE ? 2 : o->type == T3_POINTS ? 3 : 0;
   st.cull = state->side == T3_DOUBLE_SIDE ? 0 : state->side == T3_BACK_SIDE ? 2 : 1;
+  st.reversed = r->reversed_depth;
   st.depth_test = state->depth_test; st.depth_write = state->depth_write; st.depth_func = (uint8_t)state->depth_func;
   st.blend = state->transparent && state->blending != T3_NO_BLENDING ? (uint8_t)state->blending : 0;
   st.premult = state->premultiplied_alpha;
@@ -202,14 +203,14 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
       continue;
     }
     t3_attribute *ga = slot >= 0 ? g->attributes[slot] : NULL;
-    if (!ga) return;   /* r186 would warn and draw garbage; three.c skips */
+    if (!ga) return;   /* r187 would warn and draw garbage; three.c skips */
     if (ns < 12) st.strides[ns++] = (uint8_t)ga->item_size;
     vbs[nvb] = A->type[0] == 'u' ? t3_wgpu_attribute_uint(w, ga) : t3_wgpu_attribute(w, ga, false, NULL);
     voffs[nvb++] = 0;
   }
   st.flip_y = r->wg_flip;
   WGPURenderPipeline p = t3_wgpu_pipeline(w, gl, &st);
-  if (!p) { gen_note(r, "flip_y: a vertex program without the r186 clip-position epilogue"); return; }
+  if (!p) { gen_note(r, "flip_y: a vertex program without the r187 clip-position epilogue"); return; }
   t3_wgpu_set_pipeline(w, p);
   if (!wgpu_bind_groups(r, gl, m, o, g, NULL)) return;
   for (int k = 0; k < nvb; k++) t3_wgpu_set_vertex_buffer(w, k, vbs[k], voffs[k]);
@@ -241,7 +242,7 @@ static void wgpu_draw_item(t3_renderer *r, const render_item *it, const t3_camer
   if (gl) wgpu_draw_prog(r, it, cam, gl, it->material);
 }
 
-/* r186's shadow pass on WebGPU (ShadowNode / PointShadowNode with the
+/* r187's shadow pass on WebGPU (ShadowNode / PointShadowNode with the
  * WebGPU coordinate system): a Depth24Plus map per casting light, cleared
  * and drawn with the caster programs from the light's camera; a point
  * light's six faces use WebGPU's cube directions */
@@ -251,7 +252,7 @@ static void wgpu_shadow_maps(t3_renderer *r, t3_scene *scene) {
   r->rendering_shadows = true;
   int pf = r->wg_pass_format, df = r->wg_depth_format, ns = r->wg_samples;
   bool flip = r->wg_flip;
-  r->wg_pass_format = 0; r->wg_depth_format = WGPUTextureFormat_Depth24Plus; r->wg_samples = 1; r->wg_flip = false;
+  r->wg_pass_format = 0; r->wg_depth_format = t3_wgpu_depth_format(w); r->wg_samples = 1; r->wg_flip = false;
   for (int i = 0; i < r->caster_count; i++) {
     t3_light *l = r->casters[i];
     t3_light_shadow *sh = l->shadow;
@@ -266,8 +267,8 @@ static void wgpu_shadow_maps(t3_renderer *r, t3_scene *scene) {
     s->w = mw; s->h = mh; s->cube = point;
     for (int face = 0; face < (point ? 6 : 1); face++) {
       if (point) {
-        static const float dirs[6][3] = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, -1, 0 }, { 0, 1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
-        static const float ups[6][3] = { { 0, -1, 0 }, { 0, -1, 0 }, { 0, 0, -1 }, { 0, 0, 1 }, { 0, -1, 0 }, { 0, -1, 0 } };
+        static const float dirs[6][3] = { { -1, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } };
+        static const float ups[6][3] = { { 0, 1, 0 }, { 0, 1, 0 }, { 0, 0, -1 }, { 0, 0, 1 }, { 0, 1, 0 }, { 0, 1, 0 } };
         t3_camera *c = sh->camera;
         float far = l->distance ? l->distance : c->far;
         if (far != c->far) { c->far = far; t3_camera_update_projection_matrix(c); }
@@ -297,7 +298,7 @@ static void wgpu_shadow_maps(t3_renderer *r, t3_scene *scene) {
   r->rendering_shadows = false;
 }
 
-/* r186's output pass on WebGPU: its generated output program over the
+/* r187's output pass on WebGPU: its generated output program over the
  * linear target, into the output texture */
 static void wgpu_output_pass(t3_renderer *r, WGPUTextureView scene_view, WGPUTextureView out_view) {
   static const char *const tm[] = { NULL, "tmlinear", "tmreinhard", "tmcineon", "tmaces", NULL, "tmagx", "tmneutral" };
@@ -332,7 +333,7 @@ static void wgpu_output_pass(t3_renderer *r, WGPUTextureView scene_view, WGPUTex
 }
 
 /* the attachments a render (or clear) draws into: the render target's, or
- * the canvas side's (r186's linear RGBA16F target, or the output texture
+ * the canvas side's (r187's linear RGBA16F target, or the output texture
  * itself when the output needs no conversion) */
 typedef struct { WGPUTextureView color, resolve, later, depth, out; bool direct, ext; } wgpu_dest;
 static bool depth_has_stencil(int f) { return f == WGPUTextureFormat_Depth24PlusStencil8 || f == WGPUTextureFormat_Depth32FloatStencil8 || f == WGPUTextureFormat_Stencil8; }
@@ -368,13 +369,13 @@ static void wgpu_destination(t3_renderer *r, wgpu_dest *d) {
     return;
   }
   d->out = r->wg_ext_out ? (WGPUTextureView)r->wg_ext_out : t3_wgpu_target(w, &r->wg_out, r->width, r->height, r->wg_out_format, true);
-  d->depth = t3_wgpu_target(w, &r->wg_depth, r->width, r->height, WGPUTextureFormat_Depth24Plus, false);
-  /* r186 draws straight into the canvas when the output needs no conversion
+  d->depth = t3_wgpu_target(w, &r->wg_depth, r->width, r->height, t3_wgpu_depth_format(w), false);
+  /* r187 draws straight into the canvas when the output needs no conversion
    * (no tone mapping, linear output colour space): no target, no output pass */
   d->direct = r->output_color_space != T3_SRGB_COLOR_SPACE && !r->tone_mapping;
   d->color = d->direct ? d->out : t3_wgpu_target(w, &r->wg_color, r->width, r->height, WGPUTextureFormat_RGBA16Float, true);
   r->wg_pass_format = d->direct ? (r->wg_ext_out ? r->wg_ext_out_format : r->wg_out_format) : WGPUTextureFormat_RGBA16Float;
-  r->wg_depth_format = WGPUTextureFormat_Depth24Plus;
+  r->wg_depth_format = t3_wgpu_depth_format(w);
   r->wg_samples = 1;
 }
 
@@ -408,7 +409,7 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
   }
   const t3_render_target *rt = r->target;
   if (rt) {
-    /* the target's own viewport and scissor (top-left origin, as r186) */
+    /* the target's own viewport and scissor (top-left origin, as r187) */
     P.vx = rt->viewport[0]; P.vy = rt->viewport[1]; P.vw = rt->viewport[2]; P.vh = rt->viewport[3];
     P.scissor = rt->scissor_test; P.sx = rt->scissor[0]; P.sy = rt->scissor[1]; P.sw = rt->scissor[2]; P.sh = rt->scissor[3];
   } else {
@@ -416,7 +417,7 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
     P.scissor = r->scissor_test; P.sx = r->sc_x; P.sy = r->sc_y; P.sw = r->sc_w; P.sh = r->sc_h;
   }
   t3_wgpu_begin_pass(w, &P);
-  backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r186's do) */
+  backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r187's do) */
   /* what transmission copies: the colour drawn into (the resolve target when multisampled) */
   r->wg_cur_pass = P;
   /* (an external target's colour view, or its resolve view, must have TextureBinding usage;
@@ -443,7 +444,7 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
 }
 
 /* renderer.clear() on WebGPU: a pass whose load ops clear the linear target
- * (and the depth), whole attachments as r186's WebGPUBackend.clear; the
+ * (and the depth), whole attachments as r187's WebGPUBackend.clear; the
  * output texture is cleared to the encoded colour too, as the GLES path
  * clears the screen, so a later render with autoClear off finds it either way */
 static bool wgpu_clear(t3_renderer *r, bool color, bool depth) {

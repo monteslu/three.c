@@ -286,8 +286,18 @@ t3_render_target *t3_render_target_new(int w, int h, const t3_render_target_opti
   rt->stencil_buffer = opt->stencil_buffer;
   rt->depth_texture = t3_retain(opt->depth_texture);
   rt->samples = opt->samples;
+  rt->depth_only = opt->depth_only && opt->depth_texture;
   rt->viewport[2] = rt->scissor[2] = w;
   rt->viewport[3] = rt->scissor[3] = h;
+  return rt;
+}
+
+t3_render_target *t3_cube_render_target_new(int size, const t3_render_target_options *opt) {
+  t3_render_target *rt = t3_render_target_new(size, size, opt);
+  rt->is_cube = true;
+  rt->texture->is_cube = true;
+  rt->texture->mapping = T3_CUBE_REFLECTION_MAPPING;
+  rt->samples = 0;
   return rt;
 }
 
@@ -708,7 +718,7 @@ t3_instanced_mesh *t3_instanced_mesh_new(t3_geometry *g, t3_material *mat, int c
   t3_mat4 id;
   t3_mat4_identity(&id);
   for (int i = 0; i < count; i++) memcpy((float *)im->instance_matrix->array + i * 16, id.e, sizeof id.e);
-  /* frustumCulled stays true (r186): culling tests the instances' bounding
+  /* frustumCulled stays true (r187): culling tests the instances' bounding
    * sphere (t3__world_sphere), not the geometry's */
   im->_isph_count = -1;
   return im;
@@ -1149,7 +1159,7 @@ static void sphere_expand(float s[4], float x, float y, float z) {
   }
 }
 
-/* r186 InstancedMesh.computeBoundingSphere: Sphere.union of the geometry's
+/* r187 InstancedMesh.computeBoundingSphere: Sphere.union of the geometry's
  * sphere through each instance matrix (an empty sphere has radius -1) */
 static bool instanced_sphere_valid(const t3_instanced_mesh *im, const t3_geometry *g) {
   if (im->_isph_fixed) return true;

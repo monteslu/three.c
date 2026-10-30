@@ -1,11 +1,11 @@
-// Reference renders from unmodified three.js r186 in Chromium (its
+// Reference renders from unmodified three.js r187 in Chromium (its
 // WebGPURenderer on the WebGL2 backend, or on WebGPU with --webgpu): the
-// second r186 oracle, on a browser's GPU stack, for when webgl-node or
+// second r187 oracle, on a browser's GPU stack, for when webgl-node or
 // webgpu-node and three.c disagree.
 //
-//   node tools/ref-r186-browser.mjs <scene> <out.png> [frame=100]
+//   node tools/ref-r187-browser.mjs <scene> <out.png> [frame=100]
 //
-// A scene is the same classic script tools/ref-r186.mjs runs: THREE (r186,
+// A scene is the same classic script tools/ref-r187.mjs runs: THREE (r187,
 // plus THREE.GLTFLoader), a THREE.WebGPURenderer drawing into the harness's
 // 1280x720 canvas (antialias off, depth + stencil on), globalThis.frame and
 // optionally globalThis.ready.
@@ -20,9 +20,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const THREE_LUA = resolve(process.env.THREE_LUA || join(ROOT, '..', 'three.lua'));
 const WASMCART = resolve(process.env.WASMCART || join(ROOT, '..', 'wasmcart'));
 // THREE_PKG: another three.js tree (with build/ and examples/), e.g. a dev checkout; SCENES: another scene directory
-const PKG = resolve(process.env.THREE_PKG || join(ROOT, 'build', 'three-r186', 'package'));
+const PKG = resolve(process.env.THREE_PKG || join(ROOT, 'build', 'three-r187', 'package'));
 const SCENE_DIR = resolve(process.env.SCENES || join(ROOT, 'test', 'scenes'));
-// --webgpu: r186's WebGPU backend in Chromium (its adapter: SwiftShader when headless)
+// --webgpu: r187's WebGPU backend in Chromium (its adapter: SwiftShader when headless)
 const WEBGPU = process.argv.includes('--webgpu');
 const [scene, out, frameArg = '100'] = process.argv.slice(2).filter((a) => a !== '--webgpu');
 if (!scene || !out) { console.error('usage: ref-browser.mjs <scene> <out.png> [frame]'); process.exit(1); }
@@ -80,7 +80,7 @@ try {
         super(WEBGPU ? { ...p, canvas, forceWebGL: false } : { ...p, canvas, context: gl, forceWebGL: true });
         renderers.push(this);
       }
-      // one browser frame of r186's animation loop (Animation.start's update),
+      // one browser frame of r187's animation loop (Animation.start's update),
       // which a scene calling render() directly never runs: without it the node
       // frame id never advances and per-frame node updates (skeletons) run once
       __tick() { if (this.info.autoReset === true) this.info.reset(); this._nodes.nodeFrame.update(); this.info.frame = this._nodes.nodeFrame.frameId; }

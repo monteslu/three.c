@@ -3,7 +3,7 @@
 // in the fragment stage, and a 4x4 height texture (ext.height) read with
 // textureLoad in both stages: the vertex stage pushes each vertex along its
 // normal by the height of its cell times mosaicLift (a value per object), the
-// fragment stage shades with it. r186 binds a texture read in both stages
+// fragment stage shades with it. r187 binds a texture read in both stages
 // twice, so with the material's own DFG LUT the program has thirteen texture
 // bindings, more than a WebGPU bind group needs for anything else three.c
 // draws.

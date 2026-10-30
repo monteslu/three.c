@@ -5,6 +5,55 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.0 (2026-10-30)
+
+three.c on three.js r187: every program recaptured from 0.187.0, PMREMs as cube
+render targets, a reversed depth buffer, depth-only render targets, rough diffuse
+and a second UV set.
+
+### Added
+- `t3_renderer_set_reversed_depth`: reversedDepthBuffer. Depth runs from 1 at the
+  near plane to 0 at the far plane in a 32-bit float buffer, so precision is spread
+  evenly out to the horizon: no z-fighting far away, and a much farther far plane.
+  WebGPU always; GLES where the context has EXT_clip_control, otherwise it notes
+  that and stays off, as three.js does. A cart on GL has no such call, so it runs
+  with forward depth. Shadow programs take a `+rdepth` state.
+- `t3_render_target_options.depth_only` (three.js `count: 0`): a render target with
+  no colour attachment, only its depth texture.
+- `t3_material.diffuse_roughness`: MeshPhysicalMaterial.diffuseRoughness, EON rough
+  diffuse. Rough surfaces look soft and flat at grazing angles instead of plastic.
+- `t3_texture.channel`: the second UV set on map, normalMap, aoMap, emissiveMap,
+  roughnessMap, metalnessMap, alphaMap and lightMap (states `+c1map` and so on).
+  The glTF loader honours `texCoord` and KHR_texture_transform's.
+- `t3_cube_render_target_new` and `t3_renderer_set_render_target_ex`: CubeRenderTarget
+  and setRenderTarget(rt, face, mip). A cube target with generate_mipmaps builds its
+  chain after a render into face 5.
+- `t3_texture.mip_levels`: a PMREM's prefiltered levels (isPMREMTexture).
+- `t3_external_target.keep_multisampled` and the WebGPU depth prepass, from main since
+  0.186.22: `t3_renderer_render_prepass` draws on WebGPU too (`T3_WGPU_DEPTH_PREPASS`).
+
+### Changed
+- PMREMs are cube render targets with a mip chain, as in r187, instead of the cube-UV
+  atlas. Materials look slightly different, as they do in r187. Face sizes are at least
+  256 (a smaller `size` is raised) and no longer capped at 1024.
+- WebGPU point shadows use r187's face directions, and point shadow programs read the
+  shadow camera's near and far.
+- Project program tables must be regenerated: every program changed, and the
+  `pmremggx+z<n>` and `pmremblur+z<n>` states are now `pmremggx`, `pmremintegration` and
+  `pmremblur`.
+- WebGPU: the pass-state cache no longer adds and releases references on every change,
+  two host calls fewer per changed binding in a cart.
+
+### Removed
+- `T3_CUBE_UV_REFLECTION_MAPPING` and `T3_CUBE_UV_REFRACTION_MAPPING`, as in r187. Test
+  `texture->mip_levels > 0` to tell a PMREM.
+
+### Fixed
+- Everything r187 fixed in its programs arrives with the recapture, among them specular
+  intensity in direct lighting, the ACES Filmic fit, point light shadow seams and the
+  PCF radius on non-square shadow maps.
+- A PMREM made before the renderer's first render drew with no camera and came out black.
+
 ## v0.186.22 (2026-10-28)
 
 A scene structure counter for embedders' caches, cheaper per-draw extension

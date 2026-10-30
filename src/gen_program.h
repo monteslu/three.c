@@ -1,4 +1,4 @@
-/* A GLES program built from the GLSL three.js r186's node renderer generates
+/* A GLES program built from the GLSL three.js r187's node renderer generates
  * (src/gen/programs_gl.c), run with the manifest's uniform blocks.
  *
  * The program text is executed as captured, except for one mechanical edit:
@@ -65,15 +65,15 @@ typedef enum {
   GOP_MAT_SPECULAR, GOP_MAT_SHININESS, GOP_MAT_IOR, GOP_MAT_CLEARCOAT, GOP_MAT_CLEARCOAT_R,
   GOP_MAT_ROTATION, GOP_MAT_SIZE, GOP_MAT_ALPHATEST, GOP_SPRITE_CENTER,
   /* MeshPhysicalMaterial */
-  GOP_MAT_SPEC_INTENSITY, GOP_MAT_SPEC_COLOR, GOP_MAT_CC_NORMAL_SCALE, GOP_MAT_SHEEN, GOP_MAT_SHEEN_COLOR, GOP_MAT_SHEEN_R,
+  GOP_MAT_SPEC_INTENSITY, GOP_MAT_SPEC_COLOR, GOP_MAT_CC_NORMAL_SCALE, GOP_MAT_SHEEN, GOP_MAT_SHEEN_COLOR, GOP_MAT_SHEEN_R, GOP_MAT_DIFFUSE_ROUGHNESS,
   GOP_MAT_IRID, GOP_MAT_IRID_IOR, GOP_MAT_IRID_THICK_MAX, GOP_MAT_ANISO_VEC,
   GOP_MAT_TRANSMISSION, GOP_MAT_THICKNESS, GOP_MAT_ATTEN_DIST, GOP_MAT_ATTEN_COLOR,
   /* environments, backgrounds, the PMREM passes (values from the renderer's
    * aux block, renderer_gen.inc gen_aux) */
   GOP_ENV_INTENSITY, GOP_ENV_ROTATION, GOP_MAT_REFLECTIVITY, GOP_MAT_REFRACTION,
-  GOP_CUBEUV_TW, GOP_CUBEUV_TH, GOP_CUBEUV_MAXMIP,
+  GOP_PMREM_MAXLOD, GOP_PMREM_SIZE,
   GOP_BG_INTENSITY, GOP_BG_ROTATION, GOP_BG_BLUR, GOP_BG_MATRIX, GOP_BG_FLIPY,
-  GOP_PMREM_ROUGH, GOP_PMREM_MIP, GOP_PMREM_SIGMA, GOP_PMREM_FLIPY, GOP_ENV_FLIPY,
+  GOP_PMREM_ROUGH, GOP_PMREM_LODBIAS, GOP_PMREM_SOURCELOD, GOP_PMREM_SIGMA, GOP_PMREM_FLIPY, GOP_ENV_FLIPY,
   GOP_MAP_MATRIX, GOP_TEX_MATRIX /* idx: T3_GEN_TEX_* */, GOP_TEX_FLIPY /* idx: T3_GEN_TEX_*, or T3_GEN_TEX_COUNT for the DFG LUT */, GOP_NORMAL_SCALE, GOP_AO_INTENSITY, GOP_BUMP_SCALE, GOP_LIGHTMAP_INTENSITY,
   GOP_COUNT
 } t3_gen_op_kind;
@@ -86,14 +86,14 @@ extern const char *const t3_gen_tex_names[T3_GEN_TEX_COUNT];
 int t3_gen_tables(t3_gen_backend backend, const t3_gen_table *const **out);
 
 /* the runtime builder (T3_BUILDER, builder.c): the program for a state no
- * table has, captured from r186 now; NULL with err set when it cannot be */
+ * table has, captured from r187 now; NULL with err set when it cannot be */
 const t3_gen_program *t3_builder_build(const char *state, t3_gen_backend backend, char *err, size_t errcap);
 /* keep a built program (takes the malloc'd struct, returns where it now
  * lives): searched after the project tables, before the base */
 const t3_gen_program *t3_gen_add_built(const t3_gen_program *p);
 
 enum { T3_GEN_LT_DIR, T3_GEN_LT_POINT, T3_GEN_LT_SPOT };
-enum { T3_GEN_SH_BIAS, T3_GEN_SH_NORMAL_BIAS, T3_GEN_SH_RADIUS, T3_GEN_SH_INTENSITY, T3_GEN_SH_MAP_SIZE, T3_GEN_SH_MATRIX };
+enum { T3_GEN_SH_BIAS, T3_GEN_SH_NORMAL_BIAS, T3_GEN_SH_RADIUS, T3_GEN_SH_INTENSITY, T3_GEN_SH_MAP_SIZE, T3_GEN_SH_MATRIX, T3_GEN_SH_NEAR, T3_GEN_SH_FAR };
 struct t3_gen_op { uint8_t op, idx, sub; int8_t group; uint16_t off, len; };
 
 /* an object's values for the program's template parameters (src->tpl) */

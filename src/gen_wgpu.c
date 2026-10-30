@@ -43,6 +43,7 @@ struct vbuf { WGPUBuffer b; size_t size; uint32_t version; bool uint; uint32_t s
 struct sampler_entry { uint32_t key; WGPUSampler s; };
 
 struct t3_wgpu {
+  bool reversed;
   WGPUDevice dev;
   WGPUQueue q;
   WGPUTextureFormat out_format;
@@ -56,7 +57,7 @@ struct t3_wgpu {
   size_t stage_n, stage_cap;
   WGPUCommandEncoder enc;
   WGPURenderPassEncoder pass;
-  /* submits: one per render (r186's), or deferred until t3_wgpu_flush, or
+  /* submits: one per render (r187's), or deferred until t3_wgpu_flush, or
    * an embedder's encoder (never submitted here); `written`: how much of the
    * stage is already in the stream buffer */
   bool defer;
@@ -86,8 +87,11 @@ struct t3_wgpu {
   } bound;
   struct sampler_entry samplers[64];
   int n_samplers;
-  /* r186's mipmap generator (WebGPUTexturePassUtils): one pipeline per format */
-  WGPUShaderModule mip_module;
+  /* r187's mipmap generator (WebGPUTexturePassUtils): one pipeline per format */
+  WGPUShaderModule mip_module, cube_mip_module;
+  WGPUSampler cube_mip_sampler;
+  struct { WGPUTextureFormat fmt; WGPURenderPipeline p; } cube_mip_pipes[4];
+  int n_cube_mip_pipes;
   WGPUSampler mip_sampler;
   WGPUBuffer mip_noflip, mip_flip;
   struct { WGPUTextureFormat fmt; bool array; WGPURenderPipeline p; } mip_pipes[8];
@@ -95,6 +99,8 @@ struct t3_wgpu {
 };
 
 WGPUDevice t3_wgpu_device(t3_wgpu *w) { return w->dev; }
+void t3_wgpu_set_reversed_depth(t3_wgpu *w, bool on) { w->reversed = on; }
+WGPUTextureFormat t3_wgpu_depth_format(const t3_wgpu *w) { return w->reversed ? WGPUTextureFormat_Depth32Float : WGPUTextureFormat_Depth24Plus; }
 bool t3_wgpu_compat(t3_wgpu *w) { return !wgpuDeviceHasFeature(w->dev, WGPUFeatureName_CoreFeaturesAndLimits); }
 
 /* every live t3_wgpu, for forget_*: a program or an attribute is freed without naming its device's t3_wgpu */
@@ -136,6 +142,9 @@ void t3_wgpu_destroy(t3_wgpu *w) {
   for (int i = 0; i < w->n_samplers; i++) wgpuSamplerRelease(w->samplers[i].s);
   for (int i = 0; i < w->n_mip_pipes; i++) wgpuRenderPipelineRelease(w->mip_pipes[i].p);
   if (w->mip_module) wgpuShaderModuleRelease(w->mip_module);
+  for (int i = 0; i < w->n_cube_mip_pipes; i++) wgpuRenderPipelineRelease(w->cube_mip_pipes[i].p);
+  if (w->cube_mip_module) wgpuShaderModuleRelease(w->cube_mip_module);
+  if (w->cube_mip_sampler) wgpuSamplerRelease(w->cube_mip_sampler);
   if (w->mip_sampler) wgpuSamplerRelease(w->mip_sampler);
   if (w->mip_noflip) wgpuBufferRelease(w->mip_noflip);
   if (w->mip_flip) wgpuBufferRelease(w->mip_flip);
@@ -182,7 +191,7 @@ t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_param
       maxt = lim.maxSampledTexturesPerShaderStage; maxs = lim.maxSamplersPerShaderStage;
       if (lim.maxVertexBuffers) maxvb = lim.maxVertexBuffers;
     }
-    /* the vertex buffers t3_wgpu_pipeline binds (the instance matrix columns share one, as r186's
+    /* the vertex buffers t3_wgpu_pipeline binds (the instance matrix columns share one, as r187's
      * InstancedInterleavedBuffer): a program over the device's maxVertexBuffers does not build and the
      * renderer names it, where a pipeline would be a validation error and the draw lost */
     uint32_t nvb = t3_gen_vertex_buffer_count(src);
@@ -315,6 +324,18 @@ static WGPUCompareFunction compare(int f) {
     WGPUCompareFunction_NotEqual };
   return f >= 0 && f < 8 ? m[f] : WGPUCompareFunction_LessEqual;
 }
+/* ReversedDepthFuncs: less and greater trade places */
+static WGPUCompareFunction depth_compare(int f, bool reversed) {
+  WGPUCompareFunction c = compare(f);
+  if (!reversed) return c;
+  switch (c) {
+  case WGPUCompareFunction_Less: return WGPUCompareFunction_Greater;
+  case WGPUCompareFunction_LessEqual: return WGPUCompareFunction_GreaterEqual;
+  case WGPUCompareFunction_Greater: return WGPUCompareFunction_Less;
+  case WGPUCompareFunction_GreaterEqual: return WGPUCompareFunction_LessEqual;
+  default: return c;
+  }
+}
 static WGPUVertexFormat float_format(int n) {
   return n == 1 ? WGPUVertexFormat_Float32 : n == 2 ? WGPUVertexFormat_Float32x2 : n == 3 ? WGPUVertexFormat_Float32x3 : WGPUVertexFormat_Float32x4;
 }
@@ -326,7 +347,7 @@ static int attr_components(const char *type) {
 }
 
 /* flip_y draws are rendered upside down (clip y negated), so the screen's y
- * runs the other way: r186's fragment programs take the y derivative of the
+ * runs the other way: r187's fragment programs take the y derivative of the
  * WebGPU framebuffer (y down; they negate dpdy where GL's dFdy points up),
  * which is the GL direction here. Every dpdy / dpdyFine / dpdyCoarse call
  * is negated, (-dpdy( ... )), so a normal map's tangent frame (built from
@@ -398,7 +419,7 @@ static WGPUBlendState wgpu_blend_state(const t3_wgpu_state *st) {
     b.color = wgpu_component(st->bf[2], wgpu_factor(st->bf[0]), wgpu_factor(st->bf[1]));
     b.alpha = wgpu_component(ea, wgpu_factor(sa), wgpu_factor(da));
     break; }
-  /* the rest as r186's WebGLState.setBlending (renderer.c apply_blending); r186 refuses Subtractive and Multiply without
+  /* the rest as r187's WebGLState.setBlending (renderer.c apply_blending); r187 refuses Subtractive and Multiply without
    * premultipliedAlpha, three.c keeps their older straight-alpha functions there */
   case 2:   /* AdditiveBlending */
     b.color = wgpu_component(0, st->premult ? O : SA, O); b.alpha = wgpu_component(0, O, O); break;
@@ -465,7 +486,7 @@ WGPURenderPipeline t3_wgpu_pipeline(t3_wgpu *w, t3_gen_gl *g, const t3_wgpu_stat
                               .writeMask = st->color_write ? WGPUColorWriteMask_All : WGPUColorWriteMask_None };
   WGPUFragmentState fs = { .module = st->flip_y ? flip_fragment(w, wg) : wg->fs, .entryPoint = SV("main"), .targetCount = st->color ? 1 : 0, .targets = &ct };
   WGPUDepthStencilState ds = { .format = st->depth, .depthWriteEnabled = st->depth_write ? WGPUOptionalBool_True : WGPUOptionalBool_False,
-    .depthCompare = st->depth_test ? compare(st->depth_func) : WGPUCompareFunction_Always,
+    .depthCompare = st->depth_test ? depth_compare(st->depth_func, st->reversed) : WGPUCompareFunction_Always,
     .stencilFront = { .compare = WGPUCompareFunction_Always, .failOp = WGPUStencilOperation_Keep, .depthFailOp = WGPUStencilOperation_Keep, .passOp = WGPUStencilOperation_Keep },
     .stencilBack = { .compare = WGPUCompareFunction_Always, .failOp = WGPUStencilOperation_Keep, .depthFailOp = WGPUStencilOperation_Keep, .passOp = WGPUStencilOperation_Keep },
     .stencilReadMask = 0xFFFFFFFF, .stencilWriteMask = 0xFFFFFFFF };
@@ -474,7 +495,7 @@ WGPURenderPipeline t3_wgpu_pipeline(t3_wgpu *w, t3_gen_gl *g, const t3_wgpu_stat
   WGPUShaderModule vs = wg->vs;
   if (st->flip_y) {
     if (!wg->vs_flip) {
-      /* every r186 vertex program ends `return varyings;` with the clip
+      /* every r187 vertex program ends `return varyings;` with the clip
        * position in varyings.builtinClipSpace: negate its y just before */
       const char *ret = "\treturn varyings;";
       char *at = strstr(wg->vtext, ret);
@@ -649,7 +670,7 @@ void t3_wgpu_begin_pass(t3_wgpu *w, const t3_wgpu_pass *p) {
     .loadOp = p->load_color ? WGPULoadOp_Load : WGPULoadOp_Clear, .storeOp = WGPUStoreOp_Store,
     .clearValue = { p->clear[0], p->clear[1], p->clear[2], p->clear[3] } };
   WGPURenderPassDepthStencilAttachment da = { .view = p->depth, .depthLoadOp = p->load_depth ? WGPULoadOp_Load : WGPULoadOp_Clear,
-    .depthStoreOp = WGPUStoreOp_Store, .depthClearValue = p->depth_clear_set ? p->clear_depth : 1.0f };
+    .depthStoreOp = WGPUStoreOp_Store, .depthClearValue = p->depth_clear_set ? p->clear_depth : w->reversed ? 0.0f : 1.0f };
   if (p->stencil) {
     da.stencilLoadOp = p->load_depth ? WGPULoadOp_Load : WGPULoadOp_Clear;
     da.stencilStoreOp = WGPUStoreOp_Store;
@@ -712,9 +733,9 @@ void t3_wgpu_end_frame(t3_wgpu *w) {
   if (!w->defer && !w->ext) t3_wgpu_flush(w);
 }
 
-/* ── mipmaps: r186's WebGPUTexturePassUtils, a pass per level drawing the
+/* ── mipmaps: r187's WebGPUTexturePassUtils, a pass per level drawing the
  * level above through a linear-min sampler over one big triangle ────── */
-/* r186's mipmap shader (WebGPUTexturePassUtils): a level drawn from the one
+/* r187's mipmap shader (WebGPUTexturePassUtils): a level drawn from the one
  * above, the source bound with the view dimension the texture is bound with
  * (main_2d; main_2d_array for a DataArrayTexture, which in compatibility mode
  * may be bound only as a 2D array: the layer is the instance index) */
@@ -768,7 +789,7 @@ static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureForm
 static void generate_mipmaps(t3_wgpu *w, WGPUTexture tex, WGPUTextureFormat fmt, uint32_t levels) { generate_mipmaps_layers(w, tex, fmt, levels, 1, false); }
 /* each level from the one above, per layer. array: the texture is bound as a
  * 2D array (a DataArrayTexture): the source is the whole level above as a 2D
- * array, the layer picked by the instance, as r186's main_2d_array pass;
+ * array, the layer picked by the instance, as r187's main_2d_array pass;
  * compatibility mode allows no 2D view of one layer for binding. (Cubes make
  * their chains on the CPU, cube_mips_cpu.) */
 static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureFormat fmt, uint32_t levels, uint32_t layers, bool array) {
@@ -807,6 +828,93 @@ static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureForm
     wgpuCommandBufferRelease(cb);
     wgpuCommandEncoderRelease(enc);
   }
+  wgpuBindGroupLayoutRelease(bgl);
+}
+
+/* a cube target's mip chain: each level of each face from the whole cube at
+ * the level above (a 2 x 2 average: the sample sits on the corner of four
+ * texels), into a 2D texture and copied into place. Compatibility mode samples
+ * a cube only as a whole cube and allows no 2D view of one face, so r187's
+ * pass per face cannot run there. */
+static const char cube_mip_wgsl[] =
+  "struct V { @builtin( position ) p : vec4f, @location( 0 ) t : vec2f, @location( 1 ) @interpolate( flat, either ) i : u32 };\n"
+  "@group( 0 ) @binding( 0 ) var s : sampler;\n"
+  "@group( 0 ) @binding( 1 ) var c : texture_cube<f32>;\n"
+  "@vertex fn vs( @builtin( vertex_index ) v : u32, @builtin( instance_index ) i : u32 ) -> V {\n"
+  "  var pos = array( vec2f( -1, -1 ), vec2f( -1, 3 ), vec2f( 3, -1 ) );\n"
+  "  var o : V;\n"
+  "  o.p = vec4f( pos[ v ], 0, 1 );\n"
+  "  o.t = vec2f( pos[ v ].x, -pos[ v ].y );\n"
+  "  o.i = i;\n"
+  "  return o;\n"
+  "}\n"
+  "@fragment fn fs( in : V ) -> @location( 0 ) vec4f {\n"
+  "  let u = in.t.x; let v = in.t.y; let f = in.i % 6u;\n"
+  "  var d = vec3f( -u, -v, -1 );\n"
+  "  if ( f == 0u ) { d = vec3f( 1, -v, -u ); } else if ( f == 1u ) { d = vec3f( -1, -v, u ); }\n"
+  "  else if ( f == 2u ) { d = vec3f( u, 1, v ); } else if ( f == 3u ) { d = vec3f( u, -1, -v ); }\n"
+  "  else if ( f == 4u ) { d = vec3f( u, -v, 1 ); }\n"
+  "  return textureSampleLevel( c, s, d, f32( in.i / 6u ) );\n"
+  "}\n";
+static WGPURenderPipeline cube_mip_pipeline(t3_wgpu *w, WGPUTextureFormat fmt) {
+  for (int i = 0; i < w->n_cube_mip_pipes; i++) if (w->cube_mip_pipes[i].fmt == fmt) return w->cube_mip_pipes[i].p;
+  if (!w->cube_mip_module) {
+    w->cube_mip_module = module(w, cube_mip_wgsl);
+    WGPUSamplerDescriptor sd = { .addressModeU = WGPUAddressMode_ClampToEdge, .addressModeV = WGPUAddressMode_ClampToEdge,
+      .addressModeW = WGPUAddressMode_ClampToEdge, .magFilter = WGPUFilterMode_Linear, .minFilter = WGPUFilterMode_Linear,
+      .mipmapFilter = WGPUMipmapFilterMode_Nearest, .lodMinClamp = 0, .lodMaxClamp = 32, .maxAnisotropy = 1 };
+    w->cube_mip_sampler = wgpuDeviceCreateSampler(w->dev, &sd);
+  }
+  WGPUColorTargetState ct = { .format = fmt, .writeMask = WGPUColorWriteMask_All };
+  WGPUFragmentState fs = { .module = w->cube_mip_module, .entryPoint = SV("fs"), .targetCount = 1, .targets = &ct };
+  WGPURenderPipelineDescriptor d = {
+    .vertex = { .module = w->cube_mip_module, .entryPoint = SV("vs") },
+    .primitive = { .topology = WGPUPrimitiveTopology_TriangleList, .cullMode = WGPUCullMode_None, .frontFace = WGPUFrontFace_CCW },
+    .multisample = { .count = 1, .mask = 0xFFFFFFFF },
+    .fragment = &fs };
+  WGPURenderPipeline p = wgpuDeviceCreateRenderPipeline(w->dev, &d);
+  if (w->n_cube_mip_pipes < 4) { w->cube_mip_pipes[w->n_cube_mip_pipes].fmt = fmt; w->cube_mip_pipes[w->n_cube_mip_pipes++].p = p; }
+  return p;
+}
+static void generate_cube_mipmaps(t3_wgpu *w, WGPUTexture tex, WGPUTextureView cube, WGPUTextureFormat fmt, int size, uint32_t levels) {
+  WGPURenderPipeline p = cube_mip_pipeline(w, fmt);
+  WGPUBindGroupLayout bgl = wgpuRenderPipelineGetBindGroupLayout(p, 0);
+  WGPUBindGroupEntry e[2] = { { .binding = 0, .sampler = w->cube_mip_sampler }, { .binding = 1, .textureView = cube } };
+  WGPUBindGroupDescriptor bd = { .layout = bgl, .entryCount = 2, .entries = e };
+  WGPUBindGroup bg = wgpuDeviceCreateBindGroup(w->dev, &bd);
+  bool own = !w->enc || w->pass;
+  WGPUCommandEncoder enc = own ? wgpuDeviceCreateCommandEncoder(w->dev, NULL) : w->enc;
+  /* (a release while the encoder still records is safe: the commands hold the texture) */
+  for (uint32_t lv = 1; lv < levels; lv++) {
+    uint32_t s = (uint32_t)size >> lv;
+    WGPUTextureDescriptor td = { .usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_CopySrc, .dimension = WGPUTextureDimension_2D,
+                                 .size = { s, s, 1 }, .format = fmt, .mipLevelCount = 1, .sampleCount = 1 };
+    WGPUTexture tmp = wgpuDeviceCreateTexture(w->dev, &td);
+    WGPUTextureView tv = wgpuTextureCreateView(tmp, NULL);
+    for (uint32_t face = 0; face < 6; face++) {
+      WGPURenderPassColorAttachment ca = { .view = tv, .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED, .loadOp = WGPULoadOp_Clear, .storeOp = WGPUStoreOp_Store };
+      WGPURenderPassDescriptor pd = { .colorAttachmentCount = 1, .colorAttachments = &ca };
+      WGPURenderPassEncoder pe = wgpuCommandEncoderBeginRenderPass(enc, &pd);
+      wgpuRenderPassEncoderSetPipeline(pe, p);
+      wgpuRenderPassEncoderSetBindGroup(pe, 0, bg, 0, NULL);
+      wgpuRenderPassEncoderDraw(pe, 3, 1, 0, face + 6 * (lv - 1));
+      wgpuRenderPassEncoderEnd(pe);
+      wgpuRenderPassEncoderRelease(pe);
+      WGPUTexelCopyTextureInfo from = { .texture = tmp, .aspect = WGPUTextureAspect_All };
+      WGPUTexelCopyTextureInfo to = { .texture = tex, .mipLevel = lv, .origin = { 0, 0, face }, .aspect = WGPUTextureAspect_All };
+      WGPUExtent3D ext = { s, s, 1 };
+      wgpuCommandEncoderCopyTextureToTexture(enc, &from, &to, &ext);
+    }
+    wgpuTextureViewRelease(tv);
+    wgpuTextureRelease(tmp);
+  }
+  if (own) {
+    WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
+    wgpuQueueSubmit(w->q, 1, &cb);
+    wgpuCommandBufferRelease(cb);
+    wgpuCommandEncoderRelease(enc);
+  }
+  wgpuBindGroupRelease(bg);
   wgpuBindGroupLayoutRelease(bgl);
 }
 
@@ -972,7 +1080,7 @@ WGPUTextureView t3_wgpu_texture(t3_wgpu *w, t3_texture *t) {
     x->w = t->width; x->h = t->height; x->fmt = fmt; x->levels = levels; x->layers = layers;
   }
   size_t texel = t3_texture_texel_bytes(t->format, t->type), row = (size_t)t->width * texel;
-  /* t3 rows run top to bottom; r186 uploads a flipY texture flipped (GL
+  /* t3 rows run top to bottom; r187 uploads a flipY texture flipped (GL
    * convention: v = 0 at the bottom), so row 0 of the GPU texture is the
    * image's bottom row then */
   uint8_t *rows = NULL;
@@ -994,7 +1102,8 @@ WGPUTextureView t3_wgpu_texture(t3_wgpu *w, t3_texture *t) {
   return x->v;
 }
 /* ── render targets ─────────────────────────────────────────────────── */
-struct rtx { WGPUTexture msaa_c, msaa_d, depth; WGPUTextureView msaa_cv, msaa_dv, depth_v; int w, h; };
+struct rtx { WGPUTexture msaa_c, msaa_d, depth; WGPUTextureView msaa_cv, msaa_dv, depth_v; int w, h;
+             WGPUTextureView *faces; uint32_t n_faces; };   /* a cube target: an attachment view per face and level */
 
 /* WebGPUTextureUtils.getFormat for a render target's textures */
 static WGPUTextureFormat rt_color_format(const t3_texture *t) {
@@ -1002,9 +1111,9 @@ static WGPUTextureFormat rt_color_format(const t3_texture *t) {
   if (t->type == T3_HALF_FLOAT_TYPE) return WGPUTextureFormat_RGBA16Float;
   return t->color_space == T3_SRGB_COLOR_SPACE ? WGPUTextureFormat_RGBA8UnormSrgb : WGPUTextureFormat_RGBA8Unorm;
 }
-static WGPUTextureFormat rt_depth_format(const t3_render_target *rt) {
+static WGPUTextureFormat rt_depth_format(const t3_render_target *rt, bool reversed) {
   const t3_texture *d = rt->depth_texture;
-  if (!d) return rt->stencil_buffer ? WGPUTextureFormat_Depth24PlusStencil8 : WGPUTextureFormat_Depth24Plus;
+  if (!d) return rt->stencil_buffer ? WGPUTextureFormat_Depth24PlusStencil8 : reversed ? WGPUTextureFormat_Depth32Float : WGPUTextureFormat_Depth24Plus;
   if (d->format == T3_DEPTH_STENCIL_FORMAT || d->type == T3_UNSIGNED_INT_248_TYPE) return WGPUTextureFormat_Depth24PlusStencil8;
   if (d->type == T3_FLOAT_TYPE) return WGPUTextureFormat_Depth32Float;
   if (d->type == T3_UNSIGNED_SHORT_TYPE) return WGPUTextureFormat_Depth16Unorm;
@@ -1091,18 +1200,42 @@ void t3_wgpu_render_target_free(t3_render_target *rt) {
   if (x->msaa_d) wgpuTextureRelease(x->msaa_d);
   if (x->depth_v) wgpuTextureViewRelease(x->depth_v);
   if (x->depth) wgpuTextureRelease(x->depth);
+  for (uint32_t i = 0; i < x->n_faces; i++) wgpuTextureViewRelease(x->faces[i]);
+  free(x->faces);
   free(x);
   rt->_wgpu = NULL;
   view_epoch++;
 }
 void t3_wgpu_render_target(t3_wgpu *w, t3_render_target *rt, t3_wgpu_rt *out) {
   t3_texture *t = rt->texture;
-  WGPUTextureFormat cf = rt_color_format(t), df = rt_depth_format(rt);
+  WGPUTextureFormat cf = rt_color_format(t), df = rt_depth_format(rt, w->reversed);
   uint32_t levels = 1;
-  if (t->generate_mipmaps) for (int m = rt->width > rt->height ? rt->width : rt->height; m > 1; m >>= 1) levels++;
+  if (t->mip_levels > 0) levels = (uint32_t)t->mip_levels;
+  else if (t->generate_mipmaps) for (int m = rt->width > rt->height ? rt->width : rt->height; m > 1; m >>= 1) levels++;
   int samples = rt->samples > 1 ? 4 : 1;   /* WebGPU: 1 or 4 */
   struct tex *tx = t->_wgpu;
   struct rtx *x = rt->_wgpu;
+  if (rt->depth_only) {
+    /* no colour: the depth texture is the whole target */
+    t3_texture *dt = rt->depth_texture;
+    struct tex *dx = dt->_wgpu;
+    if (!dx || dx->w != rt->width || dx->h != rt->height || dx->fmt != df) {
+      if (!dx) { dx = calloc(1, sizeof *dx); T3_CHECK_ALLOC(dx); dt->_wgpu = dx; }
+      else tex_drop(dx);
+      dt->width = rt->width; dt->height = rt->height;
+      dx->t = make_tex(w, rt->width, rt->height, df, 1, 1, WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopySrc);
+      WGPUTextureViewDescriptor dv = { .format = df, .dimension = WGPUTextureViewDimension_2D, .mipLevelCount = 1, .arrayLayerCount = 1,
+                                       .aspect = WGPUTextureAspect_DepthOnly };
+      dx->v = wgpuTextureCreateView(dx->t, &dv);
+      dx->v0 = wgpuTextureCreateView(dx->t, NULL);
+      dx->w = rt->width; dx->h = rt->height; dx->fmt = df; dx->levels = 1; dx->version = dt->version;
+    }
+    memset(out, 0, sizeof *out);
+    out->samples = 1;
+    out->depth_format = df;
+    out->depth = dx->v0;
+    return;
+  }
   if (!x || x->w != rt->width || x->h != rt->height || !tx || tx->fmt != cf || tx->levels != levels) {
     t3_wgpu_render_target_free(rt);
     x = calloc(1, sizeof *x);
@@ -1111,10 +1244,31 @@ void t3_wgpu_render_target(t3_wgpu *w, t3_render_target *rt, t3_wgpu_rt *out) {
     x->w = rt->width; x->h = rt->height;
     if (!tx) { tx = calloc(1, sizeof *tx); T3_CHECK_ALLOC(tx); t->_wgpu = tx; }
     else tex_drop(tx);
-    tx->t = make_tex(w, rt->width, rt->height, cf, levels, 1, WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding |
-                     WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst);
-    tx->v = wgpuTextureCreateView(tx->t, NULL);
-    tx->v0 = level_view(tx->t, cf, 0, 1);
+    if (rt->is_cube) {
+      /* (compatibility mode: a texture is bound with one view dimension, named at creation) */
+      WGPUTextureBindingViewDimension bvd = { .chain = { .sType = WGPUSType_TextureBindingViewDimension },
+                                              .textureBindingViewDimension = WGPUTextureViewDimension_Cube };
+      WGPUTextureDescriptor d = { .nextInChain = &bvd.chain, .usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding |
+                                  WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst, .dimension = WGPUTextureDimension_2D,
+                                  .size = { (uint32_t)rt->width, (uint32_t)rt->height, 6 }, .format = cf, .mipLevelCount = levels, .sampleCount = 1 };
+      tx->t = wgpuDeviceCreateTexture(w->dev, &d);
+      WGPUTextureViewDescriptor vd = { .format = cf, .dimension = WGPUTextureViewDimension_Cube, .mipLevelCount = levels, .arrayLayerCount = 6,
+                                       .aspect = WGPUTextureAspect_All };
+      tx->v = wgpuTextureCreateView(tx->t, &vd);
+      x->n_faces = 6 * levels;
+      x->faces = calloc(x->n_faces, sizeof *x->faces);
+      T3_CHECK_ALLOC(x->faces);
+      for (uint32_t i = 0; i < x->n_faces; i++) {
+        WGPUTextureViewDescriptor fv = { .format = cf, .dimension = WGPUTextureViewDimension_2D, .baseMipLevel = i / 6, .mipLevelCount = 1,
+                                         .baseArrayLayer = i % 6, .arrayLayerCount = 1, .aspect = WGPUTextureAspect_All };
+        x->faces[i] = wgpuTextureCreateView(tx->t, &fv);
+      }
+    } else {
+      tx->t = make_tex(w, rt->width, rt->height, cf, levels, 1, WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding |
+                       WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst);
+      tx->v = wgpuTextureCreateView(tx->t, NULL);
+      tx->v0 = level_view(tx->t, cf, 0, 1);
+    }
     tx->w = rt->width; tx->h = rt->height; tx->fmt = cf; tx->levels = levels; tx->version = t->version;
     if (samples > 1) {
       x->msaa_c = make_tex(w, rt->width, rt->height, cf, 1, 4, WGPUTextureUsage_RenderAttachment);
@@ -1142,12 +1296,18 @@ void t3_wgpu_render_target(t3_wgpu *w, t3_render_target *rt, t3_wgpu_rt *out) {
   out->samples = samples;
   out->color_format = cf;
   out->depth_format = rt->depth_buffer ? df : WGPUTextureFormat_Undefined;
-  out->color = samples > 1 ? x->msaa_cv : tx->v0;
+  out->color = rt->is_cube ? x->faces[6 * (uint32_t)rt->active_mip + (uint32_t)rt->active_face] : samples > 1 ? x->msaa_cv : tx->v0;
   out->resolve = samples > 1 ? tx->v0 : NULL;
   out->depth = !rt->depth_buffer ? NULL : x->depth_v ? x->depth_v : ((struct tex *)rt->depth_texture->_wgpu)->v0;
 }
 void t3_wgpu_render_target_done(t3_wgpu *w, t3_render_target *rt) {
   struct tex *tx = rt->texture->_wgpu;
+  if (rt->is_cube) {
+    /* (CubeCamera.update: when the last face has been drawn; a PMREM's levels are its own passes') */
+    if (tx && tx->levels > 1 && !rt->texture->mip_levels && rt->active_face == 5 && rt->active_mip == 0)
+      generate_cube_mipmaps(w, tx->t, tx->v, tx->fmt, rt->width, tx->levels);
+    return;
+  }
   if (tx && tx->levels > 1) generate_mipmaps(w, tx->t, tx->fmt, tx->levels);
 }
 
@@ -1165,13 +1325,13 @@ WGPUTextureView t3_wgpu_depth_map(t3_wgpu *w, void **slot, int width, int height
                                             .textureBindingViewDimension = WGPUTextureViewDimension_Cube };
     WGPUTextureDescriptor d = { .nextInChain = cube ? &bvd.chain : NULL, .usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding,
       .dimension = WGPUTextureDimension_2D,
-      .size = { (uint32_t)width, (uint32_t)height, cube ? 6u : 1u }, .format = WGPUTextureFormat_Depth24Plus, .mipLevelCount = 1, .sampleCount = 1 };
+      .size = { (uint32_t)width, (uint32_t)height, cube ? 6u : 1u }, .format = t3_wgpu_depth_format(w), .mipLevelCount = 1, .sampleCount = 1 };
     x->t = wgpuDeviceCreateTexture(w->dev, &d);
-    WGPUTextureViewDescriptor sv = { .format = WGPUTextureFormat_Depth24Plus, .dimension = cube ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2D,
+    WGPUTextureViewDescriptor sv = { .format = t3_wgpu_depth_format(w), .dimension = cube ? WGPUTextureViewDimension_Cube : WGPUTextureViewDimension_2D,
       .mipLevelCount = 1, .arrayLayerCount = cube ? 6 : 1, .aspect = WGPUTextureAspect_DepthOnly };
     x->sample = wgpuTextureCreateView(x->t, &sv);
     for (int f = 0; f < (cube ? 6 : 1); f++) {
-      WGPUTextureViewDescriptor fv = { .format = WGPUTextureFormat_Depth24Plus, .dimension = WGPUTextureViewDimension_2D, .mipLevelCount = 1,
+      WGPUTextureViewDescriptor fv = { .format = t3_wgpu_depth_format(w), .dimension = WGPUTextureViewDimension_2D, .mipLevelCount = 1,
         .baseArrayLayer = (uint32_t)f, .arrayLayerCount = 1, .aspect = WGPUTextureAspect_All };
       x->faces[f] = wgpuTextureCreateView(x->t, &fv);
     }
@@ -1181,12 +1341,12 @@ WGPUTextureView t3_wgpu_depth_map(t3_wgpu *w, void **slot, int width, int height
   return x->sample;
 }
 WGPUSampler t3_wgpu_compare_sampler(t3_wgpu *w, bool linear) {
-  uint32_t key = 0x80000000u | (uint32_t)linear;
+  uint32_t key = 0x80000000u | (uint32_t)linear | (uint32_t)w->reversed << 1;
   for (int i = 0; i < w->n_samplers; i++) if (w->samplers[i].key == key) return w->samplers[i].s;
   WGPUFilterMode fm = linear ? WGPUFilterMode_Linear : WGPUFilterMode_Nearest;
   WGPUSamplerDescriptor d = { .addressModeU = WGPUAddressMode_ClampToEdge, .addressModeV = WGPUAddressMode_ClampToEdge, .addressModeW = WGPUAddressMode_ClampToEdge,
     .magFilter = fm, .minFilter = fm, .mipmapFilter = WGPUMipmapFilterMode_Nearest, .lodMinClamp = 0, .lodMaxClamp = 32,
-    .compare = WGPUCompareFunction_LessEqual, .maxAnisotropy = 1 };
+    .compare = w->reversed ? WGPUCompareFunction_GreaterEqual : WGPUCompareFunction_LessEqual, .maxAnisotropy = 1 };
   WGPUSampler s = wgpuDeviceCreateSampler(w->dev, &d);
   if (w->n_samplers < 64) w->samplers[w->n_samplers++] = (struct sampler_entry){ key, s };
   return s;
@@ -1240,7 +1400,7 @@ WGPUSampler t3_wgpu_sampler(t3_wgpu *w, const t3_texture *t, bool cmp) {
   static const WGPUAddressMode am[3] = { WGPUAddressMode_Repeat, WGPUAddressMode_ClampToEdge, WGPUAddressMode_MirrorRepeat };
   bool mag_lin = mag != T3_NEAREST, min_lin = min == T3_LINEAR || min == T3_LINEAR_MIPMAP_NEAREST || min == T3_LINEAR_MIPMAP_LINEAR;
   bool mip_lin = min == T3_NEAREST_MIPMAP_LINEAR || min == T3_LINEAR_MIPMAP_LINEAR;
-  /* r186 WebGPUTextureUtils: texture.anisotropy when every filter is linear
+  /* r187 WebGPUTextureUtils: texture.anisotropy when every filter is linear
    * (WebGPU allows no other); the device clamps it to what it supports, as
    * the GL backend's min(anisotropy, MAX_TEXTURE_MAX_ANISOTROPY) */
   uint32_t aniso = 1;
@@ -1256,7 +1416,7 @@ WGPUSampler t3_wgpu_sampler(t3_wgpu *w, const t3_texture *t, bool cmp) {
   if (w->n_samplers < 64) w->samplers[w->n_samplers++] = (struct sampler_entry){ key, s };
   return s;
 }
-/* r186 ViewportTextureNode (transmission): a mipmapped copy of src, a view of
+/* r187 ViewportTextureNode (transmission): a mipmapped copy of src, a view of
  * the colour attachment just drawn into (no pass open), at its format.
  * Level 0 is a same-size blit with the mipmap pipeline, then the chain. */
 struct vpcopy { WGPUTexture t; WGPUTextureView v; int w, h; WGPUTextureFormat fmt; uint32_t levels; };

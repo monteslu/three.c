@@ -1,7 +1,7 @@
 // e4-extension-many-textures: three.c's example extension with many textures
-// (tools/extensions/mosaic.mjs) written in r186 TSL: ten tiles averaged in the
+// (tools/extensions/mosaic.mjs) written in r187 TSL: ten tiles averaged in the
 // fragment stage, and a height texture read with textureLoad in both stages
-// (r186 binds it twice): it lifts the vertices by a value per object
+// (r187 binds it twice): it lifts the vertices by a value per object
 // (onObjectUpdate) and shades the surface. Thirteen texture bindings in one
 // group.
 const { uniform, texture, textureLoad, uv, ivec2, float, vec3, positionLocal, normalLocal, materialColor } = THREE.TSL;

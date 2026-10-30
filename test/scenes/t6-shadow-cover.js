@@ -2,7 +2,7 @@
 // light, with scene.environment: Standard spheres on a ground. three.c has no
 // program captured for exactly this light vector, so it draws with one
 // captured for more point lights (the extra lights inert); the pixels must be
-// r186's.
+// r187's.
 const renderer = new THREE.WebGPURenderer();
 renderer.setSize(1280, 720);
 renderer.setClearColor(0x182028, 1);
@@ -11,7 +11,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, 1280 / 720, 0.1, 100);
 camera.position.set(0, 5, 11);
 camera.lookAt(0, 0.5, 0);
-// a cube environment (PMREM'd by r186 as scene.environment)
+// a cube environment (PMREM'd by r187 as scene.environment)
 const S = 16, tints = [[200, 120, 90], [90, 160, 220], [230, 230, 240], [60, 70, 60], [160, 200, 140], [120, 100, 180]];
 const faces = tints.map((c) => { const d = new Uint8Array(S * S * 4); for (let i = 0; i < S * S; i++) { d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255; } const t = new THREE.DataTexture(d, S, S, THREE.RGBAFormat); t.needsUpdate = true; return t; });
 const env = new THREE.CubeTexture(faces);

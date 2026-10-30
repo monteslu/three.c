@@ -1,6 +1,6 @@
 # Table states beyond the base table (tools/gen-programs.mjs allStates): the
-# ones three.c's own scenes and tests draw, and the r186 features they cover
-# (MeshPhysicalMaterial lobes, transmission). tools/parity-r186.mjs lists what
+# ones three.c's own scenes and tests draw, and the r187 features they cover
+# (MeshPhysicalMaterial lobes, transmission). tools/parity-r187.mjs lists what
 # is missing. A project that embeds three.c keeps its own list for the states it
 # draws beyond these (tools/gen-project-table.mjs).
 basic+fog+instbig
@@ -85,7 +85,7 @@ physical+cc+sheen+irid+instbig+shadow+senv+l1001
 physical+cc+sheen+irid+instbig+icol+shadow+senv+l1001
 physical+cc+sheen+irid+trans+shadow+senv+l1001
 physical+cc+sheen+irid+trans+instbig+icol+shadow+senv+l1001
-# transmission (r186 framebuffer copy); bs: the back-face pass of a double-sided one
+# transmission (r187 framebuffer copy); bs: the back-face pass of a double-sided one
 physical+transm
 physical+transm+shadow+senv+l1001
 physical+transm+instbig+shadow+senv+l1001
@@ -100,3 +100,17 @@ physical+transm+bs+instbig+icol+shadow+senv+l1001
 physical+map+rep+nmap+ao+rmap+transm+bs+shadow+senv+l1001
 physical+map+rep+nmap+ao+rmap+transm+bs+instbig+shadow+senv+l1001
 physical+map+rep+nmap+ao+rmap+transm+bs+instbig+icol+shadow+senv+l1001
+# reversedDepthBuffer: only what reads a shadow map differs
+standard+shadow+rdepth
+standard+shadow+rdepth+l1000
+standard+shadow+rdepth+l0100
+standard+shadow+rdepth+l1100
+phong+shadow+rdepth+l1000
+phong+shadow+rdepth+l1100
+lambert+shadow+rdepth+l1000
+lambert+shadow+rdepth+l1100
+physical+shadow+rdepth+l1000
+physical+shadow+rdepth+l1100
+standard+map+shadow+rdepth+l1000
+standard+map+shadow+rdepth+l1100
+standard+map+ao+lmap+c1map+c1ao+c1lmap+l1000

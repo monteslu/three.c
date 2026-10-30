@@ -3,24 +3,25 @@
 // plain values. tools/emit-programs.mjs writes it as C; the runtime builder
 // (src/builder.c) reads it straight from QuickJS. Plain JS, no Node.
 //
-// The only edit to three.js's text: r186 names instanced attributes by node
+// The only edit to three.js's text: r187 names instanced attributes by node
 // id (nodeAttribute<n>), so the instance colour's number depends on the
 // state; it is renamed instanceColor. The instance matrix columns stay
 // nodeAttribute0..3, which is checked.
 
 export const KINDS = ['basic', 'lambert', 'phong', 'standard', 'physical', 'depth', 'points', 'psprite', 'line', 'sprite', 'normal', 'output',
-  'bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremblur'];
+  'bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremintegration', 'pmremblur'];
 // feature bits (64): the order is the C ABI of the table, append only
 export const FEATURE_NAMES = ['map', 'vcol', 'fog', 'inst', 'trans', 'flat', 'rep', 'nearest', 'instbig', 'nmap', 'ao', 'emap', 'rmap', 'mmap',
   'amap', 'bump', 'spec', 'shadow', 'skin', 'morph', 'env', 'senv', 'lmap', 'noatten', 'tmlinear', 'tmreinhard', 'tmcineon', 'tmaces',
-  'tmagx', 'tmneutral', 'lin', 'fog2', 'clip', 'clipi', 'atest', 'tan', 'morphn', 'dmap', 'cenv', 'refr', 'mix', 'add', 'ds', 'bs', 'cm', 'icol', 'cc', 'ccn', 'sheen', 'irid', 'aniso', 'transm'];
+  'tmagx', 'tmneutral', 'lin', 'fog2', 'clip', 'clipi', 'atest', 'tan', 'morphn', 'dmap', 'cenv', 'refr', 'mix', 'add', 'ds', 'bs', 'cm', 'icol', 'cc', 'ccn', 'sheen', 'irid', 'aniso', 'transm', 'eon',
+  'c1map', 'c1nmap', 'c1ao', 'c1emap', 'c1rmap', 'c1mmap', 'c1amap', 'c1lmap', 'rdepth'];
 // backend.h's t3_bk_sample_type / t3_bk_tex_dim, by index
 export const SAMPLES = ['float', 'unfilterable-float', 'depth', 'sint', 'uint'];
 export const DIMS = ['2d', '2d-array', 'cube', '3d'];
 
 // WGSL declares binding numbers; GLSL binds blocks by name at link time and
 // samplers by location, so there the binding is the position in the group.
-// The capture lists groups in @group order (r186's BindGroup carries no
+// The capture lists groups in @group order (r187's BindGroup carries no
 // index); on WebGPU the declarations say which group and binding each name
 // has, and the model checks the group matches the position.
 function bindingNumbers(be, code, groupIndex) {
@@ -40,7 +41,7 @@ function groupOf(be, code, name) {
 // The WebGPU vertex buffers three.c binds for a program's attributes (src/gen_wgpu.c t3_wgpu_pipeline,
 // src/gen_program.c t3_gen_vertex_buffer_count): one per geometry attribute; the instance matrix
 // columns nodeAttribute0..3 share one instance-step buffer (64 bytes an InstancedMesh, 80 a batch:
-// the matrix and an rgb + pad colour), as r186's InstancedInterleavedBuffer; the instance colour (vec3,
+// the matrix and an rgb + pad colour), as r187's InstancedInterleavedBuffer; the instance colour (vec3,
 // named nodeAttribute<n> in a capture and instanceColor after programModel) in one of its own. A tool
 // that compiles a captured program the way a host draws it uses this layout, not one buffer per
 // attribute (that counts the matrix four times: 9 buffers for an instanced, vertex- and instance-

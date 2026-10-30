@@ -5,8 +5,8 @@
  * MeshPhysicalMaterial that uses map, normalMap (with the geometry's
  * tangents), aoMap and vertexColors: the most vertex buffers an instanced
  * program binds (7: position, normal, uv, color and tangent, the instance
- * matrix as one buffer as r186's InstancedInterleavedBuffer, the instance
- * colour; r186 samples the aoMap on uv, channel 0, so uv1 is on the
+ * matrix as one buffer as r187's InstancedInterleavedBuffer, the instance
+ * colour; r187 samples the aoMap on uv, channel 0, so uv1 is on the
  * geometry but no program reads it). WebGPU guarantees 8 (maxVertexBuffers,
  * core and compatibility mode); one buffer per matrix column would be 10. The draw must not be
  * skipped, raise no WebGPU validation error, show each instance's colour

@@ -315,7 +315,7 @@ t3_geometry *t3_sphere_geometry_new_ex(float radius, int ws, int hs, float phi_s
     float v = (float)iy / hs, u_off = 0;
     if (iy == 0 && theta_start == 0) u_off = 0.5f / ws;
     else if (iy == hs && theta_end == (float)M_PI) u_off = -0.5f / ws;
-    /* r186: the ring radius from the height (exact zeros at the poles) */
+    /* r187: the ring radius from the height (exact zeros at the poles) */
     float py = radius * cosf(theta_start + v * theta_len);
     float ring = sqrtf(radius * radius - py * py);
     for (int ix = 0; ix <= ws; ix++) {

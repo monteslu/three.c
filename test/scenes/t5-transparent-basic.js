@@ -1,6 +1,6 @@
 // t5-transparent-basic: Basic materials only, one of them transparent, under
 // an orthographic camera (a 2D game's frame). A transparent item sends the
-// frame through r186's linear target and output pass; with no textured
+// frame through r187's linear target and output pass; with no textured
 // material in the scene, nothing else rebinds the texture unit the output
 // pass samples.
 const renderer = new THREE.WebGPURenderer();

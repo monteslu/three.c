@@ -6,8 +6,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 QJS_VER=0.17.0
 QJS_SHA=559bc4c420475e55c7ab4510adbc562f55d7524d75e8e89d79ce4bb02f5687d9
-THREE_VER=0.186.1
-THREE_SHA=8cd068708ea44f2c73c944b1cead2ba2f0d5c15c8fc194e5700f4e4f4a033fe7
+THREE_VER=0.187.0
+THREE_SHA=ff540832ded0cfe919764d24a3d88f3e2a05f23303f876423e4f893841e90728
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 get() {   # url sha dest

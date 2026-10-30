@@ -1,4 +1,4 @@
-/* Every vertex attribute name r186's generated programs use gets one of
+/* Every vertex attribute name r187's generated programs use gets one of
  * three.c's fixed locations (gen_program.c fixed_location, renumber_attributes).
  * A name with no fixed place must be refused, which is the control. */
 #include "../src/gen_program.c"

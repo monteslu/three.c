@@ -1,4 +1,4 @@
-/* r186's generated programs, inside the renderer (included by renderer.c
+/* r187's generated programs, inside the renderer (included by renderer.c
  * ahead of draw_item: it uses the renderer's statics).
  *
  * A material is mapped to a table state (kind + features + the frame's light
@@ -115,7 +115,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   case T3_MESH_STANDARD_MATERIAL: kind = T3_GEN_STANDARD; break;
   case T3_MESH_PHYSICAL_MATERIAL: kind = T3_GEN_PHYSICAL; break;
   case T3_MESH_NORMAL_MATERIAL: kind = T3_GEN_NORMAL; break;
-  case T3_POINTS_MATERIAL: kind = T3_GEN_POINTS; break;      /* r186 draws a Points object as 1-pixel GL points */
+  case T3_POINTS_MATERIAL: kind = T3_GEN_POINTS; break;      /* r187 draws a Points object as 1-pixel GL points */
   case T3_LINE_BASIC_MATERIAL: kind = T3_GEN_LINE; break;
   case T3_SPRITE_MATERIAL: kind = T3_GEN_SPRITE; break;
   default: *why = "material kind"; return false;
@@ -126,12 +126,12 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   if (g->morph_count && !g->morph_position) { *why = "morph targets without positions"; return false; }
   if (o->type == T3_SKINNED_MESH) {
     const t3_skeleton *sk = ((const t3_skinned_mesh *)o)->skeleton;
-    if (!sk || sk->bone_count < 1 || sk->bone_count > 256) { *why = "skeleton missing or over 256 bones (r186's bone-texture path)"; return false; }
+    if (!sk || sk->bone_count < 1 || sk->bone_count > 256) { *why = "skeleton missing or over 256 bones (r187's bone-texture path)"; return false; }
   }
-  /* (material / renderer clippingPlanes: r186's node renderer ignores them, its
+  /* (material / renderer clippingPlanes: r187's node renderer ignores them, its
    * clipping is ClippingGroup; the generated path does the same) */
   uint64_t f = 0;
-  /* the environment: Standard / Physical through a PMREM (r186 EnvironmentNode:
+  /* the environment: Standard / Physical through a PMREM (r187 EnvironmentNode:
    * a cube, an equirect or a PMREM texture; scene.environment when the
    * material has none); Basic / Lambert / Phong a CubeTexture sampled along
    * the reflection or refraction vector (BasicEnvironmentNode) */
@@ -139,7 +139,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   if (m->env_map) {
     const t3_texture *e = m->env_map;
     if (pbr) {
-      if (!(e->is_cube || e->mapping == T3_CUBE_UV_REFLECTION_MAPPING || e->mapping == T3_EQUIRECTANGULAR_REFLECTION_MAPPING)) { *why = "envMap mapping"; return false; }
+      if (!(e->is_cube || e->mapping == T3_EQUIRECTANGULAR_REFLECTION_MAPPING)) { *why = "envMap mapping"; return false; }
       f |= T3_GEN_ENV;
     } else if (kind == T3_GEN_BASIC || kind == T3_GEN_LAMBERT || kind == T3_GEN_PHONG) {
       if (!e->is_cube) { *why = "a Basic / Lambert / Phong envMap that is not a CubeTexture"; return false; }
@@ -150,7 +150,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
     } else { *why = "envMap on this material kind"; return false; }
   } else if (pbr && r->environment) {
     const t3_texture *e = r->environment;
-    if (!(e->is_cube || e->mapping == T3_CUBE_UV_REFLECTION_MAPPING || e->mapping == T3_EQUIRECTANGULAR_REFLECTION_MAPPING)) { *why = "scene.environment mapping"; return false; }
+    if (!(e->is_cube || e->mapping == T3_EQUIRECTANGULAR_REFLECTION_MAPPING)) { *why = "scene.environment mapping"; return false; }
     f |= T3_GEN_SENV;
   }
   if (m->normal_map) { f |= T3_GEN_NMAP; if (g->attributes[T3_ATTR_TANGENT]) f |= T3_GEN_TAN; }
@@ -160,15 +160,25 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   if (m->metalness_map) f |= T3_GEN_MMAP;
   if (m->alpha_map) f |= T3_GEN_AMAP;
   if (m->light_map) f |= T3_GEN_LMAP;
+  /* texture.channel (r187 RenderObject keys its programs on it) */
+  if (m->map && m->map->channel) f |= T3_GEN_C1MAP;
+  if (m->normal_map && m->normal_map->channel) f |= T3_GEN_C1NMAP;
+  if (m->ao_map && m->ao_map->channel) f |= T3_GEN_C1AO;
+  if (m->emissive_map && m->emissive_map->channel) f |= T3_GEN_C1EMAP;
+  if (m->roughness_map && m->roughness_map->channel) f |= T3_GEN_C1RMAP;
+  if (m->metalness_map && m->metalness_map->channel) f |= T3_GEN_C1MMAP;
+  if (m->alpha_map && m->alpha_map->channel) f |= T3_GEN_C1AMAP;
+  if (m->light_map && m->light_map->channel) f |= T3_GEN_C1LMAP;
   if (kind == T3_GEN_PHYSICAL) {
-    /* r186 useClearcoat / useSheen / useIridescence / useAnisotropy / useTransmission */
+    /* r187 useClearcoat / useSheen / useDiffuseRoughness / useIridescence / useAnisotropy / useTransmission */
     if (m->clearcoat > 0) { f |= T3_GEN_CC; if (m->clearcoat_normal_map) f |= T3_GEN_CCN; }
     if (m->sheen > 0) f |= T3_GEN_SHEEN;
+    if (m->diffuse_roughness > 0) f |= T3_GEN_EON;
     if (m->iridescence > 0) f |= T3_GEN_IRID;
     if (m->anisotropy > 0) f |= T3_GEN_ANISO;
     if (m->transmission > 0) f |= T3_GEN_TRANSM;
   }
-  /* instanced draws take r186's instanced-attribute program whatever the count
+  /* instanced draws take r187's instanced-attribute program whatever the count
    * (its uniform-buffer program bakes the count into the shader) */
   if (o->type == T3_INSTANCED_MESH || batched) f |= T3_GEN_INSTBIG;
   if (o->type == T3_INSTANCED_MESH && ((const t3_instanced_mesh *)o)->instance_color) f |= T3_GEN_ICOL;
@@ -182,14 +192,14 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
     if (m->map->format == T3_DEPTH_FORMAT || m->map->format == T3_DEPTH_STENCIL_FORMAT) {
       f |= T3_GEN_DMAP;
 #ifdef T3_WGPU
-      if (r->wgpu && t3_wgpu_compat(r->wgpu)) f |= T3_GEN_CM;   /* r186 reads it as texture_2d<f32> there */
+      if (r->wgpu && t3_wgpu_compat(r->wgpu)) f |= T3_GEN_CM;   /* r187 reads it as texture_2d<f32> there */
 #endif
     }
     else if (tex_nearest(m->map)) f |= T3_GEN_NEAREST;
   }
   if (m->vertex_colors) {
     /* rgb or rgba (glTF exporters write COLOR_0 as vec4 by default): the program reads the first three
-     * components of the attribute, so an rgba one draws with its colour and an opaque alpha (r186's
+     * components of the attribute, so an rgba one draws with its colour and an opaque alpha (r187's
      * USE_COLOR_ALPHA program, which would multiply the alpha in, is not in the tables) */
     if (!g->attributes[T3_ATTR_COLOR] || (g->attributes[T3_ATTR_COLOR]->item_size != 3 && g->attributes[T3_ATTR_COLOR]->item_size != 4)) {
       *why = "vertex colors that are not rgb or rgba"; return false;
@@ -208,7 +218,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   if ((kind == T3_GEN_SPRITE) && !m->size_attenuation) f |= T3_GEN_NOATTEN;
   if (m->flat_shading && (kind == T3_GEN_NORMAL || (kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL))) f |= T3_GEN_FLAT;
   if (m->wireframe || m->premultiplied_alpha || m->dithering) { *why = "wireframe / premultiplied / dithering"; return false; }
-  /* shadows: r186 keys the program on receiveShadow when a light casts; the
+  /* shadows: r187 keys the program on receiveShadow when a light casts; the
    * table's +shadow states have every light of the vector casting */
   bool shadow = false;
   uint8_t cast[3] = { 0, 0, 0 };
@@ -226,6 +236,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
       }
     }
     f |= T3_GEN_SHADOW;
+    if (r->reversed_depth) f |= T3_GEN_RDEPTH;   /* (only what reads a shadow map differs) */
     shadow = true;
   }
   /* lights: the exact vector when the table has it, else the smallest one that
@@ -475,6 +486,11 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
     case GOP_CAM_PROJ:
       if (cam) {
         memcpy(b, cam->projection_matrix.e, 64);
+        if (r->reversed_depth && !r->wgpu) {
+          /* EXT_clip_control's [0, 1] clip z, reversed: z' = 0.5 w - 0.5 z */
+          float *p = (float *)b;
+          for (int c = 0; c < 4; c++) p[c * 4 + 2] = 0.5f * p[c * 4 + 3] - 0.5f * p[c * 4 + 2];
+        }
 #ifdef T3_WGPU
         if (r->wgpu) {
           /* WebGPU clip z is [0, 1]: z' = 0.5 z + 0.5 w (three.js builds this
@@ -484,7 +500,7 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
           double n = cam->near, f = cam->far;
           if (cam->base.type == T3_PERSPECTIVE_CAMERA) {
             /* a projection the application edited (an oblique near plane:
-             * r186's ReflectorNode replaces the third row) is not the one
+             * r187's ReflectorNode replaces the third row) is not the one
              * near / far build: remap its z row as clip space does instead,
              * z' = 0.5 z + 0.5 w, which keeps the edit */
             if (p[2] == 0 && p[6] == 0 && p[10] == (float)(-(f + n) / (f - n)) && p[14] == (float)(-2 * f * n / (f - n))) {
@@ -494,6 +510,8 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
             }
           }
           else { p[10] = (float)(-1 / (f - n)); p[14] = (float)(-n / (f - n)); }
+          /* reversedDepthBuffer: z' = w - z */
+          if (r->reversed_depth) for (int c = 0; c < 4; c++) p[c * 4 + 2] = p[c * 4 + 3] - p[c * 4 + 2];
           memcpy(b, p, 64);
         }
 #endif
@@ -536,6 +554,9 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
       switch (field) {
       case T3_GEN_SH_BIAS: putf(b, sh->bias); break;
       case T3_GEN_SH_NORMAL_BIAS: putf(b, sh->normal_bias); break;
+      /* the point shadow camera's range (far: the light's distance when it has one, as its passes draw) */
+      case T3_GEN_SH_NEAR: putf(b, sh->camera->near); break;
+      case T3_GEN_SH_FAR: putf(b, l->distance ? l->distance : sh->camera->far); break;
       case T3_GEN_SH_RADIUS: putf(b, sh->radius); break;
       case T3_GEN_SH_INTENSITY: putf(b, sh->intensity); break;
       case T3_GEN_SH_MAP_SIZE: { float v[2] = { (float)sh->map_width, (float)sh->map_height }; memcpy(b, v, 8); break; }
@@ -552,13 +573,6 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
   }
 }
 
-/* cube-UV sizes from a PMREM texture's height (PMREMNode _generateCubeUVSize) */
-static void cubeuv_sizes(const t3_texture *t, float out[3]) {
-  float h = t ? (float)t->height : 1024;
-  float mm = log2f(h) - 2;
-  float p = powf(2, mm);
-  out[0] = 1.0f / (3 * (p > 112 ? p : 112)); out[1] = 1.0f / h; out[2] = mm;
-}
 /* the transposed rotation matrix of an euler (MaterialProperties envMapRotation) */
 static void rotation_t(t3_euler e, float out[16]) {
   t3_mat4 m;
@@ -598,12 +612,9 @@ static void gen_fill_draw(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, c
     case GOP_ENV_ROTATION: { float v[16]; rotation_t(r->aux.env_rotation, v); memcpy(b, v, 64); break; }
     case GOP_MAT_REFLECTIVITY: putf(b, m->reflectivity); break;
     case GOP_MAT_REFRACTION: putf(b, m->refraction_ratio); break;
-    case GOP_CUBEUV_TW: case GOP_CUBEUV_TH: case GOP_CUBEUV_MAXMIP: {
-      float c[3];
-      cubeuv_sizes(r->aux.env ? r->aux.env : r->aux.bg, c);
-      putf(b, c[op->op - GOP_CUBEUV_TW]);
-      break;
-    }
+    /* PMREMNode.updateFromTexture */
+    case GOP_PMREM_MAXLOD: { const t3_texture *t = r->aux.env ? r->aux.env : r->aux.bg; putf(b, t ? (float)(t->mip_levels - 1) : 0); break; }
+    case GOP_PMREM_SIZE: { const t3_texture *t = r->aux.env ? r->aux.env : r->aux.bg; putf(b, t ? (float)t->width : 0); break; }
     case GOP_BG_INTENSITY: putf(b, r->aux.bg_intensity); break;
     case GOP_BG_BLUR: putf(b, r->aux.bg_blur); break;
     case GOP_BG_ROTATION: { float v[16]; rotation_t(r->aux.bg_rotation, v); memcpy(b, v, 64); break; }
@@ -617,7 +628,8 @@ static void gen_fill_draw(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, c
     case GOP_PMREM_FLIPY: { uint32_t v = r->aux.pm_src && r->aux.pm_src->gpu_made; memcpy(b, &v, 4); break; }
     case GOP_ENV_FLIPY: { uint32_t v = r->aux.env && r->aux.env->gpu_made; memcpy(b, &v, 4); break; }
     case GOP_PMREM_ROUGH: putf(b, r->aux.pm_rough); break;
-    case GOP_PMREM_MIP: putf(b, r->aux.pm_mip); break;
+    case GOP_PMREM_LODBIAS: putf(b, r->aux.pm_lod_bias); break;
+    case GOP_PMREM_SOURCELOD: putf(b, r->aux.pm_source_lod); break;
     case GOP_PMREM_SIGMA: putf(b, r->aux.pm_sigma); break;
     case GOP_MAT_OPACITY: putf(b, m->opacity); break;
     case GOP_MAT_EMISSIVE: put3(b, &m->emissive, 1); break;
@@ -635,10 +647,11 @@ static void gen_fill_draw(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, c
     case GOP_MAT_SHEEN: putf(b, m->sheen); break;
     case GOP_MAT_SHEEN_COLOR: put3(b, &m->sheen_color, 1); break;
     case GOP_MAT_SHEEN_R: putf(b, m->sheen_roughness); break;
+    case GOP_MAT_DIFFUSE_ROUGHNESS: putf(b, m->diffuse_roughness); break;
     case GOP_MAT_IRID: putf(b, m->iridescence); break;
     case GOP_MAT_IRID_IOR: putf(b, m->iridescence_ior); break;
     case GOP_MAT_IRID_THICK_MAX: putf(b, m->iridescence_thickness_range[1]); break;
-    case GOP_MAT_ANISO_VEC: {   /* r186 materialAnisotropyVector: anisotropy along anisotropyRotation */
+    case GOP_MAT_ANISO_VEC: {   /* r187 materialAnisotropyVector: anisotropy along anisotropyRotation */
       float v[2] = { m->anisotropy * cosf(m->anisotropy_rotation), m->anisotropy * sinf(m->anisotropy_rotation) };
       memcpy(b, v, 8);
       break;
@@ -789,7 +802,7 @@ static bool gen_fill_ext(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, co
       snprintf(buf, sizeof buf, "program %s: extension %s left texture %s unset", gl->src->state, gl->src->extension, gl->ext_tex[t].name);
       return gen_note(r, buf);
     }
-    /* r186 TextureNode flipY: a texture the GPU drew is stored flipped */
+    /* r187 TextureNode flipY: a texture the GPU drew is stored flipped */
     for (int k = 0; k < gl->ext_tex[t].n_flip; k++)
       if (gl->mirror[gl->ext_tex[t].flip_group[k]]) {
         uint32_t v = tx->gpu_made;
@@ -799,7 +812,7 @@ static bool gen_fill_ext(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, co
   return true;
 }
 
-/* r186's precomputed DFG LUT as a texture (16 x 16 RG16F, linear, clamp) */
+/* r187's precomputed DFG LUT as a texture (16 x 16 RG16F, linear, clamp) */
 static GLuint gen_dfg_texture(t3_renderer *r) {
   if (r->dfg_tex) return r->dfg_tex;
   glGenTextures(1, &r->dfg_tex);
@@ -813,7 +826,7 @@ static GLuint gen_dfg_texture(t3_renderer *r) {
   return r->dfg_tex;
 }
 
-/* ── shadows (r186 ShadowNode): a depth texture per casting light, drawn
+/* ── shadows (r187 ShadowNode): a depth texture per casting light, drawn
  * with the table's caster programs (kind depth) from the light's shadow
  * camera, sampled by receivers with a LEQUAL comparison (hardware PCF:
  * linear filtering for PCFShadowMap) ── */
@@ -842,7 +855,7 @@ static struct gen_shadow *gen_shadow_of(t3_renderer *r, const t3_light *l, bool 
   s->light_id = l->base.id;
   return s;
 }
-/* a 2D depth texture, or for a point light a cube one (r186 CubeDepthTexture) */
+/* a 2D depth texture, or for a point light a cube one (r187 CubeDepthTexture) */
 static void gen_shadow_storage(t3_renderer *r, struct gen_shadow *s, int w, int h, bool cube) {
   if (s->tex && s->w == w && s->h == h && s->cube == cube) return;
   if (s->tex && s->cube != cube) { glDeleteTextures(1, &s->tex); s->tex = 0; }
@@ -850,13 +863,14 @@ static void gen_shadow_storage(t3_renderer *r, struct gen_shadow *s, int w, int 
   if (!s->fbo) glGenFramebuffers(1, &s->fbo);
   s->cube = cube;
   GLenum target = cube ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D;
+  GLenum dfmt = r->reversed_depth ? GL_DEPTH_COMPONENT32F : GL_DEPTH_COMPONENT24, dtype = r->reversed_depth ? GL_FLOAT : GL_UNSIGNED_INT;
   if (cube) {
     tu_bind_cube(31, s->tex, true);
     for (int f = 0; f < 6; f++)
-      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, GL_DEPTH_COMPONENT24, w, w, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, dfmt, w, w, 0, GL_DEPTH_COMPONENT, dtype, NULL);
   } else {
     tu_bind(31, s->tex, true);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, w, h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, dfmt, w, h, 0, GL_DEPTH_COMPONENT, dtype, NULL);
   }
   bool pcf = r->shadow_map_type != T3_BASIC_SHADOW_MAP;
   glTexParameteri(target, GL_TEXTURE_MIN_FILTER, pcf ? GL_LINEAR : GL_NEAREST);
@@ -864,7 +878,7 @@ static void gen_shadow_storage(t3_renderer *r, struct gen_shadow *s, int w, int 
   glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(target, 0x884C /* GL_TEXTURE_COMPARE_MODE */, 0x884E /* GL_COMPARE_REF_TO_TEXTURE */);
-  glTexParameteri(target, 0x884D /* GL_TEXTURE_COMPARE_FUNC */, GL_LEQUAL);
+  glTexParameteri(target, 0x884D /* GL_TEXTURE_COMPARE_FUNC */, r->reversed_depth ? GL_GEQUAL : GL_LEQUAL);
   glBindFramebuffer(GL_FRAMEBUFFER, s->fbo);
   if (cube) glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X, s->tex, 0);
   else glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, s->tex, 0);
@@ -891,7 +905,7 @@ static void gen_bind_shadow(t3_renderer *r, uint8_t kind, int idx, int unit) {
   if (s && s->tex) { if (s->cube) tu_bind_cube(unit, s->tex, true); else tu_bind(unit, s->tex, true); }
 }
 
-/* the caster program for an object (r186 draws the shadow pass with an
+/* the caster program for an object (r187 draws the shadow pass with an
  * override NodeMaterial: kind depth, plus the object's deformations) */
 static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t3_geometry *g, const t3_material *m) {
   if (g->morph_count && (g->morph_normal || o->type != T3_MESH)) return NULL;
@@ -903,7 +917,7 @@ static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t
   const char *base = f & T3_GEN_INSTBIG ? "depth+instbig" : f & T3_GEN_SKIN ? "depth+skin" : f & T3_GEN_MORPH ? "depth+morph" : "depth";
   const t3_gen_program *src = NULL;
   if (m->extension) {
-    /* r186 draws the shadow pass with the material's positionNode (and its
+    /* r187 draws the shadow pass with the material's positionNode (and its
      * colorNode's alpha): an extension material casts with depth+x<name>.
      * A table without it is listed as missing, and the plain caster draws. */
     char name[96];
@@ -977,7 +991,7 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
   }
   GLuint keep = r->gen_stream_ubo;
   r->gen_stream_ubo = r->cast_ubo;
-  /* the caster's state: the material with r186's shadow overrides, copied
+  /* the caster's state: the material with r187's shadow overrides, copied
    * once for a run of casters sharing a material */
   t3_material state;
   const t3_material *state_of = NULL;
@@ -1207,15 +1221,15 @@ static void gen_draw(t3_renderer *r, const render_item *it, const t3_camera *cam
   if (gl) gen_draw_gl(r, it, cam, gl, it->material);
 }
 /* state: the material whose render state (side, depth, blending) applies:
- * the item's own, or for a shadow caster a copy with r186's shadow side */
+ * the item's own, or for a shadow caster a copy with r187's shadow side */
 /* transmission's framebuffer copy on GLES: what has been drawn so far (the
  * current framebuffer, resolved when multisampled) into a mipmapped texture
- * of the framebuffer's type, as r186 copyFramebufferToTexture + mipmaps */
+ * of the framebuffer's type, as r187 copyFramebufferToTexture + mipmaps */
 static void gl_viewport_copy(t3_renderer *r, int which) {
   if (r->vp_done[which]) return;
   r->vp_done[which] = true;
   int w = r->target ? r->target->width : r->width, h = r->target ? r->target->height : r->height;
-  /* r186: the framebuffer's type (an embedder's FBO (set_framebuffer /
+  /* r187: the framebuffer's type (an embedder's FBO (set_framebuffer /
    * external target) by what its colour attachment holds) */
   t3_texture_type type = r->target ? r->target->texture->type : T3_UNSIGNED_BYTE_TYPE;
   if (!r->target && r->cur_fbo) {

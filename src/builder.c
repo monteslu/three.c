@@ -1,5 +1,5 @@
 /* The runtime program builder (T3_BUILDER=1): a state no table has is
- * captured from three.js r186 itself, on first use, by running the same
+ * captured from three.js r187 itself, on first use, by running the same
  * capture tools/gen-programs.mjs does (tools/builder-entry.mjs) in an embedded
  * QuickJS, on the mock GPU (tools/mock-gpu.mjs with tools/gpu-answers.json).
  * The result is the program the emitter would have written into a table

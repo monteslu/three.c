@@ -67,15 +67,15 @@ wc_info_t *wc_get_info(void) {
 
 #ifdef CART_WGPU
 /* a dual cart (WGPU=1 wasm/build.sh): GL and WebGPU imported; the host's
- * host-info flag picks one. Both routes run r186's generated programs. */
+ * host-info flag picks one. Both routes run r187's generated programs. */
 #include <webgpu/webgpu.h>
 extern void *bench_wgpu_device, *bench_wgpu_queue;
 static WGPUSurface surface;
 static WGPUTextureFormat surface_format;
-/* The device the way r186's WebGPUBackend asks for one: a compatibility
+/* The device the way r187's WebGPUBackend asks for one: a compatibility
  * adapter, then a device with every feature the adapter has (which is core
  * where the hardware allows). wasmcart's tier keeps carts at compatibility
- * level whatever they ask (three.c then takes r186's compatibility programs,
+ * level whatever they ask (three.c then takes r187's compatibility programs,
  * t3_wgpu_compat), but grants features beyond the host's device. The answer
  * arrives between frames; frames before it draw nothing. Without an adapter:
  * the host's device. */

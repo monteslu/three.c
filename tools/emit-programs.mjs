@@ -1,4 +1,4 @@
-// Emit the captured r186 programs (tools/gen-programs.mjs, build/gen-programs/)
+// Emit the captured r187 programs (tools/gen-programs.mjs, build/gen-programs/)
 // as C: src/gen/programs.h, programs_gl.c (GLSL ES 3.00 text + manifests),
 // programs_wgpu.c (WGSL text + manifests), programs_dfg.c (the DFG LUT), and
 // programs_core_gl.c / programs_core_wgpu.c: the same table cut down to the
@@ -86,7 +86,7 @@ if (STATES_ARG || !TABLE) {
 }
 if (!states.length) throw new Error(`no captures in ${IN}; run tools/gen-programs.mjs first`);
 // the programs the renderer draws with itself, whatever the materials
-const CORE_KINDS = new Set(['depth', 'output', 'bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremblur']);
+const CORE_KINDS = new Set(['depth', 'output', 'bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremintegration', 'pmremblur']);
 let threeVersion = null;
 
 function load(state, be) {
@@ -139,7 +139,7 @@ ${guard ? `/* the ${guard === 'ifdef' ? 'core' : 'full'} table: T3_TABLE_CORE pi
     out += `static const t3_gen_property p_${S}[] = {\n`;
     for (const p of m.properties) out += `  { ${cq(p.path)}, ${p.group}, ${p.offset}, ${p.length}, ${p.mat3} },\n`;
     out += `};\n`;
-    // constants: uniforms nothing varies, with the bytes r186 uploaded
+    // constants: uniforms nothing varies, with the bytes r187 uploaded
     if (m.constants.length) {
       const rows = [];
       for (const c of m.constants) rows.push({ c, at: rows.reduce((n, r) => n + r.bytes.length, 0), bytes: c.bytes.match(/../g).map((h) => '0x' + h) });
@@ -191,7 +191,7 @@ ${Object.entries(FEATURE_BITS).map(([k, v]) => `#define T3_GEN_${k.toUpperCase()
 typedef struct { const char *path; uint8_t group; uint16_t offset, length; bool std140_mat3; } t3_gen_property;
 typedef struct { const char *name, *type; uint8_t location; bool instanced; } t3_gen_attribute;
 /* a uniform nothing varies (a flag, an identity matrix, a default): the bytes
- * r186 uploaded, written once when the program is built */
+ * r187 uploaded, written once when the program is built */
 typedef struct { uint8_t group; uint16_t offset, length; const uint8_t *bytes; } t3_gen_constant;
 /* a table's shader text, packed and deflated by tools/emit-programs.mjs
  * (packText); the cache holds it inflated once a program of the table is built */
@@ -229,7 +229,7 @@ extern const t3_gen_table t3_gen_base_gl, t3_gen_base_wgpu;
  * err set when the packed text does not inflate */
 char *t3_gen_source(const t3_gen_program *p, bool fragment, char *err, size_t errcap);
 
-/* r186's precomputed DFG LUT: 16 x 16, RG16F (scale, bias), linear, clamp */
+/* r187's precomputed DFG LUT: 16 x 16, RG16F (scale, bias), linear, clamp */
 #define T3_GEN_DFG_LUT_SIZE 16
 extern const uint16_t t3_gen_dfg_lut[T3_GEN_DFG_LUT_SIZE * T3_GEN_DFG_LUT_SIZE * 2];
 

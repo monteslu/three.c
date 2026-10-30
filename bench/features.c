@@ -1265,6 +1265,168 @@ static void r10_frame(void) {
 }
 
 
+/* ── p3-eon: diffuseRoughness (EON rough diffuse) ─────────────────── */
+static void eon_setup(void) {
+  R = make_renderer(0x101018);
+  C = t3_perspective_camera_new(40, 1280.0f / 720, 0.1f, 60);
+  t3_object_set_position(C, 0, 0, 11);
+  S = t3_scene_new();
+  enum { n = 32 };
+  static uint8_t data[n * n * 4];
+  for (int y = 0; y < n; y++)
+    for (int x = 0; x < n; x++) {
+      uint8_t *p = data + (y * n + x) * 4;
+      p[0] = (uint8_t)(120 + ((x ^ y) & 7) * 16); p[1] = (uint8_t)(90 + ((x + y) & 7) * 12); p[2] = 70; p[3] = 255;
+    }
+  t3_texture *map = t3_data_texture_new(n, n, data);
+  map->mag_filter = map->min_filter = T3_LINEAR;
+  map->color_space = T3_SRGB_COLOR_SPACE;
+  t3_geometry *geo = t3_sphere_geometry_new(0.85f, 48, 24);
+  static const float rough[5] = { 0, 0.25f, 0.5f, 0.75f, 1 };
+  for (int i = 0; i < 5; i++) {
+    t3_material *a = t3_mesh_physical_material_new(0xc08060);
+    a->roughness = 0.9f; a->metalness = 0; a->diffuse_roughness = rough[i];
+    t3_object_set_position(add_mesh(&S->base, geo, a), (i - 2) * 2.0f, -1.1f, 0);
+    t3_material *b = t3_mesh_physical_material_new(0xffffff);
+    t3_material_set_texture(b, T3_MAP, map);
+    b->roughness = 0.7f; b->metalness = 0; b->diffuse_roughness = rough[i];
+    t3_object_set_position(add_mesh(&S->base, geo, b), (i - 2) * 2.0f, 1.1f, 0);
+    t3_release(a); t3_release(b);
+  }
+  t3_light *amb = t3_ambient_light_new(0x202030, 1);
+  t3_object_add(&S->base, amb); t3_release(amb);
+  r9_add_light(S, t3_directional_light_new(0xffffff, 3), 6, 1, 1);
+  t3_release(geo); t3_release(map);
+}
+static void eon_frame(void) { t3_renderer_render(R, S, C); }
+
+/* ── u1-uv-channel: texture.channel = 1, the second UV set ──────────── */
+static void u1_setup(void) {
+  R = make_renderer(0x080810);
+  C = t3_perspective_camera_new(45, 1280.0f / 720, 0.1f, 60);
+  t3_object_set_position(C, 0, 1.5f, 8);
+  t3_object_look_at(C, 0, 0, 0);
+  S = t3_scene_new();
+  t3_geometry *geo = t3_box_geometry_new(1.6f, 1.6f, 1.6f, 1, 1, 1);
+  t3_attribute *uv = geo->attributes[T3_ATTR_UV];
+  float *v1 = malloc(sizeof(float) * 2 * (size_t)uv->count);
+  const float *v0 = uv->array;
+  for (int i = 0; i < uv->count; i++) { v1[i * 2] = v0[i * 2] * 0.25f + 0.6f; v1[i * 2 + 1] = v0[i * 2 + 1] * 0.25f + 0.1f; }
+  t3_attribute *a1 = t3_attribute_new(T3_FLOAT32, v1, uv->count, 2);
+  t3_geometry_set_attribute(geo, T3_ATTR_UV1, a1);
+  t3_release(a1); free(v1);
+  t3_texture *a = r10_tex(0), *b = r10_tex(1), *c = r10_tex(2);
+  a->channel = b->channel = c->channel = 1;
+  t3_material *m[6] = { t3_mesh_standard_material_new(0xffffff), t3_mesh_standard_material_new(0xffffff), t3_mesh_standard_material_new(0xffffff),
+                        t3_mesh_standard_material_new(0xffffff), t3_mesh_basic_material_new(0xffffff), t3_mesh_lambert_material_new(0xffffff) };
+  t3_material_set_texture(m[0], T3_MAP, a);
+  t3_material_set_texture(m[1], T3_AO_MAP, b);
+  t3_material_set_texture(m[2], T3_LIGHT_MAP, c);
+  t3_material_set_texture(m[3], T3_MAP, a); t3_material_set_texture(m[3], T3_AO_MAP, b); t3_material_set_texture(m[3], T3_LIGHT_MAP, c);
+  t3_material_set_texture(m[4], T3_MAP, a);
+  t3_material_set_texture(m[5], T3_LIGHT_MAP, c);
+  for (int i = 0; i < 6; i++) {
+    if (i < 4) m[i]->roughness = 0.6f;
+    t3_mesh *o = add_mesh(&S->base, geo, m[i]);
+    t3_object_set_position(o, (i % 3 - 1) * 3.0f, i < 3 ? 1.3f : -1.3f, 0);
+    t3_object_set_rotation(o, 0.4f, 0.5f, 0);
+    t3_release(m[i]);
+  }
+  t3_light *amb = t3_ambient_light_new(0x808080, 1);
+  t3_object_add(&S->base, amb); t3_release(amb);
+  r9_add_light(S, t3_directional_light_new(0xffffff, 1.5f), -2, 4, 5);
+  t3_release(geo); t3_release(a); t3_release(b); t3_release(c);
+}
+static void u1_frame(void) { t3_renderer_render(R, S, C); }
+
+/* ── z1-reversed-depth: reversedDepthBuffer ─────────────────────────── */
+static t3_mesh *z1_mover;
+static void z1_setup(void) {
+  R = make_renderer(0x101820);
+  t3_renderer_set_reversed_depth(R, true);
+  t3_renderer_set_shadow_map(R, true, T3_PCF_SHADOW_MAP);
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 0.1f, 200000);
+  t3_object_set_position(C, 0, 3, 9);
+  t3_object_look_at(C, 0, 1, 0);
+  S = t3_scene_new();
+  t3_geometry *pg = t3_plane_geometry_new(30, 30, 1, 1), *bg = t3_box_geometry_new(1.5f, 1.5f, 1.5f, 1, 1, 1), *sg = t3_sphere_geometry_new(0.8f, 32, 16);
+  t3_geometry *wg = t3_plane_geometry_new(60000, 30000, 1, 1);
+  t3_material *fm = t3_mesh_standard_material_new(0x808890), *bm = t3_mesh_standard_material_new(0xd06030), *sm = t3_mesh_phong_material_new(0x40a0e0);
+  t3_mesh *floor = add_mesh(&S->base, pg, fm);
+  t3_object_set_rotation(floor, -3.141592653589793f / 2, 0, 0);
+  floor->base.receive_shadow = true;
+  z1_mover = add_mesh(&S->base, bg, bm);
+  t3_object_set_position(z1_mover, -2, 1, 0);
+  z1_mover->base.cast_shadow = z1_mover->base.receive_shadow = true;
+  t3_mesh *ball = add_mesh(&S->base, sg, sm);
+  t3_object_set_position(ball, 2, 1, 0.5f);
+  ball->base.cast_shadow = ball->base.receive_shadow = true;
+  /* two walls a metre apart 100 km out: a linear 24-bit depth buffer fights here */
+    t3_material *w1 = t3_mesh_basic_material_new(0x40c040), *w0 = t3_mesh_basic_material_new(0xc04040);
+  t3_mesh *front = add_mesh(&S->base, wg, w1);
+  t3_object_set_position(front, 0, 0, -99999);
+  t3_mesh *back = add_mesh(&S->base, wg, w0);
+  t3_object_set_position(back, 0, 5000, -100000);
+  back->base.render_order = 1;   /* drawn after the near wall, whatever the sort */
+  t3_light *amb = t3_ambient_light_new(0x303040, 1);
+  t3_object_add(&S->base, amb); t3_release(amb);
+  t3_light *sun = t3_directional_light_new(0xffffff, 2);
+  t3_object_set_position(sun, 4, 8, 3);
+  t3_object_add(&S->base, sun);
+  sun->base.cast_shadow = true;
+  sun->shadow->map_width = sun->shadow->map_height = 1024;
+  t3_release(sun);
+  t3_light *pt = t3_point_light_new(0xffc080, 30, 0, 2);
+  t3_object_set_position(pt, 0, 4, 2);
+  t3_object_add(&S->base, pt);
+  pt->base.cast_shadow = true;
+  pt->shadow->map_width = pt->shadow->map_height = 512;
+  t3_release(pt);
+  t3_release(pg); t3_release(bg); t3_release(sg); t3_release(wg);
+  t3_release(fm); t3_release(bm); t3_release(sm); t3_release(w0); t3_release(w1);
+}
+static void z1_frame(void) {
+  frame_no++;
+  t3_object_set_rotation(z1_mover, 0, frame_no / 60.0f, 0);
+  t3_renderer_render(R, S, C);
+}
+
+/* ── r12-depth-only: a render target with no colour attachment ────── */
+static t3_scene *r12_inner;
+static t3_camera *r12_cam;
+static t3_render_target *r12_rt;
+static t3_mesh *r12_mover;
+static void r12_setup(void) {
+  R = make_renderer(0x202028);
+  r12_inner = t3_scene_new();
+  t3_geometry *bg = t3_box_geometry_new(1, 1, 1, 1, 1, 1), *pg = t3_plane_geometry_new(4, 4, 1, 1);
+  t3_material *bm = t3_mesh_basic_material_new(0xff0000);
+  r12_mover = add_mesh(&r12_inner->base, bg, bm);
+  r12_cam = t3_perspective_camera_new(50, 1, 1, 6);
+  t3_object_set_position(r12_cam, 0, 0, 3);
+  t3_render_target_options o = t3_render_target_options_default();
+  t3_texture *depth = t3_depth_texture_new(256, 256, 0);
+  o.depth_texture = depth;
+  o.depth_only = true;
+  r12_rt = t3_render_target_new(256, 256, &o);
+  t3_release(depth);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 0.1f, 50);
+  t3_object_set_position(C, 0, 0, 5);
+  t3_material *pm = t3_mesh_basic_material_new(0xffffff);
+  t3_material_set_texture(pm, T3_MAP, r12_rt->depth_texture);
+  add_mesh(&S->base, pg, pm);
+  t3_release(bg); t3_release(pg); t3_release(bm); t3_release(pm);
+}
+static void r12_frame(void) {
+  frame_no++;
+  t3_object_set_rotation(r12_mover, frame_no / 60.0f, frame_no / 40.0f, 0);
+  t3_renderer_set_render_target(R, r12_rt);
+  t3_renderer_render(R, r12_inner, r12_cam);
+  t3_renderer_set_render_target(R, NULL);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── r11-pmrem-probe: PMREMGenerator.fromScene's options as a probe
  * refreshed every frame into one target (size 64, a position off the
  * origin, renderTarget); a box orbits inside the captured ring. ─────── */

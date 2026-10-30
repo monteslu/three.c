@@ -1,10 +1,10 @@
-// Reference renders from unmodified three.js r186 (its WebGPURenderer on the
+// Reference renders from unmodified three.js r187 (its WebGPURenderer on the
 // WebGL2 backend, as three.lua's bench runs it) on webgl-node, for three.c's
 // feature scenes (test/scenes/<name>.js) and the compare scenes.
 //
-//   node tools/ref-r186.mjs <scene> <out.png> [frames=100] [--dir test/scenes]
+//   node tools/ref-r187.mjs <scene> <out.png> [frames=100] [--dir test/scenes]
 //
-// A scene is a classic script: it gets THREE (r186, plus THREE.GLTFLoader),
+// A scene is a classic script: it gets THREE (r187, plus THREE.GLTFLoader),
 // creates a THREE.WebGPURenderer (the harness supplies the canvas, and on GL
 // the webgl-node context with forceWebGL), may fetch test/assets/* by
 // relative URL, sets globalThis.frame and optionally globalThis.ready.
@@ -19,13 +19,13 @@ import { pkgEntry } from './deps.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
-// --webgpu: r186's WebGPU backend on webgpu-node instead of WebGL2 on webgl-node
+// --webgpu: r187's WebGPU backend on webgpu-node instead of WebGL2 on webgl-node
 const WEBGPU = args.includes('--webgpu');
 if (WEBGPU) args.splice(args.indexOf('--webgpu'), 1);
 const dirIdx = args.indexOf('--dir');
 const SCENES = dirIdx >= 0 ? resolve(args.splice(dirIdx, 2)[1]) : join(ROOT, 'test', 'scenes');
 const [scene, out, framesArg = '100'] = args;
-if (!scene || !out) { console.error('usage: ref-r186.mjs <scene> <out.png> [frames] [--dir DIR]'); process.exit(1); }
+if (!scene || !out) { console.error('usage: ref-r187.mjs <scene> <out.png> [frames] [--dir DIR]'); process.exit(1); }
 const W = 1280, H = 720, FRAMES = +framesArg;
 const ASSETS = [join(ROOT, 'test', 'assets'), join(ROOT, '..', 'three.lua', 'compare', 'assets')];
 
@@ -36,7 +36,7 @@ if (WEBGPU) {
   canvas = wn.createCanvas(W, H);
   canvas.getContext = ((orig) => (kind, ...a) => (kind === 'webgpu' ? orig.call(canvas, kind, ...a) : null))(canvas.getContext);
   made = {};
-  // Dawn's Node bindings lack copyExternalImageToTexture (r186 uploads images
+  // Dawn's Node bindings lack copyExternalImageToTexture (r187 uploads images
   // with it): do what a browser does with a decoded RGBA8 bitmap, flipY and
   // premultipliedAlpha included, through writeTexture
   globalThis.GPUQueue.prototype.copyExternalImageToTexture = function (src, dst, size) {
@@ -125,7 +125,7 @@ globalThis.fetch = async (url, opts) => {
   return new Response(null, { status: 404, statusText: 'not found: ' + u });
 };
 
-const PKG = join(ROOT, 'build', 'three-r186', 'package');
+const PKG = join(ROOT, 'build', 'three-r187', 'package');
 const mod = await import(pathToFileURL(join(PKG, 'build', 'three.webgpu.js')).href);
 const { GLTFLoader } = await import(pathToFileURL(join(PKG, 'examples', 'jsm', 'loaders', 'GLTFLoader.js')).href);
 const renderers = [];
@@ -137,7 +137,7 @@ THREE.WebGPURenderer = class WebGPURenderer extends mod.WebGPURenderer {
                  : { ...p, canvas, context: gl, forceWebGL: true });
     renderers.push(this);
   }
-  // one browser frame of r186's animation loop (Animation.start's update),
+  // one browser frame of r187's animation loop (Animation.start's update),
   // which a scene calling render() directly never runs: without it the node
   // frame id never advances and per-frame node updates (skeletons) run once
   __tick() { if (this.info.autoReset === true) this.info.reset(); this._nodes.nodeFrame.update(); this.info.frame = this._nodes.nodeFrame.frameId; }
@@ -164,11 +164,11 @@ if (globalThis.ready) await globalThis.ready;
 for (let i = 0; i < 200 && globalThis.scene && globalThis.scene.children?.length === 0; i++) await new Promise((r) => setTimeout(r, 10));
 await Promise.all(renderers.map((r) => r.init()));
 for (const r of renderers) { for (const [f, a] of r._pending ?? []) f(...a); r._pending = []; }
-// R186_DUMP=Sprite: print each draw of that object type's uniform groups (debugging an oracle disagreement)
-if (process.env.R186_DUMP) for (const r of renderers) {
+// R187_DUMP=Sprite: print each draw of that object type's uniform groups (debugging an oracle disagreement)
+if (process.env.R187_DUMP) for (const r of renderers) {
   const draw = r.backend.draw.bind(r.backend);
   r.backend.draw = (ro, info) => {
-    if (ro.object && ro.object.type === process.env.R186_DUMP) {
+    if (ro.object && ro.object.type === process.env.R187_DUMP) {
       for (const g of ro.getBindings()) for (const b of g.bindings) if (b.uniforms) {
         const buf = b.buffer instanceof ArrayBuffer ? b.buffer : b.buffer.buffer ?? b.buffer;
         console.error(`[dump] ${ro.object.type}#${ro.object.id} ${g.name}: ${Array.from(new Float32Array(buf)).map((x) => +x.toPrecision(5)).join(' ')}`);

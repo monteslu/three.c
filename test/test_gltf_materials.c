@@ -1,6 +1,6 @@
 /* GLTFLoader material names, KHR_materials_* extensions and morph target
  * names (no GPU): a small glTF parsed from memory, its materials and meshes
- * checked against what r186's GLTFLoader builds from the same file.
+ * checked against what r187's GLTFLoader builds from the same file.
  * T3_TEST_CONTROL=1 parses the same file with its extensions renamed (an
  * unknown extension is ignored): the checks must then fail. */
 #include <math.h>

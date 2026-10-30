@@ -6,7 +6,7 @@
  * a contract the GLES unit leaves NULL and the renderer never calls.
  *
  * Shaped by what the GENERATED programs need (tools/gen-programs.mjs: the
- * programs three.js r186 generates for each material state, with a manifest
+ * programs three.js r187 generates for each material state, with a manifest
  * of bind groups, uniform structs, typed textures, samplers and vertex
  * attributes): uniform groups uploaded as whole blocks, textures and samplers
  * bound by manifest name, one pipeline per (program, render state). It is not
@@ -35,7 +35,7 @@ typedef enum { T3_BK_QUERY_TIMESTAMP, T3_BK_QUERY_OCCLUSION } t3_bk_query_kind;
 
 /* A texture binding is TYPED: an extension group (an embedder's clustered
  * light data: RG32UI records, R32UI index lists read with texelFetch) must be
- * able to say "uint, 2d, no sampler". The generator records r186's own
+ * able to say "uint, 2d, no sampler". The generator records r187's own
  * classification per binding. */
 typedef enum { T3_BK_SAMPLE_FLOAT, T3_BK_SAMPLE_UNFILTERABLE_FLOAT, T3_BK_SAMPLE_DEPTH, T3_BK_SAMPLE_SINT, T3_BK_SAMPLE_UINT } t3_bk_sample_type;
 typedef enum { T3_BK_DIM_2D, T3_BK_DIM_2D_ARRAY, T3_BK_DIM_CUBE, T3_BK_DIM_3D } t3_bk_tex_dim;
@@ -47,7 +47,7 @@ typedef struct {
   bool has_sampler;          /* a sampler binding accompanies it (WebGPU); false for integer and storage textures */
   bool compare_sampler;      /* ... and it is a comparison sampler (shadow maps) */
   bool storage;              /* storage texture (written), not sampled */
-  const char *source;        /* what the renderer binds here: "map", "normalMap", ..., "dfg_lut" (r186's LUT, shipped with the programs), or an extension's own name */
+  const char *source;        /* what the renderer binds here: "map", "normalMap", ..., "dfg_lut" (r187's LUT, shipped with the programs), or an extension's own name */
   uint32_t sampler_binding;  /* its sampler's binding number in the group (WebGPU; has_sampler) */
 } t3_bk_texture_layout;
 typedef struct {
@@ -63,7 +63,7 @@ typedef struct {
   uint32_t uniform_bytes;    /* the group's uniform struct size (std140 on GLES, WGSL layout on WebGPU; the generator emits both) */
   uint32_t uniform_binding;  /* its binding number inside the group (WebGPU; GLES binds the block by name at link) */
   const t3_bk_texture_layout *textures; uint32_t n_textures;   /* in binding order */
-  /* extra uniform / storage buffers in the group beside the struct (r186
+  /* extra uniform / storage buffers in the group beside the struct (r187
    * keeps instance matrices, morph influences, bone matrices in them) */
   const t3_bk_buffer_layout *buffers; uint32_t n_buffers;
 } t3_bk_group_layout;
@@ -91,7 +91,7 @@ struct t3_backend {
   void (*destroy)(t3_backend *b);
   const char *(*name)(t3_backend *b);                /* "gles3" / "webgpu" */
   const char *(*renderer_string)(t3_backend *b);     /* GL_RENDERER / adapter description */
-  t3_clip_z (*clip_z)(t3_backend *b);                /* [-1,1] on GLES, [0,1] on WebGPU; r186 builds projections per backend and so does the renderer */
+  t3_clip_z (*clip_z)(t3_backend *b);                /* [-1,1] on GLES, [0,1] on WebGPU; r187 builds projections per backend and so does the renderer */
 
   /* ── resources (NULL in the GLES unit) ── */
   t3_bk_buffer *(*buffer_create)(t3_backend *b, t3_bk_buffer_kind kind, size_t bytes, const void *data, bool dynamic);

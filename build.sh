@@ -44,7 +44,7 @@ fi
 # (tools/fetch-builder-deps.sh fetches QuickJS and three.js into third_party/)
 BLD_FLAGS=""
 if [ "${T3_BUILDER:-0}" = 1 ]; then
-  QJS="$ROOT/third_party/quickjs" TPKG="$ROOT/third_party/three-0.186.1"
+  QJS="$ROOT/third_party/quickjs" TPKG="$ROOT/third_party/three-0.187.0"
   [ -f "$QJS/quickjs.c" ] && [ -f "$TPKG/build/three.webgpu.js" ] || "$ROOT/tools/fetch-builder-deps.sh"
   OUT="$OUT-builder"
   mkdir -p "$OUT/obj"

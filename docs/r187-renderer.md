@@ -1,6 +1,6 @@
-# The r186 renderer
+# The r187 renderer
 
-three.js r186 does not ship shaders: its node renderer builds each program
+three.js r187 does not ship shaders: its node renderer builds each program
 from the material, the object and the scene at run time. three.c renders with
 those same programs by capturing them from three.js itself and turning them
 into C tables. This document covers how the tables are made, how the
@@ -8,8 +8,8 @@ renderer uses them, and what is specific to WebGPU.
 
 ## Capturing the programs
 
-`tools/gen-programs.mjs` loads three.js 0.186.1 (downloaded from npm into
-`build/three-r186` on first use) and, for each **state**, builds a small scene
+`tools/gen-programs.mjs` loads three.js 0.187.0 (downloaded from npm into
+`build/three-r187` on first use) and, for each **state**, builds a small scene
 that exercises it: one mesh with the material, the lights, the fog, the
 shadows. It renders that scene once with `WebGPURenderer` on webgpu-node
 (WGSL) and once with `forceWebGL` on webgl-node (GLSL ES 3.00), each in a
@@ -43,7 +43,7 @@ buffers are searched for each value. Then:
 anything differs.
 
 `tools/emit-programs.mjs` turns the captures into `src/gen/programs_gl.c`,
-`src/gen/programs_wgpu.c` and `src/gen/programs.h`, plus r186's DFG lookup
+`src/gen/programs_wgpu.c` and `src/gen/programs.h`, plus r187's DFG lookup
 table (`src/gen/programs_dfg.c`). The tables are checked in, so building
 three.c needs neither Node nor three.js.
 
@@ -74,7 +74,6 @@ with `+`:
 - **`lDPSH`:** the number of directional, point, spot and hemisphere lights.
   Lit kinds default to `l1100` and always have an ambient light.
 - **`sDPS`:** how many directional, point and spot lights cast shadows.
-- **`z<n>`:** the PMREM target size, for `pmremggx` and `pmremblur`.
 - **`x<name>`:** an extension module (`tools/extensions/<name>.mjs`) that
   adds TSL nodes and uniforms of its own before the capture (see
   "Extension programs").
@@ -134,7 +133,7 @@ one instead. `src/builder.c` compiles to nothing without `-DT3_BUILDER`.
 ## Building states at run time
 
 Built with `T3_BUILDER=1` (`./build.sh` or `wasm/build.sh`), three.c carries
-three.js r186 itself, in an embedded QuickJS (quickjs-ng), and a draw whose
+three.js r187 itself, in an embedded QuickJS (quickjs-ng), and a draw whose
 state no table has gets its program built on first use: the same capture
 `tools/gen-programs.mjs` runs (`tools/capture-core.mjs` on the mock GPU),
 turned into a program by the same code the emitter uses
@@ -162,7 +161,7 @@ turned into a program by the same code the emitter uses
 
 ## Extension programs
 
-An application's own shading is written the way a three.js r186 application
+An application's own shading is written the way a three.js r187 application
 writes it: TSL on the material. A generator extension is a module that
 exports `name` and `apply()`; `apply` gets the capture scene (`THREE`,
 `TSL`, `mat`, `mesh`, `props`, `sentinel`, ...) and changes the material
@@ -177,8 +176,8 @@ before the capture, for example:
 - A texture the application binds is named `ext.<name>` (`texture.name`),
   which becomes the binding's source in the manifest.
 - A uniform in the default object group travels with each draw; one in a
-  group of its own (`sharedUniformGroup`, with an update type, as r186's own
-  `renderGroup`) is uploaded only when its bytes change. r186 names a GLSL
+  group of its own (`sharedUniformGroup`, with an update type, as r187's own
+  `renderGroup`) is uploaded only when its bytes change. r187 names a GLSL
   uniform block after its group, so a group needs a name none of its
   uniforms has.
 
@@ -205,14 +204,14 @@ that fills it:
 
 - The material's extension is part of its program key: the renderer picks the
   table program whose state has the same kind, features, lights and `x<name>`.
-- The hook runs for each draw of an extension program, as r186's
+- The hook runs for each draw of an extension program, as r187's
   `onObjectUpdate` does, on GLES and WebGPU alike; it may run more than once
   for a draw (GLES fills the frame's per-draw blocks before drawing), so it
   only sets values. Uniforms land where the manifest put them; textures bind
   with the program's other textures, and a texture's `flipY` flag follows
-  the texture (`gpu_made`). r186 gives each sample of a texture its own
+  the texture (`gpu_made`). r187 gives each sample of a texture its own
   `flipY` flag on GLES, and every one is filled.
-- A DepthTexture the extension samples with compare (r186's
+- A DepthTexture the extension samples with compare (r187's
   `texture(depth).compare(ref)`) gets a LessEqual comparison sampler on
   WebGPU, linear unless the texture is nearest filtered; on GLES the GL
   texture's own compare mode applies.
@@ -232,7 +231,7 @@ that fills it:
   table needs the `+instbig` state too), and the hook runs once a batch,
   with the batch's first mesh. Batching is off by default; it is three.c's
   own (three.js renders each mesh on its own).
-- Shadow casters: r186 draws the shadow pass with the material's
+- Shadow casters: r187 draws the shadow pass with the material's
   `positionNode` (and its `colorNode`'s alpha), so an extension material
   casts with `depth+x<name>` (`depth+instbig+x<name>` and so on for the
   object's deformations), filled by the same hook. A table without that
@@ -240,11 +239,11 @@ that fills it:
   `tools/extensions/swell.mjs` (vertices pushed along their normals) and the
   `e2-extension-shadow` scene check it.
 
-- Array and integer textures, as r186 has them: `t3_data_array_texture_new`
+- Array and integer textures, as r187 has them: `t3_data_array_texture_new`
   (DataArrayTexture, sampled with `texture(map, uv).depth(layer)`) and
   `t3_data_texture_new_format` with `T3_RED_INTEGER_FORMAT`,
   `T3_RG_INTEGER_FORMAT` or `T3_RGBA_INTEGER_FORMAT` (read with
-  `textureLoad`, texelFetch on GLES). r186's TSL types an integer texture as
+  `textureLoad`, texelFetch on GLES). r187's TSL types an integer texture as
   one only for a 32-bit type (`UnsignedIntType` / `IntType`: R32UI, RG32UI,
   RGBA32UI and the signed ones); with a smaller type it declares a float
   texture, which the integer data cannot bind to. Pack 16-bit values into a
@@ -252,24 +251,24 @@ that fills it:
   `e3-extension-textures` scene check both.
 - A program may have up to 16 texture bindings over all its groups (WebGPU's
   default per-stage limits for textures and samplers, and GLES 3's units).
-  r186 binds a texture that both stages read twice. A program over the
+  r187 binds a texture that both stages read twice. A program over the
   limit (or the device's, if lower) does not build: its draws are skipped
   and the renderer's error names it. `tools/extensions/mosaic.mjs` and the
   `e4-extension-many-textures` scene draw thirteen.
-- A texture's sampling settings are part of the program (r186 reads a
+- A texture's sampling settings are part of the program (r187 reads a
   nearest-filtered texture with `textureLoad` and bakes wrap modes into the
   code), so an extension's textures at run time need the filters and
   wrapping its module captured them with.
 
 `test/test_extension.c` (both backends) and the `e1-extension`,
 `e2-extension-shadow`, `e3-extension-textures` and
-`e4-extension-many-textures` scenes (under `tools/parity-r186.mjs`, against r186
+`e4-extension-many-textures` scenes (under `tools/parity-r187.mjs`, against r187
 running the same TSL) check it.
 
 ## renderer.info
 
-`t3_renderer_info` counts what r186's `renderer.info.render` counts, including
-r186's output pass: one draw and one triangle whenever a render to the screen
+`t3_renderer_info` counts what r187's `renderer.info.render` counts, including
+r187's output pass: one draw and one triangle whenever a render to the screen
 has an sRGB output or tone mapping, also when three.c encoded in each program
 and drew no output pass itself.
 
@@ -280,14 +279,14 @@ object, the scene and the light counts, and looks it up. If there is no exact
 light vector, a captured program whose counts cover the scene's is used and
 the unused light slots are left empty.
 
-Draws are sorted as r186 sorts them: render order, then opaque front to back
+Draws are sorted as r187 sorts them: render order, then opaque front to back
 and transparent back to front by the projected depth of the object's origin.
 `t3_renderer_set_sort_bounds(r, true)` (three.c's own, off by default) sorts
 opaque meshes and instanced meshes by the centre of their cached world
 bounding sphere instead, which is what geometry built far from its object's
 origin (merged world-space chunks, instanced scenery) needs for front to
 back order to hold. Render order, transparent objects and skinned meshes keep
-r186's order. `test/test_scene_sort.c` checks it.
+r187's order. `test/test_scene_sort.c` checks it.
 
 `src/gen_program.c` reads the manifest into a list of fill operations, one
 per property, and splits them into per-frame operations (camera, lights, fog)
@@ -328,21 +327,27 @@ For an embedder that composes three.c's drawing with its own:
   backends, into a rect of a depth-only target) draw the shadow caster pass
   from any camera, for the embedder's own shadow maps.
 
-Several pieces follow r186's own code:
+Several pieces follow r187's own code:
 
-- **Output pass:** r186's generated output program (tone mapping and colour
+- **Output pass:** r187's generated output program (tone mapping and colour
   space).
-- **Environment maps:** r186's PMREM generator (`src/renderer_env.inc`). It
-  converts a cube or equirectangular map to cube-UV, blurs scene captures,
-  and builds the GGX mip chain, all with r186's own generated programs.
-  fromScene takes r186's options (`t3_pmrem_from_scene_ex`: the face size,
+- **Environment maps:** r187's PMREM generator (`src/renderer_env.inc`). It
+  draws a cube or equirectangular map, or a scene, into a mipmapped source
+  cube, blurs scene captures, and fills a cube render target's mip levels: GGX
+  sampling on the sharp ones, integration over a small source mip on the rough
+  ones, all with r187's own generated programs. A PMREM is the cube texture with
+  `mip_levels` set (`t3_cube_render_target_new`, drawn by face and level with
+  `t3_renderer_set_render_target_ex`). On WebGPU a cube target's mip chain goes
+  through a 2D texture per level and a copy, since compatibility mode samples a
+  cube only as a whole cube.
+  fromScene takes r187's options (`t3_pmrem_from_scene_ex`: the face size,
   the position the cube camera renders from, and a target to draw into
   again), and `t3_pmrem_from_cubemap_into` / `_equirectangular_into` are
   fromCubemap / fromEquirectangular's target argument, so a reflection probe
   refreshed every few frames keeps one target. The `r11-pmrem-probe` scene
   checks it.
 - **Shadows:** depth maps drawn with the captured caster programs.
-  Point lights use a cube map with r186's face directions for each backend.
+  Point lights use a cube map with r187's face directions for each backend.
   A renderer keeps depth maps for up to 16 shadow-casting lights at a time.
   The map of a light that no longer casts in the render (removed or
   destroyed) is reused by the next new caster, so a scene that adds and
@@ -366,7 +371,7 @@ What else it does:
 
 - **Uniform stream:** one buffer per frame, written with a single queue
   write.
-- **Submits:** by default each render submits, as r186 does. With
+- **Submits:** by default each render submits, as r187 does. With
   `t3_renderer_wgpu_defer` the frame's renders share one command buffer, and
   `t3_renderer_wgpu_submit` sends it.
 - **Embedder hooks:** an embedder can pass its own command encoder
@@ -379,7 +384,7 @@ What else it does:
   fields (`glDepthRangef` does the same there).
 - **Vertex buffers:** one per geometry attribute, the instance matrix's four
   columns in one instance-step buffer (64 bytes an instance; a batch's record
-  is 80, the matrix and a colour), as r186's `InstancedInterleavedBuffer`,
+  is 80, the matrix and a colour), as r187's `InstancedInterleavedBuffer`,
   and the instance colour in one of its own. The most any program needs is
   7 (an InstancedMesh with position, normal, uv, colour and tangent, and
   instance colours), inside the 8 every WebGPU device has (`maxVertexBuffers`,
@@ -392,12 +397,12 @@ What else it does:
   refuses a WebGPU program over 8. `test/test_vertex_buffers.c` and
   `test/test_vertex_buffer_layout.mjs` check both.
 - **Blending:** a pipeline's blend state is the material's, as GLES sets it
-  (r186's WebGLState.setBlending): Normal, Additive, Subtractive and Multiply,
+  (r187's WebGLState.setBlending): Normal, Additive, Subtractive and Multiply,
   straight or premultiplied alpha, and CustomBlending with its own factors and
   equations (Add, Subtract, ReverseSubtract, Min, Max; Min and Max take
   factors One, as WebGPU requires).
 - **Samplers:** a texture's sampler takes its anisotropy (when every filter
-  is linear, as r186's WebGPUTextureUtils), so a grazing floor is as sharp as
+  is linear, as r187's WebGPUTextureUtils), so a grazing floor is as sharp as
   on GLES. On GLES, a texture's wrap, filters and anisotropy changed after its
   upload apply at the next bind.
 - **Bottom-up targets:** a `flip_y` draw (an embedder's bottom-up target)
@@ -405,7 +410,7 @@ What else it does:
   map on geometry without tangents is lit as on GLES.
 - **Projection:** three.js builds WebGPU's projection z row from near and far.
   three.c does that for the usual projection, and a projection the
-  application edited (an oblique near plane, as r186's Reflector and
+  application edited (an oblique near plane, as r187's Reflector and
   Refractor set to clip at the mirror plane) keeps its edit, its z row
   remapped to WebGPU's clip space (z' = 0.5 z + 0.5 w).
 
@@ -417,17 +422,17 @@ wasmcart gives carts) needs a few things, and the renderer handles them:
   single morph target draws.
 - Cube mipmaps are built on the CPU, because a GPU pass cannot sample one
   face.
-- A DepthTexture used as a map takes r186's compatibility program (`cm`),
+- A DepthTexture used as a map takes r187's compatibility program (`cm`),
   which reads it as `texture_2d<f32>`.
 - A DataArrayTexture is created to bind as a 2D array, and its mipmaps are
   drawn from the level above bound that way, the layer picked per draw
-  (r186's `main_2d_array` mipmap pass).
+  (r187's `main_2d_array` mipmap pass).
 
 ## Checking against three.js
 
-`tools/parity-r186.mjs` renders every scene with three.c (`bench-native`,
-GLES, or WebGPU with `--wgpu`) and with unmodified three.js r186 on the same
-backend (`tools/ref-r186.mjs`, webgl-node or webgpu-node), then compares the
-two images. `tools/ref-r186-browser.mjs` is the same reference in Chromium.
+`tools/parity-r187.mjs` renders every scene with three.c (`bench-native`,
+GLES, or WebGPU with `--wgpu`) and with unmodified three.js r187 on the same
+backend (`tools/ref-r187.mjs`, webgl-node or webgpu-node), then compares the
+two images. `tools/ref-r187-browser.mjs` is the same reference in Chromium.
 Measured three.js defects that three.c does not copy are listed in the tool
 and reported apart from failures.
