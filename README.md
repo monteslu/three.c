@@ -122,7 +122,7 @@ has on first use, the same program the tables would hold.
 
 ## Same pixels as three.js r187
 
-`tools/parity-r187.mjs` renders 43 scenes (three.lua's compare scenes and
+`tools/parity-r187.mjs` renders 44 scenes (three.lua's compare scenes and
 three.c's feature scenes in `test/scenes`) with three.c and with unmodified
 three.js r187 on the same backend, and compares frame 100 (frame 3 for the
 compare scenes). A scene matches when at most 8 pixels differ by more than 2
@@ -131,7 +131,7 @@ paths produces.
 
 | Backend | three.js reference | Match | Differ |
 | --- | --- | --- | --- |
-| WebGPU | r187 WebGPURenderer on webgpu-node | 43 | 0 |
+| WebGPU | r187 WebGPURenderer on webgpu-node | 44 | 0 |
 | GLES / WebGL2 | r187 WebGPURenderer (forceWebGL) on webgl-node | 36 | 6: 1 r187 defect and 5 notes below |
 
 The one defect is three.js's, on WebGL: a DepthTexture map and a colour map

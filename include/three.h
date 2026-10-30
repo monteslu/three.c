@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.0"
+#define T3_VERSION "0.187.1"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;

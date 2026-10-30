@@ -1391,6 +1391,58 @@ static void z1_frame(void) {
   t3_renderer_render(R, S, C);
 }
 
+/* ── z2-reversed-far: reversedDepthBuffer at a far / near of 1e7 ─────────────────────────── */
+static t3_mesh *z2_mover;
+static void z2_setup(void) {
+  R = make_renderer(0x101820);
+  t3_renderer_set_reversed_depth(R, true);
+  t3_renderer_set_shadow_map(R, true, T3_PCF_SHADOW_MAP);
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 1, 10000000);
+  t3_object_set_position(C, 0, 3, 9);
+  t3_object_look_at(C, 0, 1, 0);
+  S = t3_scene_new();
+  t3_geometry *pg = t3_plane_geometry_new(30, 30, 1, 1), *bg = t3_box_geometry_new(1.5f, 1.5f, 1.5f, 1, 1, 1), *sg = t3_sphere_geometry_new(0.8f, 32, 16);
+  t3_geometry *wg = t3_plane_geometry_new(6000000, 3000000, 1, 1);
+  t3_material *fm = t3_mesh_standard_material_new(0x808890), *bm = t3_mesh_standard_material_new(0xd06030), *sm = t3_mesh_phong_material_new(0x40a0e0);
+  t3_mesh *floor = add_mesh(&S->base, pg, fm);
+  t3_object_set_rotation(floor, -3.141592653589793f / 2, 0, 0);
+  floor->base.receive_shadow = true;
+  z2_mover = add_mesh(&S->base, bg, bm);
+  t3_object_set_position(z2_mover, -2, 1, 0);
+  z2_mover->base.cast_shadow = z2_mover->base.receive_shadow = true;
+  t3_mesh *ball = add_mesh(&S->base, sg, sm);
+  t3_object_set_position(ball, 2, 1, 0.5f);
+  ball->base.cast_shadow = ball->base.receive_shadow = true;
+  /* two walls a metre apart 100 km out: a linear 24-bit depth buffer fights here */
+    t3_material *w1 = t3_mesh_basic_material_new(0x40c040), *w0 = t3_mesh_basic_material_new(0xc04040);
+  t3_mesh *front = add_mesh(&S->base, wg, w1);
+  t3_object_set_position(front, 0, 0, -9800000);
+  t3_mesh *back = add_mesh(&S->base, wg, w0);
+  t3_object_set_position(back, 0, 500000, -9900000);
+  back->base.render_order = 1;   /* drawn after the near wall, whatever the sort */
+  t3_light *amb = t3_ambient_light_new(0x303040, 1);
+  t3_object_add(&S->base, amb); t3_release(amb);
+  t3_light *sun = t3_directional_light_new(0xffffff, 2);
+  t3_object_set_position(sun, 4, 8, 3);
+  t3_object_add(&S->base, sun);
+  sun->base.cast_shadow = true;
+  sun->shadow->map_width = sun->shadow->map_height = 1024;
+  t3_release(sun);
+  t3_light *pt = t3_point_light_new(0xffc080, 30, 0, 2);
+  t3_object_set_position(pt, 0, 4, 2);
+  t3_object_add(&S->base, pt);
+  pt->base.cast_shadow = true;
+  pt->shadow->map_width = pt->shadow->map_height = 512;
+  t3_release(pt);
+  t3_release(pg); t3_release(bg); t3_release(sg); t3_release(wg);
+  t3_release(fm); t3_release(bm); t3_release(sm); t3_release(w0); t3_release(w1);
+}
+static void z2_frame(void) {
+  frame_no++;
+  t3_object_set_rotation(z2_mover, 0, frame_no / 60.0f, 0);
+  t3_renderer_render(R, S, C);
+}
+
 /* ── r12-depth-only: a render target with no colour attachment ────── */
 static t3_scene *r12_inner;
 static t3_camera *r12_cam;

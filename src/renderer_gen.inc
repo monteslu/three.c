@@ -22,6 +22,23 @@ static bool gen_note(t3_renderer *r, const char *what) {
   return false;
 }
 
+/* reversedDepthBuffer: clip z in [0, 1] with 1 at the near plane, from the GL
+ * matrix in p. The z row comes from near and far in double, as Matrix4
+ * makePerspective builds it: taken as w - z from the rounded floats, -1 + f / (f - n)
+ * cancels and most of the term is rounding error at a large far / near. A
+ * projection the application edited keeps its edit, by the remap clip space does. */
+static void gen_reversed_projection(const t3_camera *cam, float *p) {
+  double n = cam->near, f = cam->far;
+  if (cam->base.type == T3_PERSPECTIVE_CAMERA) {
+    if (p[2] == 0 && p[6] == 0 && p[10] == (float)(-(f + n) / (f - n)) && p[14] == (float)(-2 * f * n / (f - n))) {
+      p[10] = (float)(n / (f - n)); p[14] = (float)(f * n / (f - n));
+      return;
+    }
+    for (int c = 0; c < 4; c++) p[c * 4 + 2] = 0.5f * p[c * 4 + 3] - 0.5f * p[c * 4 + 2];
+    return;
+  }
+  p[10] = (float)(1 / (f - n)); p[14] = (float)(f / (f - n));
+}
 /* a state's name in the generator's syntax (kind+features+lDPSH+sDPS) */
 static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast, uint16_t ext) {
   static const char *const kinds[] = { "basic", "lambert", "phong", "standard", "physical", "depth", "points", "psprite", "line", "sprite", "normal" };
@@ -486,11 +503,7 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
     case GOP_CAM_PROJ:
       if (cam) {
         memcpy(b, cam->projection_matrix.e, 64);
-        if (r->reversed_depth && !r->wgpu) {
-          /* EXT_clip_control's [0, 1] clip z, reversed: z' = 0.5 w - 0.5 z */
-          float *p = (float *)b;
-          for (int c = 0; c < 4; c++) p[c * 4 + 2] = 0.5f * p[c * 4 + 3] - 0.5f * p[c * 4 + 2];
-        }
+        if (r->reversed_depth && !r->wgpu) gen_reversed_projection(cam, (float *)b);
 #ifdef T3_WGPU
         if (r->wgpu) {
           /* WebGPU clip z is [0, 1]: z' = 0.5 z + 0.5 w (three.js builds this
@@ -510,8 +523,7 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
             }
           }
           else { p[10] = (float)(-1 / (f - n)); p[14] = (float)(-n / (f - n)); }
-          /* reversedDepthBuffer: z' = w - z */
-          if (r->reversed_depth) for (int c = 0; c < 4; c++) p[c * 4 + 2] = p[c * 4 + 3] - p[c * 4 + 2];
+          if (r->reversed_depth) { memcpy(p, cam->projection_matrix.e, 64); gen_reversed_projection(cam, p); }
           memcpy(b, p, 64);
         }
 #endif

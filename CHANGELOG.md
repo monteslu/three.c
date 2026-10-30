@@ -5,6 +5,13 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.1 (2026-10-30)
+
+### Fixed
+- Reversed depth at a large far / near: the projection's z row was taken as `w - z` from
+  the rounded floats, where `-1 + f / (f - n)` cancels and most of the term is rounding
+  error. It now comes from near and far in double, as three.js builds it.
+
 ## v0.187.0 (2026-10-30)
 
 three.c on three.js r187: every program recaptured from 0.187.0, PMREMs as cube

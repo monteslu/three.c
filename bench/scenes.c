@@ -1109,6 +1109,7 @@ const bench_scene bench_scenes[] = {
   { "p3-eon", eon_setup, eon_frame },
   { "u1-uv-channel", u1_setup, u1_frame },
   { "z1-reversed-depth", z1_setup, z1_frame },
+  { "z2-reversed-far", z2_setup, z2_frame },
   { "r12-depth-only", r12_setup, r12_frame },
   { "p2-transmission", xm_setup, xm_frame },
   { "t6-shadow-cover", sc_setup, sc_frame },
