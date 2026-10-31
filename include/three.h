@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.2"
+#define T3_VERSION "0.187.3"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1338,7 +1338,7 @@ void t3_renderer_set_gpu_timing(t3_renderer *r, bool on);
  * plane to 0 at the far plane in a 32-bit float buffer, which spreads precision
  * evenly out to the horizon (no z-fighting far away, and a much farther far
  * plane). Set it before the first render. WebGPU always has it; GLES needs
- * EXT_clip_control, and without it (a cart's GL has no such call) the call notes
+ * EXT_clip_control, and without it (a cart's GL, Windows and macOS have no such call here) the call notes
  * that and leaves it off, as three.js does on a context without the extension.
  * On GLES it sets the context's clip control, and the default framebuffer keeps
  * whatever depth format it was made with. An external target's depth clear value

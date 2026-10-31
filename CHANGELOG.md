@@ -5,6 +5,14 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.3 (2026-10-30)
+
+### Fixed
+- macOS: a program using three.c failed to link, on an undefined `eglGetProcAddress` from
+  `t3_renderer_set_reversed_depth`, since v0.187.0. The weak reference that Linux and Android resolve to
+  nothing is an error on macOS. A reversed depth buffer on GLES there now notes and stays off, as on Windows;
+  WebGPU has it on every platform.
+
 ## v0.187.2 (2026-10-30)
 
 ### Added

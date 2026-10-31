@@ -786,7 +786,7 @@ void t3_renderer_set_auto_instancing(t3_renderer *r, bool on) { r->auto_instanci
 const t3_render_info *t3_renderer_info(t3_renderer *r) { return &r->info; }
 void t3_renderer_set_gpu_timing(t3_renderer *r, bool on) { r->gpu_timing = on; }
 static bool gen_note(t3_renderer *r, const char *what);
-#if !defined(T3_WASMCART) && !defined(_WIN32)
+#if !defined(T3_WASMCART) && !defined(_WIN32) && !defined(__APPLE__) /* macOS's linker requires a weak symbol to exist */
 extern void (*eglGetProcAddress(const char *))(void) __attribute__((weak));
 #endif
 void t3_renderer_set_forward_shadows(t3_renderer *r, bool on) {
@@ -799,7 +799,7 @@ void t3_renderer_set_reversed_depth(t3_renderer *r, bool on) {
 #ifdef T3_WGPU
   if (r->wgpu) { r->reversed_depth = on; t3_wgpu_set_reversed_depth(r->wgpu, on); return; }
 #endif
-#if !defined(T3_WASMCART) && !defined(_WIN32)
+#if !defined(T3_WASMCART) && !defined(_WIN32) && !defined(__APPLE__) /* macOS's linker requires a weak symbol to exist */
   /* WebGLCapabilities: only with EXT_clip_control */
   const char *ext = (const char *)glGetString(GL_EXTENSIONS);
   void (*clip_control)(GLenum, GLenum) = ext && strstr(ext, "GL_EXT_clip_control") && eglGetProcAddress
