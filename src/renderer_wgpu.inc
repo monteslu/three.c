@@ -509,6 +509,8 @@ bool t3_renderer_wgpu_read(t3_renderer *r, uint8_t *rgba) {
 }
 void t3_renderer_wgpu_defer(t3_renderer *r, bool on) { if (r->wgpu) t3_wgpu_set_defer(r->wgpu, on); }
 /* (tests) the WebGPU work counters: bind groups made, pass state set, sets skipped */
+unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r);
+unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r) { return r->wgpu ? t3_wgpu_vertex_buffer_creates(r->wgpu) : 0; }
 void t3__wgpu_counters(t3_renderer *r, unsigned out[3]);
 void t3__wgpu_counters(t3_renderer *r, unsigned out[3]) { if (r->wgpu) t3_wgpu_counters(r->wgpu, out); else out[0] = out[1] = out[2] = 0; }
 void t3_renderer_wgpu_submit(t3_renderer *r) { if (r->wgpu) t3_wgpu_submitted(r->wgpu); }
@@ -536,6 +538,3 @@ t3_texture *t3_texture_from_wgpu(void *texture, void *view, int w, int h, int le
 }
 static bool wgpu_clear(t3_renderer *r, bool color, bool depth) { (void)r; (void)color; (void)depth; return false; }
 #endif
-
-unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r);
-unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r) { return r->wgpu ? t3_wgpu_vertex_buffer_creates(r->wgpu) : 0; }
