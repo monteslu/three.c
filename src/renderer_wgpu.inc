@@ -330,7 +330,8 @@ static void wgpu_output_pass(t3_renderer *r, WGPUTextureView scene_view, WGPUTex
   t3_wgpu_set_pipeline(w, p);
   wgpu_bind_groups(r, gl, NULL, NULL, NULL, scene_view);
   static const float tri[9] = { -1, 3, 0, -1, -1, 0, 3, -1, 0 };   /* QuadMesh's triangle */
-  WGPUBuffer vb = t3_wgpu_floats(w, &r->wg_quad, tri, 9);
+  WGPUBuffer vb = t3_wgpu_floats(w, &r->wg_quad, NULL, 0);
+  if (!vb) vb = t3_wgpu_floats(w, &r->wg_quad, tri, 9);
   t3_wgpu_set_vertex_buffer(w, 0, vb, 0);
   wgpuRenderPassEncoderDraw(t3_wgpu_pass_encoder(w), 3, 1, 0, 0);
   t3_wgpu_end_pass(w);
@@ -535,3 +536,6 @@ t3_texture *t3_texture_from_wgpu(void *texture, void *view, int w, int h, int le
 }
 static bool wgpu_clear(t3_renderer *r, bool color, bool depth) { (void)r; (void)color; (void)depth; return false; }
 #endif
+
+unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r);
+unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r) { return r->wgpu ? t3_wgpu_vertex_buffer_creates(r->wgpu) : 0; }

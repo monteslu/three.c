@@ -5,6 +5,16 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## Unreleased
+
+### Fixed
+- WebGPU: dynamic vertex/index and auto-instance data remain intact when an external
+  encoder is detached before submission, including partial attribute updates and
+  uniform-stream growth. Track buffers actually bound by outstanding commands and
+  reuse their storage after submission; attaching an encoder alone does not force
+  allocation. Dynamic streams discard obsolete capacities and release their pool
+  on destruction. The constant output triangle is uploaded once.
+
 ## v0.187.3 (2026-10-30)
 
 ### Fixed

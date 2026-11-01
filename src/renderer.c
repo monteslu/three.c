@@ -419,6 +419,8 @@ void t3_renderer_destroy(t3_renderer *r) {
   pm187_free(r);
 #ifdef T3_WGPU
   for (int i = 0; i < r->gen_n; i++) if (r->wgpu) t3_gen_wgpu_free(r->gen[i].gl); else t3_gen_gl_free(r->gen[i].gl);
+  t3_wgpu_floats_free(&r->wg_inst);
+  t3_wgpu_floats_free(&r->wg_quad);
   t3_wgpu_destroy(r->wgpu);
 #else
   for (int i = 0; i < r->gen_n; i++) t3_gen_gl_free(r->gen[i].gl);
