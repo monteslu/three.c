@@ -176,6 +176,7 @@ static void glass_frame(t3_renderer *r, const t3_external_target *et, WGPUTextur
 }
 
 void t3__wgpu_counters(t3_renderer *r, unsigned out[3]);   /* (renderer_wgpu.inc) */
+unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r);
 static int fails;
 static void check(bool ok, const char *what) { printf("%s  %s\n", ok ? "ok  " : "FAIL", what); if (!ok) fails++; }
 
@@ -644,6 +645,185 @@ int main(void) {
     wgpuBufferRelease(b0);
     t3_release(a);
     t3_wgpu_destroy(w);
+  }
+
+  { /* O: detaching an embedder encoder does not submit it. A later render
+     * must not overwrite the auto-instance transforms recorded by the first. */
+    static uint8_t expected[S * S * 4], actual[S * S * 4], moved[S * S * 4];
+    t3_scene *sc = t3_scene_new();
+    t3_geometry *g = t3_box_geometry_new(.45f, .45f, .45f, 1, 1, 1);
+    t3_material *m = t3_mesh_normal_material_new();
+    t3_mesh *a = t3_mesh_new(g, m), *b = t3_mesh_new(g, m);
+    t3_object_add(&sc->base, a); t3_object_add(&sc->base, b);
+    t3_camera *eye = t3_perspective_camera_new(55, 1, .1f, 20);
+    t3_object_set_position(eye, 0, 0, 4); t3_object_look_at(eye, 0, 0, 0);
+    t3_object_set_position(a, -.8f, -.45f, 0); t3_object_set_position(b, -.8f, .45f, 0);
+    t3_renderer_set_auto_instancing(r, true);
+    t3_renderer_set_external_target(r, &et);
+    t3_renderer_render(r, sc, eye); t3_renderer_wgpu_submit(r);
+    read_back(ct, false, expected);
+    WGPUTexture other = texture(WGPUTextureFormat_RGBA8Unorm);
+    WGPUTextureView other_view = wgpuTextureCreateView(other, NULL);
+    WGPUCommandEncoder enc = wgpuDeviceCreateCommandEncoder(dev, NULL);
+    t3_renderer_set_external_encoder(r, (uintptr_t)enc);
+    t3_renderer_render(r, sc, eye);
+    t3_renderer_set_external_encoder(r, 0);
+    t3_object_set_position(a, .8f, -.45f, 0); t3_object_set_position(b, .8f, .45f, 0);
+    t3_external_target second = et; second.color = (uintptr_t)other_view;
+    t3_renderer_set_external_encoder(r, (uintptr_t)enc);
+    t3_renderer_set_external_target(r, &second);
+    t3_renderer_render(r, sc, eye);
+    t3_renderer_set_external_encoder(r, 0);
+    WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
+    wgpuQueueSubmit(queue, 1, &cb);
+    t3_renderer_wgpu_submit(r);
+    read_back(ct, false, actual); read_back(other, false, moved);
+    check(distinct(expected) >= 2 && differ(expected, moved, false) > 100,
+          "instance lifetime control: moving the batch changes the image");
+    check(!memcmp(expected, actual, sizeof expected),
+          "detached external encoder retains its original instance transforms");
+    wgpuCommandBufferRelease(cb); wgpuCommandEncoderRelease(enc);
+    unsigned warm = 0;
+    for (int frame = 0; frame < 60; frame++) {
+      enc = wgpuDeviceCreateCommandEncoder(dev, NULL);
+      for (int pass = 0; pass < 4; pass++) {
+        t3_object_set_position(a, pass & 1 ? .8f : -.8f, -.45f, 0);
+        t3_renderer_set_external_encoder(r, (uintptr_t)enc);
+        t3_renderer_set_external_target(r, pass & 1 ? &second : &et);
+        t3_renderer_render(r, sc, eye);
+        t3_renderer_set_external_encoder(r, 0);
+      }
+      cb = wgpuCommandEncoderFinish(enc, NULL);
+      wgpuQueueSubmit(queue, 1, &cb);
+      t3_renderer_wgpu_submit(r);
+      wgpuCommandBufferRelease(cb); wgpuCommandEncoderRelease(enc);
+      if (!frame) warm = t3__wgpu_vertex_buffer_creates(r);
+    }
+    check(t3__wgpu_vertex_buffer_creates(r) == warm,
+          "60 frames of four rendered instance batches create no buffers after warmup");
+    wgpuTextureViewRelease(other_view); wgpuTextureRelease(other);
+    t3_release(a); t3_release(b); t3_release(g); t3_release(m); t3_release(eye); t3_release(sc);
+    t3_renderer_set_external_target(r, &et);
+  }
+
+  { /* P: partial updates and stream replacement must retain externally used attributes. */
+    for (int grow = 0; grow < 2; grow++) {
+      t3_wgpu *w = t3_wgpu_new(dev, queue, WGPUTextureFormat_RGBA8Unorm);
+      WGPUCommandEncoder enc = wgpuDeviceCreateCommandEncoder(dev, NULL);
+      t3_wgpu_set_encoder(w, enc);
+      t3_wgpu_begin_frame(w, 0);
+      float data[12] = { 0 };
+      t3_attribute *a = t3_attribute_new(T3_FLOAT32, data, 4, 3);
+      WGPUBuffer original = t3_wgpu_attribute(w, a, false, NULL);
+      wgpuBufferAddRef(original);
+      t3_wgpu_begin_pass(w, &(t3_wgpu_pass){ .color = cv, .depth = dv });
+      t3_wgpu_set_vertex_buffer(w, 0, original, 0);
+      t3_wgpu_end_pass(w);
+      t3_wgpu_set_encoder(w, NULL);
+      if (grow) t3_wgpu_begin_frame(w, 1024 * 1024);
+      ((float *)a->array)[0] = 1;
+      a->version++;
+      a->update_start = 0;
+      a->update_count = grow ? 0 : 1;
+      WGPUBuffer changed = t3_wgpu_attribute(w, a, false, NULL);
+      check(changed != original, grow ?
+            "uniform-stream replacement retains outstanding external attribute data" :
+            "partial attribute update after detachment renames the buffer");
+      WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
+      wgpuQueueSubmit(queue, 1, &cb);
+      t3_wgpu_submitted(w);
+      ((float *)a->array)[0] = 2;
+      a->version++;
+      a->update_count = 1;
+      check(t3_wgpu_attribute(w, a, false, NULL) == changed,
+            "submitted attribute buffer can be reused");
+      wgpuBufferRelease(original);
+      wgpuCommandBufferRelease(cb);
+      wgpuCommandEncoderRelease(enc);
+      t3_release(a);
+      t3_wgpu_destroy(w);
+    }
+  }
+
+  { /* Q: an attached encoder alone is not a use; submitted storage is recycled.
+     * Four passes model split-screen/reflection batches. Vary both attribute
+     * and instance data; no buffers may be allocated after the first frame. */
+    t3_wgpu *w = t3_wgpu_new(dev, queue, WGPUTextureFormat_RGBA8Unorm);
+    float data[12] = { 0 };
+    t3_attribute *a = t3_attribute_new(T3_FLOAT32, data, 4, 3);
+    uint16_t indices[6] = { 0, 1, 2, 0, 2, 3 };
+    t3_attribute *idx = t3_attribute_new(T3_UINT16, indices, 6, 1);
+    void *instances = NULL;
+    unsigned warm = 0;
+    for (int frame = 0; frame < 60; frame++) {
+      WGPUCommandEncoder enc = wgpuDeviceCreateCommandEncoder(dev, NULL);
+      t3_wgpu_set_encoder(w, enc);
+      t3_wgpu_begin_frame(w, 0);
+      unsigned before = t3_wgpu_vertex_buffer_creates(w);
+      for (int pass = 0; pass < 4; pass++) {
+        WGPUBuffer vb = NULL, ib = NULL, inst = NULL;
+        uint32_t fmt = 0;
+        for (int unused = 0; unused < 3; unused++) {
+          ((float *)a->array)[0] = (float)(frame + pass + unused);
+          a->version++; a->update_count = unused == 1 ? 1 : 0;
+          idx->version++;
+          vb = t3_wgpu_attribute(w, a, false, NULL);
+          ib = t3_wgpu_attribute(w, idx, true, &fmt);
+          data[0] = (float)(frame + pass + unused);
+          inst = t3_wgpu_floats(w, &instances, data, 12);
+        }
+        t3_wgpu_begin_pass(w, &(t3_wgpu_pass){ .color = cv, .depth = dv });
+        t3_wgpu_set_vertex_buffer(w, 0, vb, 0);
+        t3_wgpu_set_vertex_buffer(w, 1, inst, 0);
+        t3_wgpu_set_index_buffer(w, ib, fmt);
+        t3_wgpu_end_pass(w);
+        t3_wgpu_set_encoder(w, NULL);
+        t3_wgpu_set_encoder(w, enc);
+        t3_wgpu_begin_frame(w, 0);
+      }
+      t3_wgpu_set_encoder(w, NULL);
+      WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
+      wgpuQueueSubmit(queue, 1, &cb);
+      t3_wgpu_submitted(w);
+      wgpuCommandBufferRelease(cb); wgpuCommandEncoderRelease(enc);
+      unsigned after = t3_wgpu_vertex_buffer_creates(w);
+      if (!frame) {
+        warm = after;
+        check(after - before == 12, "four outstanding passes allocate only four buffers per stream, despite unused writes");
+      }
+    }
+    check(t3_wgpu_vertex_buffer_creates(w) == warm,
+          "60-frame four-pass workload creates zero vertex/index/instance buffers after warmup");
+    t3_release(a); t3_release(idx); t3_wgpu_floats_free(&instances); t3_wgpu_destroy(w);
+  }
+
+  { /* R: an internal submit does not release another encoder's use. */
+    t3_wgpu *w = t3_wgpu_new(dev, queue, WGPUTextureFormat_RGBA8Unorm);
+    float data[12] = { 0 }; void *slot = NULL;
+    WGPUCommandEncoder enc = wgpuDeviceCreateCommandEncoder(dev, NULL);
+    t3_wgpu_set_encoder(w, enc); t3_wgpu_begin_frame(w, 0);
+    WGPUBuffer external = t3_wgpu_floats(w, &slot, data, 12);
+    t3_wgpu_begin_pass(w, &(t3_wgpu_pass){ .color = cv, .depth = dv });
+    t3_wgpu_set_vertex_buffer(w, 0, external, 0); t3_wgpu_end_pass(w);
+    t3_wgpu_set_encoder(w, NULL);
+    t3_wgpu_set_defer(w, true); t3_wgpu_begin_frame(w, 0);
+    WGPUBuffer internal = t3_wgpu_floats(w, &slot, data, 12);
+    t3_wgpu_begin_pass(w, &(t3_wgpu_pass){ .color = cv, .depth = dv });
+    t3_wgpu_set_vertex_buffer(w, 0, internal, 0); t3_wgpu_end_pass(w);
+    WGPUBuffer third = t3_wgpu_floats(w, &slot, data, 12);
+    check(external != internal && internal != third && external != third,
+          "unsubmitted internal and external uses retain separate storage");
+    t3_wgpu_flush(w);
+    t3_wgpu_begin_frame(w, 0);
+    t3_wgpu_begin_pass(w, &(t3_wgpu_pass){ .color = cv, .depth = dv });
+    t3_wgpu_set_vertex_buffer(w, 0, third, 0); t3_wgpu_end_pass(w);
+    check(t3_wgpu_floats(w, &slot, data, 12) == internal,
+          "internal submit recycles internal storage without releasing external use");
+    t3_wgpu_flush(w);
+    WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
+    wgpuQueueSubmit(queue, 1, &cb); t3_wgpu_submitted(w);
+    wgpuCommandBufferRelease(cb); wgpuCommandEncoderRelease(enc);
+    t3_wgpu_floats_free(&slot); t3_wgpu_destroy(w);
   }
 
   const char *err = t3_renderer_last_error(r);

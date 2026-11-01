@@ -330,7 +330,8 @@ static void wgpu_output_pass(t3_renderer *r, WGPUTextureView scene_view, WGPUTex
   t3_wgpu_set_pipeline(w, p);
   wgpu_bind_groups(r, gl, NULL, NULL, NULL, scene_view);
   static const float tri[9] = { -1, 3, 0, -1, -1, 0, 3, -1, 0 };   /* QuadMesh's triangle */
-  WGPUBuffer vb = t3_wgpu_floats(w, &r->wg_quad, tri, 9);
+  WGPUBuffer vb = t3_wgpu_floats(w, &r->wg_quad, NULL, 0);
+  if (!vb) vb = t3_wgpu_floats(w, &r->wg_quad, tri, 9);
   t3_wgpu_set_vertex_buffer(w, 0, vb, 0);
   wgpuRenderPassEncoderDraw(t3_wgpu_pass_encoder(w), 3, 1, 0, 0);
   t3_wgpu_end_pass(w);
@@ -508,6 +509,8 @@ bool t3_renderer_wgpu_read(t3_renderer *r, uint8_t *rgba) {
 }
 void t3_renderer_wgpu_defer(t3_renderer *r, bool on) { if (r->wgpu) t3_wgpu_set_defer(r->wgpu, on); }
 /* (tests) the WebGPU work counters: bind groups made, pass state set, sets skipped */
+unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r);
+unsigned t3__wgpu_vertex_buffer_creates(t3_renderer *r) { return r->wgpu ? t3_wgpu_vertex_buffer_creates(r->wgpu) : 0; }
 void t3__wgpu_counters(t3_renderer *r, unsigned out[3]);
 void t3__wgpu_counters(t3_renderer *r, unsigned out[3]) { if (r->wgpu) t3_wgpu_counters(r->wgpu, out); else out[0] = out[1] = out[2] = 0; }
 void t3_renderer_wgpu_submit(t3_renderer *r) { if (r->wgpu) t3_wgpu_submitted(r->wgpu); }

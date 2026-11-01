@@ -137,5 +137,9 @@ void t3_wgpu_set_reversed_depth(t3_wgpu *w, bool on);
 void t3_wgpu_set_forward_shadows(t3_wgpu *w, bool on);
 WGPUTextureFormat t3_wgpu_depth_format(const t3_wgpu *w);
 
+/* Internal diagnostics and owned stream cleanup. */
+unsigned t3_wgpu_vertex_buffer_creates(const t3_wgpu *w);
+void t3_wgpu_floats_free(void **slot);
+
 #endif
 #endif

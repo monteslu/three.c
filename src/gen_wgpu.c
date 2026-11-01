@@ -39,7 +39,22 @@ struct gen_wgpu_prog {
 };
 
 struct target { WGPUTexture tex; WGPUTextureView view; int w, h; WGPUTextureFormat fmt; };
-struct vbuf { WGPUBuffer b; size_t size; uint32_t version; bool uint; uint32_t serial; };
+struct vbstore;
+struct vbuse {
+  struct vbstore *buffer;
+  t3_wgpu *owner;
+  bool internal, external;
+  struct vbuse *buffer_next, *owner_next, *owner_prev;
+};
+struct vbstore {
+  WGPUBuffer b;
+  size_t size;
+  WGPUBufferUsage usage;
+  bool orphan;
+  struct vbuse *uses;
+  struct vbstore *pool_next, *hash_next;
+};
+struct vbuf { struct vbstore *current, *pool; uint32_t version; bool uint; };
 struct sampler_entry { uint32_t key; WGPUSampler s; };
 
 struct t3_wgpu {
@@ -66,7 +81,8 @@ struct t3_wgpu {
   /* what the embedder hooks cost (t3__wgpu_counters, test_wgpu_external):
    * bind groups made, pass state set and set calls skipped */
   unsigned n_bg_made, n_sets, n_sets_skipped;
-  uint32_t serial;    /* the open frame's number: a vertex buffer written in it is renamed, not overwritten */
+  unsigned n_vertex_buffers_made;
+  struct vbuse *vertex_uses;
   /* what the open pass has bound (t3_wgpu_set_*): a draw re-sets only what
    * changed. Each setter is a call through the WebGPU API (in a browser a
    * JS call and a command for the GPU process). The slots hold no reference
@@ -129,6 +145,105 @@ static void release_pipeline(WGPURenderPipeline p) { forget_pipeline(p); wgpuRen
 static void release_bind_group(WGPUBindGroup g) { forget_bind_group(g); wgpuBindGroupRelease(g); }
 static void release_buffer(WGPUBuffer b) { forget_buffer(b); wgpuBufferRelease(b); }
 
+/* Dynamic vertex/index storage is registered by handle so bindings mark only
+ * buffers that recorded commands can read. A use survives encoder detachment
+ * and uniform-stream replacement. Queue submission, not GPU completion, makes
+ * subsequent queue writes safe: writes and submitted draws are ordered. */
+#define VB_BUCKETS 1024
+static struct vbstore *vb_table[VB_BUCKETS];
+static size_t vb_hash(WGPUBuffer b) { return (((uintptr_t)b >> 4) * (uintptr_t)2654435761u) & (VB_BUCKETS - 1); }
+static bool vb_busy(const struct vbstore *b) {
+  for (const struct vbuse *u = b->uses; u; u = u->buffer_next)
+    if (u->internal || u->external) return true;
+  return false;
+}
+static void vb_unlink_use(struct vbuse *u) {
+  if (u->owner_prev) u->owner_prev->owner_next = u->owner_next;
+  else u->owner->vertex_uses = u->owner_next;
+  if (u->owner_next) u->owner_next->owner_prev = u->owner_prev;
+  struct vbuse **p = &u->buffer->uses;
+  while (*p != u) p = &(*p)->buffer_next;
+  *p = u->buffer_next;
+  free(u);
+}
+static void vb_free(struct vbstore *b) {
+  struct vbstore **p = &vb_table[vb_hash(b->b)];
+  while (*p != b) p = &(*p)->hash_next;
+  *p = b->hash_next;
+  while (b->uses) vb_unlink_use(b->uses);
+  release_buffer(b->b);
+  free(b);
+}
+static void vb_note_use(t3_wgpu *w, WGPUBuffer handle) {
+  struct vbstore *b = vb_table[vb_hash(handle)];
+  while (b && b->b != handle) b = b->hash_next;
+  if (!b) return; /* caller-owned buffer, never rewritten by these helpers */
+  struct vbuse *u = b->uses;
+  while (u && u->owner != w) u = u->buffer_next;
+  if (!u) {
+    u = calloc(1, sizeof *u); T3_CHECK_ALLOC(u);
+    u->owner = w; u->buffer = b;
+    u->buffer_next = b->uses; b->uses = u;
+    u->owner_next = w->vertex_uses;
+    if (u->owner_next) u->owner_next->owner_prev = u;
+    w->vertex_uses = u;
+  }
+  if (w->ext && w->enc == w->ext) u->external = true;
+  else u->internal = true;
+}
+static void vb_submitted(t3_wgpu *w, bool external) {
+  for (struct vbuse *u = w->vertex_uses, *next; u; u = next) {
+    next = u->owner_next;
+    if (external) u->external = false; else u->internal = false;
+    if (u->buffer->orphan && !vb_busy(u->buffer)) vb_free(u->buffer);
+  }
+}
+static void vb_destroy_owner(t3_wgpu *w) {
+  while (w->vertex_uses) {
+    struct vbuse *u = w->vertex_uses;
+    struct vbstore *b = u->buffer;
+    vb_unlink_use(u);
+    if (b->orphan && !vb_busy(b)) vb_free(b);
+  }
+}
+static struct vbstore *vb_select(t3_wgpu *w, struct vbuf *v, size_t bytes, size_t capacity, WGPUBufferUsage usage) {
+  struct vbstore *b = v->current;
+  if (b && b->size >= bytes && b->usage == usage && !vb_busy(b)) return b;
+  /* Discard obsolete capacities instead of accumulating every past size.
+   * Encoders retain their uses until submission even after leaving the pool. */
+  for (struct vbstore **p = &v->pool; *p;) {
+    b = *p;
+    if (b->size < bytes || b->usage != usage) {
+      *p = b->pool_next;
+      if (v->current == b) v->current = NULL;
+      b->orphan = true;
+      forget_buffer(b->b);
+      if (!vb_busy(b)) vb_free(b);
+    } else p = &b->pool_next;
+  }
+  for (b = v->pool; b; b = b->pool_next)
+    if (b->size >= bytes && b->usage == usage && !vb_busy(b)) { v->current = b; return b; }
+  b = calloc(1, sizeof *b); T3_CHECK_ALLOC(b);
+  b->size = capacity; b->usage = usage;
+  WGPUBufferDescriptor d = { .usage = usage | WGPUBufferUsage_CopyDst, .size = capacity };
+  b->b = wgpuDeviceCreateBuffer(w->dev, &d);
+  w->n_vertex_buffers_made++;
+  size_t h = vb_hash(b->b); b->hash_next = vb_table[h]; vb_table[h] = b;
+  b->pool_next = v->pool; v->pool = b; v->current = b;
+  return b;
+}
+static void vb_drop(struct vbuf *v) {
+  if (!v) return;
+  for (struct vbstore *b = v->pool, *next; b; b = next) {
+    next = b->pool_next;
+    b->orphan = true;
+    if (!vb_busy(b)) vb_free(b);
+  }
+  free(v);
+}
+unsigned t3_wgpu_vertex_buffer_creates(const t3_wgpu *w) { return w->n_vertex_buffers_made; }
+void t3_wgpu_floats_free(void **slot) { vb_drop(*slot); *slot = NULL; }
+
 t3_wgpu *t3_wgpu_new(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat out_format) {
   t3_wgpu *w = calloc(1, sizeof *w);
   T3_CHECK_ALLOC(w);
@@ -140,6 +255,7 @@ t3_wgpu *t3_wgpu_new(WGPUDevice device, WGPUQueue queue, WGPUTextureFormat out_f
 }
 void t3_wgpu_destroy(t3_wgpu *w) {
   if (!w) return;
+  vb_destroy_owner(w);
   for (int k = 0; k < MAX_LIVE; k++) if (live[k] == w) live[k] = NULL;
   if (w->stream) wgpuBufferRelease(w->stream);
   for (int i = 0; i < w->n_samplers; i++) wgpuSamplerRelease(w->samplers[i].s);
@@ -576,11 +692,11 @@ WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextur
 /* ── the frame ──────────────────────────────────────────────────────── */
 void t3_wgpu_flush(t3_wgpu *w) {
   if (!w->enc) return;
-  w->serial++;
   if (w->enc != w->ext) {
     WGPUCommandBufferDescriptor cd = { 0 };
     WGPUCommandBuffer cb = wgpuCommandEncoderFinish(w->enc, &cd);
     wgpuQueueSubmit(w->q, 1, &cb);
+    vb_submitted(w, false);
     wgpuCommandBufferRelease(cb);
     wgpuCommandEncoderRelease(w->enc);
   }
@@ -591,6 +707,7 @@ void t3_wgpu_flush(t3_wgpu *w) {
 void t3_wgpu_submitted(t3_wgpu *w) {
   t3_wgpu_flush(w);
   w->stream_ext = false;
+  vb_submitted(w, true);
 }
 void t3_wgpu_set_defer(t3_wgpu *w, bool on) { if (!on) t3_wgpu_flush(w); w->defer = on; }
 void t3_wgpu_set_encoder(t3_wgpu *w, WGPUCommandEncoder enc) { t3_wgpu_flush(w); w->ext = enc; }
@@ -706,6 +823,7 @@ void t3_wgpu_set_bind_group(t3_wgpu *w, int group, WGPUBindGroup bg, int nd, con
   wgpuRenderPassEncoderSetBindGroup(w->pass, (uint32_t)group, bg, (size_t)nd, offs);
 }
 void t3_wgpu_set_vertex_buffer(t3_wgpu *w, int slot, WGPUBuffer b, uint64_t off) {
+  vb_note_use(w, b);
   if (slot >= 0 && slot < 16) {
     if (w->bound.vb[slot] == b && w->bound.voff[slot] == off) { w->n_sets_skipped++; return; }
     w->bound.vb[slot] = b;
@@ -715,6 +833,7 @@ void t3_wgpu_set_vertex_buffer(t3_wgpu *w, int slot, WGPUBuffer b, uint64_t off)
   wgpuRenderPassEncoderSetVertexBuffer(w->pass, (uint32_t)slot, b, off, WGPU_WHOLE_SIZE);
 }
 void t3_wgpu_set_index_buffer(t3_wgpu *w, WGPUBuffer b, uint32_t fmt) {
+  vb_note_use(w, b);
   if (w->bound.ib == b && w->bound.ifmt == fmt) { w->n_sets_skipped++; return; }
   w->n_sets++;
   w->bound.ib = b;
@@ -928,28 +1047,23 @@ WGPUBuffer t3_wgpu_attribute(t3_wgpu *w, t3_attribute *a, bool index, uint32_t *
 WGPUBuffer t3_wgpu_attribute_uint(t3_wgpu *w, t3_attribute *a) { return attribute_buf(w, a, false, NULL, true); }
 static WGPUBuffer attribute_buf(t3_wgpu *w, t3_attribute *a, bool index, uint32_t *index_format, bool as_uint) {
   struct vbuf *v = a->_wgpu;
+  struct vbstore *b = v ? v->current : NULL;
   size_t n = (size_t)a->count * a->item_size;
   size_t bytes = index ? n * (a->type == T3_UINT16 ? 2 : 4) : n * 4;
   size_t padded = (bytes + 3) & ~(size_t)3;
   if (index_format) *index_format = a->type == T3_UINT16 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32;
-  if (v && v->version == a->version && v->size >= padded && v->uint == as_uint) return v->b;
+  if (b && v->version == a->version && b->size >= padded && v->uint == as_uint) return b->b;
   /* only the update range: a plain float vertex buffer that already holds the rest and no open frame reads */
-  if (v && a->update_count > 0 && !index && !as_uint && a->type == T3_FLOAT32 && v->b && v->size == padded && v->uint == as_uint &&
-      !(w->enc && v->serial == w->serial)) {
+  if (b && a->update_count > 0 && !index && !as_uint && a->type == T3_FLOAT32 && b->b && b->size == padded && v->uint == as_uint &&
+      !vb_busy(b)) {
     size_t item = (size_t)a->item_size * 4;
-    wgpuQueueWriteBuffer(w->q, v->b, a->update_start * item, (const uint8_t *)a->array + a->update_start * item, a->update_count * item);
+    wgpuQueueWriteBuffer(w->q, b->b, a->update_start * item, (const uint8_t *)a->array + a->update_start * item, a->update_count * item);
     a->update_start = a->update_count = 0;
     v->version = a->version;
-    return v->b;
+    return b->b;
   }
   if (!v) { v = calloc(1, sizeof *v); T3_CHECK_ALLOC(v); a->_wgpu = v; }
-  if (v->b && w->enc && v->serial == w->serial) { release_buffer(v->b); v->b = NULL; }   /* (in use by the open frame: renamed) */
-  if (!v->b || v->size < padded) {
-    if (v->b) release_buffer(v->b);
-    WGPUBufferDescriptor d = { .usage = (index ? WGPUBufferUsage_Index : WGPUBufferUsage_Vertex) | WGPUBufferUsage_CopyDst, .size = padded };
-    v->b = wgpuDeviceCreateBuffer(w->dev, &d);
-    v->size = padded;
-  }
+  b = vb_select(w, v, padded, padded, index ? WGPUBufferUsage_Index : WGPUBufferUsage_Vertex);
   void *tmp = NULL;
   const void *data = a->array;
   if (as_uint) {
@@ -969,31 +1083,22 @@ static WGPUBuffer attribute_buf(t3_wgpu *w, t3_attribute *a, bool index, uint32_
     memcpy(tmp, a->array, bytes);
     data = tmp;
   }
-  wgpuQueueWriteBuffer(w->q, v->b, 0, data, padded);
-  v->serial = w->serial;
+  wgpuQueueWriteBuffer(w->q, b->b, 0, data, padded);
   free(tmp);
   v->version = a->version;
   v->uint = as_uint;
   a->update_start = a->update_count = 0;
-  return v->b;
+  return b->b;
 }
 WGPUBuffer t3_wgpu_floats(t3_wgpu *w, void **slot, const float *data, size_t n) {
   struct vbuf *v = *slot;
-  size_t bytes = n * 4;
+  if (!n) return v && v->current ? v->current->b : NULL;
   if (!v) { v = calloc(1, sizeof *v); T3_CHECK_ALLOC(v); *slot = v; }
-  if (!bytes) return v->b;
-  /* rewritten while a deferred frame still reads it: a new buffer instead */
-  bool busy = v->b && w->enc && v->serial == w->serial;
-  if (!v->b || v->size < bytes || busy) {
-    if (v->b) release_buffer(v->b);
-    size_t sz = v->size > bytes * 2 ? v->size : bytes * 2;
-    WGPUBufferDescriptor d = { .usage = WGPUBufferUsage_Vertex | WGPUBufferUsage_CopyDst, .size = sz };
-    v->b = wgpuDeviceCreateBuffer(w->dev, &d);
-    v->size = sz;
-  }
-  wgpuQueueWriteBuffer(w->q, v->b, 0, data, bytes);
-  v->serial = w->serial;
-  return v->b;
+  size_t bytes = n * 4;
+  size_t capacity = v->current && v->current->size > bytes * 2 ? v->current->size : bytes * 2;
+  struct vbstore *b = vb_select(w, v, bytes, capacity, WGPUBufferUsage_Vertex);
+  wgpuQueueWriteBuffer(w->q, b->b, 0, data, bytes);
+  return b->b;
 }
 
 static float srgb_dec(uint8_t c) { float v = c / 255.0f; return v <= 0.04045f ? v / 12.92f : powf((v + 0.055f) / 1.055f, 2.4f); }
@@ -1170,9 +1275,7 @@ void t3_wgpu_release(uint32_t kind, void *thing) {
   }
   case T3_KIND_ATTRIBUTE: {
     t3_attribute *a = thing;
-    struct vbuf *v = a->_wgpu;
-    if (v && v->b) release_buffer(v->b);
-    free(v);
+    vb_drop(a->_wgpu);
     a->_wgpu = NULL;
     break;
   }
