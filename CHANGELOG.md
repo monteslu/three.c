@@ -5,7 +5,7 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
-## Unreleased
+## v0.187.4 (2026-11-01)
 
 ### Fixed
 - WebGPU: dynamic vertex/index and auto-instance data remain intact when an external
