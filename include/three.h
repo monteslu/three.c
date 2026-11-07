@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.4"
+#define T3_VERSION "0.187.5"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1283,6 +1283,16 @@ void t3_renderer_set_external_target(t3_renderer *r, const t3_external_target *t
  * WGPUCommandEncoder and never submit (0 = the renderer owns encoding and
  * submit). GLES: accepted and ignored. */
 void t3_renderer_set_external_encoder(t3_renderer *r, uintptr_t wgpu_command_encoder);
+/* WebGPU: fn(user, encoder, false) right after the renderer opens a
+ * WGPUCommandEncoder of its own (not an embedder's) and fn(user, encoder,
+ * true) right before it finishes it, so an embedder can write timestamps
+ * into the renderer's own command buffers (a PMREM capture, mip chains)
+ * and time their GPU work without the gaps between submits. NULL removes
+ * it. GLES: accepted and ignored. */
+typedef void (*t3_encoder_hook)(void *user, uintptr_t wgpu_command_encoder, bool end);
+void t3_renderer_set_encoder_hook(t3_renderer *r, t3_encoder_hook fn, void *user);
+/* t3_renderer_set_encoder_hook exists (an embedder can test for it) */
+#define T3_ENCODER_HOOK 1
 /* t3_renderer_render_depth into a caller's depth-only target rect: color is
  * the depth-only framebuffer on GLES (depth the view, depth_format its
  * format, on WebGPU; the only depth render there), LOAD unless

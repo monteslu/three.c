@@ -78,6 +78,9 @@ struct t3_wgpu {
   bool defer;
   WGPUCommandEncoder ext;
   size_t written;
+  /* t3_renderer_set_encoder_hook: told of each encoder of our own as it opens and before it finishes */
+  void (*enc_hook)(void *user, uintptr_t enc, bool end);
+  void *enc_hook_user;
   /* what the embedder hooks cost (t3__wgpu_counters, test_wgpu_external):
    * bind groups made, pass state set and set calls skipped */
   unsigned n_bg_made, n_sets, n_sets_skipped;
@@ -693,6 +696,7 @@ WGPUBindGroup t3_wgpu_bind_group(t3_wgpu *w, t3_gen_gl *g, int group, WGPUTextur
 void t3_wgpu_flush(t3_wgpu *w) {
   if (!w->enc) return;
   if (w->enc != w->ext) {
+    if (w->enc_hook) w->enc_hook(w->enc_hook_user, (uintptr_t)w->enc, true);
     WGPUCommandBufferDescriptor cd = { 0 };
     WGPUCommandBuffer cb = wgpuCommandEncoderFinish(w->enc, &cd);
     wgpuQueueSubmit(w->q, 1, &cb);
@@ -710,6 +714,7 @@ void t3_wgpu_submitted(t3_wgpu *w) {
   vb_submitted(w, true);
 }
 void t3_wgpu_set_defer(t3_wgpu *w, bool on) { if (!on) t3_wgpu_flush(w); w->defer = on; }
+void t3_wgpu_set_encoder_hook(t3_wgpu *w, void (*fn)(void *user, uintptr_t enc, bool end), void *user) { w->enc_hook = fn, w->enc_hook_user = user; }
 void t3_wgpu_set_encoder(t3_wgpu *w, WGPUCommandEncoder enc) { t3_wgpu_flush(w); w->ext = enc; }
 void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
   /* a render that ran out of stream drew with another draw's data: the
@@ -764,7 +769,11 @@ void t3_wgpu_begin_frame(t3_wgpu *w, size_t estimate) {
     T3_CHECK_ALLOC(w->stage);
   }
   if (w->ext) w->enc = w->ext;
-  else { WGPUCommandEncoderDescriptor ed = { 0 }; w->enc = wgpuDeviceCreateCommandEncoder(w->dev, &ed); }
+  else {
+    WGPUCommandEncoderDescriptor ed = { 0 };
+    w->enc = wgpuDeviceCreateCommandEncoder(w->dev, &ed);
+    if (w->enc_hook) w->enc_hook(w->enc_hook_user, (uintptr_t)w->enc, false);
+  }
 }
 uint32_t t3_wgpu_stream(t3_wgpu *w, const void *data, uint32_t n) {
   size_t off = (w->stage_n + 255) & ~(size_t)255;
@@ -920,6 +929,7 @@ static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureForm
   /* into the open frame when there is one (its draws into the texture come first) */
   bool own = !w->enc || w->pass;
   WGPUCommandEncoder enc = own ? wgpuDeviceCreateCommandEncoder(w->dev, NULL) : w->enc;
+  if (own && w->enc_hook) w->enc_hook(w->enc_hook_user, (uintptr_t)enc, false);
   for (uint32_t lv = 1; lv < levels; lv++) for (uint32_t layer = 0; layer < layers; layer++) {
     WGPUTextureViewDescriptor sv = { .format = fmt, .dimension = array ? WGPUTextureViewDimension_2DArray : WGPUTextureViewDimension_2D,
                                      .baseMipLevel = lv - 1, .mipLevelCount = 1, .baseArrayLayer = array ? 0 : layer,
@@ -945,6 +955,7 @@ static void generate_mipmaps_layers(t3_wgpu *w, WGPUTexture tex, WGPUTextureForm
     wgpuTextureViewRelease(dst);
   }
   if (own) {
+    if (w->enc_hook) w->enc_hook(w->enc_hook_user, (uintptr_t)enc, true);
     WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
     wgpuQueueSubmit(w->q, 1, &cb);
     wgpuCommandBufferRelease(cb);
@@ -1006,6 +1017,7 @@ static void generate_cube_mipmaps(t3_wgpu *w, WGPUTexture tex, WGPUTextureView c
   WGPUBindGroup bg = wgpuDeviceCreateBindGroup(w->dev, &bd);
   bool own = !w->enc || w->pass;
   WGPUCommandEncoder enc = own ? wgpuDeviceCreateCommandEncoder(w->dev, NULL) : w->enc;
+  if (own && w->enc_hook) w->enc_hook(w->enc_hook_user, (uintptr_t)enc, false);
   /* (a release while the encoder still records is safe: the commands hold the texture) */
   for (uint32_t lv = 1; lv < levels; lv++) {
     uint32_t s = (uint32_t)size >> lv;
@@ -1031,6 +1043,7 @@ static void generate_cube_mipmaps(t3_wgpu *w, WGPUTexture tex, WGPUTextureView c
     wgpuTextureRelease(tmp);
   }
   if (own) {
+    if (w->enc_hook) w->enc_hook(w->enc_hook_user, (uintptr_t)enc, true);
     WGPUCommandBuffer cb = wgpuCommandEncoderFinish(enc, NULL);
     wgpuQueueSubmit(w->q, 1, &cb);
     wgpuCommandBufferRelease(cb);

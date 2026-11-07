@@ -5,6 +5,15 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.5 (2026-11-07)
+
+### Added
+- WebGPU: `t3_renderer_set_encoder_hook` tells an embedder of each command encoder the
+  renderer opens on its own (the frame encoder when no external one is set, a mip chain's,
+  a cube's mip chain) right after it opens and right before it finishes, so the embedder can
+  write timestamps into those command buffers and time work such as a PMREM capture without
+  the gaps between submits. `T3_ENCODER_HOOK` says it exists. GLES: accepted and ignored.
+
 ## v0.187.4 (2026-11-01)
 
 ### Fixed

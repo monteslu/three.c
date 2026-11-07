@@ -76,6 +76,7 @@ void t3_wgpu_flush(t3_wgpu *w);        /* submits an open deferred frame */
 void t3_wgpu_submitted(t3_wgpu *w);
 void t3_wgpu_counters(const t3_wgpu *w, unsigned out[3]);   /* bind groups made, pass sets, sets skipped */    /* the embedder submitted its encoder (t3_renderer_wgpu_submit) */
 void t3_wgpu_set_defer(t3_wgpu *w, bool on);
+void t3_wgpu_set_encoder_hook(t3_wgpu *w, void (*fn)(void *user, uintptr_t enc, bool end), void *user);
 void t3_wgpu_set_encoder(t3_wgpu *w, WGPUCommandEncoder enc);   /* NULL: back to our own */
 
 /* the pipeline for a program in a state, made on first use */

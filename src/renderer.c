@@ -513,6 +513,12 @@ void t3_renderer_set_external_encoder(t3_renderer *r, uintptr_t enc) {
 #endif
   r->bk->set_external_encoder(r->bk, enc);
 }
+void t3_renderer_set_encoder_hook(t3_renderer *r, t3_encoder_hook fn, void *user) {
+#ifdef T3_WGPU
+  if (r->wgpu) t3_wgpu_set_encoder_hook(r->wgpu, fn, user);
+#endif
+  (void)r, (void)fn, (void)user;
+}
 void t3_renderer_set_external_target(t3_renderer *r, const t3_external_target *t) {
   if (!t) {
     t3_renderer_set_framebuffer(r, 0);
