@@ -115,7 +115,9 @@ for scene in ${SCENES:-01-cubes 05-heavy 06-heavy-instanced physics3d physics2d}
     cp "$ROOT"/test/assets/*.glb "$ASSETS"/
     if [ -d "$LUA_ASSETS" ]; then cp "$LUA_ASSETS"/* "$ASSETS"/; fi
   fi
+  # no --version: the packer takes this checkout's (the tag at a clean v* tag,
+  # else <last tag>-dev.g<commit>)
   node "$WASMCART/bin/wasmcart-pack.js" --wasm "$OUT/$name.wasm" --name "three.c $scene" --assets "$ASSETS" \
-    --version 0.1.0 --output "$OUT/$name.wasc" >/dev/null
+    --output "$OUT/$name.wasc" >/dev/null
   echo "built build/wasm/$name.wasc ($(wc -c < "$OUT/$name.wasc") bytes)"
 done

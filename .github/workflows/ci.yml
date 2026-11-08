@@ -52,7 +52,7 @@ jobs:
       - name: Fetch wasmcart, Box2D and Box3D
         run: |
           git clone https://github.com/wasmcart/wasmcart ../wasmcart
-          git -C ../wasmcart checkout b3b99900b103cc55fe58bd2e2d1e1b52e02af0cc
+          git -C ../wasmcart checkout f45614e87c878b5a1c4a238640b72841fc0b0047
           (cd ../wasmcart && npm ci --no-audit --no-fund)
           git clone https://github.com/erincatto/box2d ../box2d
           git -C ../box2d checkout c05c48738fbe5c27625e36c5f0cfbdaddfc8359a
