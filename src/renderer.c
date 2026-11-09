@@ -289,6 +289,9 @@ struct t3_renderer {
   struct gen_shadow { const t3_light *l; uint32_t light_id; GLuint fbo, tex; int w, h; bool cube; bool rendered; void *wg; } gen_sh[16];
   int gen_sh_n;
   char *gen_missing;      /* table states the scenes asked for and the table lacks, one per line */
+  /* t3_renderer_set_missing_hook, and the item whose program is being looked up (for it) */
+  t3_missing_hook missing_hook; void *missing_user;
+  const t3_object *gen_cur_obj; const t3_material *gen_cur_mat;
   /* every draw's per-draw block of the frame, packed at the uniform-buffer
    * offset alignment, uploaded once per frame (glBindBufferRange per draw) */
   uint8_t *gen_stage; size_t gen_stage_n, gen_stage_cap;
@@ -514,6 +517,7 @@ void t3_renderer_set_external_encoder(t3_renderer *r, uintptr_t enc) {
 #endif
   r->bk->set_external_encoder(r->bk, enc);
 }
+void t3_renderer_set_missing_hook(t3_renderer *r, t3_missing_hook fn, void *user) { r->missing_hook = fn; r->missing_user = user; }
 void t3_renderer_set_encoder_hook(t3_renderer *r, t3_encoder_hook fn, void *user) {
 #ifdef T3_WGPU
   if (r->wgpu) t3_wgpu_set_encoder_hook(r->wgpu, fn, user);

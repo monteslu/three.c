@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.6"
+#define T3_VERSION "0.187.7"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1297,6 +1297,15 @@ typedef void (*t3_encoder_hook)(void *user, uintptr_t wgpu_command_encoder, bool
 void t3_renderer_set_encoder_hook(t3_renderer *r, t3_encoder_hook fn, void *user);
 /* t3_renderer_set_encoder_hook exists (an embedder can test for it) */
 #define T3_ENCODER_HOOK 1
+/* fn(user, state, object, material) once for each program state the tables
+ * lack (t3_renderer_generated_missing), when a draw first asks for it: the
+ * object and material of that draw (either may be NULL: a state the renderer
+ * asks for on its own behalf), valid only during the call, so an embedder can
+ * say which of its objects is not drawn. The draw is skipped as before. NULL
+ * removes it. */
+typedef void (*t3_missing_hook)(void *user, const char *state, const t3_object *object, const t3_material *material);
+void t3_renderer_set_missing_hook(t3_renderer *r, t3_missing_hook fn, void *user);
+#define T3_MISSING_HOOK 1
 /* t3_pmrem_scene_options.min_size and t3_pmrem_scene_job_* (v0.187.6) */
 #define T3_PMREM_SCENE_JOB 1
 /* t3_renderer_render_depth into a caller's depth-only target rect: color is

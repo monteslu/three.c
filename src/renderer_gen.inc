@@ -71,6 +71,7 @@ static void gen_record_missing_name(const t3_renderer *rc, const char *name) {
   memcpy(r->gen_missing + old, name, len);
   r->gen_missing[old + len] = '\n';
   r->gen_missing[old + len + 1] = 0;
+  if (r->missing_hook) r->missing_hook(r->missing_user, name, r->gen_cur_obj, r->gen_cur_mat);
 #ifndef T3_WASMCART
   /* T3_MISSING_LOG=<file>: each missing state appended, once per renderer, for
    * tools/gen-project-table.mjs --missing <file> */
@@ -441,7 +442,9 @@ static t3_gen_gl *gen_pick(t3_renderer *r, const t3_material *m, const t3_object
   t3_gen_gl *gl;
   if (slot->used) gl = slot->gl;
   else {
+    r->gen_cur_obj = o, r->gen_cur_mat = m; /* who asked, for the missing hook */
     const t3_gen_program *src = gen_state_find(r, &key, &why);
+    r->gen_cur_obj = NULL, r->gen_cur_mat = NULL;
     if (!src) { gen_note(r, why); r->info.skipped++; return NULL; }
     t3_gen_params prm = { 0, 0, 0 };
     if (src->tpl[0] && o->type == T3_SKINNED_MESH) prm.bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
@@ -929,6 +932,7 @@ static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t
   /* (the caster program does not depend on the lights: look it up by name) */
   const char *base = f & T3_GEN_INSTBIG ? "depth+instbig" : f & T3_GEN_SKIN ? "depth+skin" : f & T3_GEN_MORPH ? "depth+morph" : "depth";
   const t3_gen_program *src = NULL;
+  r->gen_cur_obj = o, r->gen_cur_mat = m; /* who asked, for the missing hook */
   if (m->extension) {
     /* r187 draws the shadow pass with the material's positionNode (and its
      * colorNode's alpha): an extension material casts with depth+x<name>.
@@ -939,7 +943,9 @@ static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t
     if (!src) gen_record_missing_name(r, name);
   }
   if (!src) src = gen_by_name(r, base);
-  if (!src) { gen_record_missing(r, T3_GEN_DEPTH, f, (const uint8_t[4]){ 0, 0, 0, 0 }, NULL); return NULL; }
+  if (!src) gen_record_missing(r, T3_GEN_DEPTH, f, (const uint8_t[4]){ 0, 0, 0, 0 }, NULL);
+  r->gen_cur_obj = NULL, r->gen_cur_mat = NULL;
+  if (!src) return NULL;
   t3_gen_params prm = { 0, 0, 0 };
   if (src->tpl[0] && o->type == T3_SKINNED_MESH) prm.bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
   gen_morph_params(src, g, &prm);

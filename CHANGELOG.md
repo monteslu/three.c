@@ -5,6 +5,15 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.7 (2026-11-09)
+
+### Added
+- `t3_renderer_set_missing_hook`: a callback once for each program state the tables lack, when a draw first
+  asks for it, with that draw's object and material (valid during the call), so an embedder can say which of its
+  objects is not drawn instead of only listing states. The draw is still skipped and the state still listed by
+  `t3_renderer_generated_missing`. `T3_MISSING_HOOK` says it exists. test/test_missing_hook.c: the core
+  table alone names the sphere and its material once over two frames; the full table never calls it.
+
 ## v0.187.6 (2026-11-09)
 
 ### Added
