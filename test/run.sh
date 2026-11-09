@@ -80,8 +80,8 @@ run test_flip_copies node test/test_flip_copies.mjs
 [ -f build/native_core/libthree.a ] || T3_TABLE=core ./build.sh >/dev/null 2>&1
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include test/test_missing_hook.c build/native_core/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_missing_hook
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -DFULL test/test_missing_hook.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_missing_hook_full
-run test_missing_hook ./build/test/test_missing_hook
-run test_missing_hook_full ./build/test/test_missing_hook_full
+run test_missing_hook env EGL_PLATFORM=surfaceless ./build/test/test_missing_hook
+run test_missing_hook_full env EGL_PLATFORM=surfaceless ./build/test/test_missing_hook_full
 # a project's own program table with three.c's core table: the same picture as the full table
 if [ -d build/gen-programs ] && ls build/gen-programs/standard+map+nearest.gl.json >/dev/null 2>&1; then
   T3_TABLE=core ./build.sh >/dev/null 2>&1
