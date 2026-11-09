@@ -5,6 +5,29 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.6 (2026-11-09)
+
+### Added
+- `t3_pmrem_scene_options.min_size`: a scene capture smaller than r187's 256 cube (16 at least).
+  r187 raises every `fromScene` to 256, so a probe that asked for 64 or 128 paid for 256.
+- `t3_pmrem_scene_job_*`: `fromScene` over several calls, a face of the scene a step, then the
+  blur, then the filtered levels, for a capture that would otherwise be one frame's spike. A job keeps
+  a source cube of its own, so other PMREMs made between its steps leave it alone.
+  `T3_PMREM_SCENE_JOB` says both exist.
+- `t3_renderer_set_shadow_hold`: renders made while held draw no shadow map that has been drawn before;
+  they use it as it stands, and a map due to be drawn again is still drawn by the first render after the
+  hold. For extra views of a scene within a frame (a reflection probe's faces).
+
+### Changed
+- PMREM (every `fromScene`, `fromCubemap`, `fromEquirectangular` and a scene's environment):
+  the filtered levels' six faces are drawn side by side into one 2D target and copied into the
+  cube's faces, where r187 draws each face of each level into the cube on its own (30 passes, each
+  waiting on the one before it for a new attachment, and on WebGPU a submit each). The same programs
+  and values draw every texel, so the levels are unchanged (GL frames byte-identical). Level 0
+  (roughness 0) is the source's own faces, copied: r187's GGX pass reads the source once a texel
+  there. On an AMD 890M a 256 scene capture went from about 3.7 to 2.4 ms of GPU time on GL and
+  from 5.2 to 3.0 ms on WebGPU.
+
 ## v0.187.5 (2026-11-07)
 
 ### Added

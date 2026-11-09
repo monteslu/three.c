@@ -1419,6 +1419,20 @@ void t3_wgpu_render_target(t3_wgpu *w, t3_render_target *rt, t3_wgpu_rt *out) {
   out->resolve = samples > 1 ? tx->v0 : NULL;
   out->depth = !rt->depth_buffer ? NULL : x->depth_v ? x->depth_v : ((struct tex *)rt->depth_texture->_wgpu)->v0;
 }
+/* a size x size square of one render target's colour texture (array layer, level, origin from the top left) into
+ * another's, on the open frame's encoder outside any pass (the PMREM's atlas into its cube) */
+void t3_wgpu_copy_target(t3_wgpu *w, t3_render_target *src, int sx, int sy, int slayer, int smip, t3_render_target *dst, int dlayer, int dmip, int size) {
+  /* (made now when nothing has drawn into them yet: a PMREM's levels are only ever copied in) */
+  t3_wgpu_rt made;
+  if (src && !src->_wgpu) t3_wgpu_render_target(w, src, &made);
+  if (dst && !dst->_wgpu) t3_wgpu_render_target(w, dst, &made);
+  struct tex *a = src && src->texture ? src->texture->_wgpu : NULL, *b = dst && dst->texture ? dst->texture->_wgpu : NULL;
+  if (!a || !b || !a->t || !b->t || !w->enc || w->pass || size <= 0) return;
+  WGPUTexelCopyTextureInfo from = { .texture = a->t, .mipLevel = (uint32_t)smip, .origin = { (uint32_t)sx, (uint32_t)sy, (uint32_t)slayer }, .aspect = WGPUTextureAspect_All };
+  WGPUTexelCopyTextureInfo to = { .texture = b->t, .mipLevel = (uint32_t)dmip, .origin = { 0, 0, (uint32_t)dlayer }, .aspect = WGPUTextureAspect_All };
+  WGPUExtent3D ext = { (uint32_t)size, (uint32_t)size, 1 };
+  wgpuCommandEncoderCopyTextureToTexture(w->enc, &from, &to, &ext);
+}
 void t3_wgpu_render_target_done(t3_wgpu *w, t3_render_target *rt) {
   struct tex *tx = rt->texture->_wgpu;
   if (rt->is_cube) {

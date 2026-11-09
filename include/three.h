@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.5"
+#define T3_VERSION "0.187.6"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1020,6 +1020,10 @@ void t3_renderer_set_shadow_map(t3_renderer *r, bool enabled, t3_shadow_map_type
  * frame (a depth prepass, then the scene) draw it once */
 void t3_renderer_set_shadow_auto_update(t3_renderer *r, bool auto_update);
 void t3_renderer_shadow_needs_update(t3_renderer *r);
+/* Renders made while held draw no shadow map that has been drawn before (at its size): they use it as it stands, and
+ * a map due to be drawn again (needs_update) is still drawn by the first render after the hold. For extra views of a
+ * scene within a frame (a reflection probe's faces) that should not pay for, or change, the frame's shadow maps. */
+void t3_renderer_set_shadow_hold(t3_renderer *r, bool hold);
 /* renderer.outputColorSpace (SRGBColorSpace) */
 void t3_renderer_set_output_color_space(t3_renderer *r, t3_color_space cs);
 /* renderer.toneMapping and renderer.toneMappingExposure (1), applied in the
@@ -1293,6 +1297,8 @@ typedef void (*t3_encoder_hook)(void *user, uintptr_t wgpu_command_encoder, bool
 void t3_renderer_set_encoder_hook(t3_renderer *r, t3_encoder_hook fn, void *user);
 /* t3_renderer_set_encoder_hook exists (an embedder can test for it) */
 #define T3_ENCODER_HOOK 1
+/* t3_pmrem_scene_options.min_size and t3_pmrem_scene_job_* (v0.187.6) */
+#define T3_PMREM_SCENE_JOB 1
 /* t3_renderer_render_depth into a caller's depth-only target rect: color is
  * the depth-only framebuffer on GLES (depth the view, depth_format its
  * format, on WebGPU; the only depth render there), LOAD unless
@@ -1321,7 +1327,7 @@ t3_render_target *t3_pmrem_from_equirectangular(t3_pmrem_generator *g, t3_textur
  * the six faces, a 256 cube */
 t3_render_target *t3_pmrem_from_scene(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far);
 /* fromScene's options (r187): size (the cube's face size; 0 = 256; rounded
- * down to a power of two, at least 256), position (where the cube camera
+ * down to a power of two, at least 256 unless min_size says less), position (where the cube camera
  * renders from) and render_target: a target an earlier call returned, drawn
  * into again instead of a new one being made (when it is the size `size`
  * allocates; otherwise a new target is returned). Either way the result is a
@@ -1329,11 +1335,32 @@ t3_render_target *t3_pmrem_from_scene(t3_pmrem_generator *g, t3_scene *scene, fl
  * keeps one target: rt = t3_pmrem_from_scene_ex(.., &(t3_pmrem_scene_options){
  * .size = 64, .position = p, .render_target = old }); t3_release(old).
  * Costs six renders of the scene at size x size, the blur when sigma > 0, and
- * the GGX filter over the mip levels (six passes a level, 256 samples a texel
- * on the sharp levels). */
-typedef struct t3_pmrem_scene_options { int size; t3_vec3 position; t3_render_target *render_target; } t3_pmrem_scene_options;
+ * the GGX filter over the mip levels (256 samples a texel on the sharp
+ * levels, 768 on the rough ones); every filtered level's six faces are drawn
+ * into one 2D target side by side and copied into the cube, so they run
+ * together on the GPU, and level 0 is the scene's own faces, copied. */
+typedef struct t3_pmrem_scene_options {
+  int size;
+  t3_vec3 position;
+  t3_render_target *render_target;
+  /* the smallest cube made (0: r187's 256); 16 at least. A probe that asks for a 64 cube gets one: below 256 r187
+   * still makes 256 */
+  int min_size;
+} t3_pmrem_scene_options;
 t3_render_target *t3_pmrem_from_scene_ex(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far,
                                          const t3_pmrem_scene_options *options);
+/* fromScene over several calls, for a capture that would be one frame's spike: t3_pmrem_scene_job_start takes
+ * from_scene_ex's arguments, then each t3_pmrem_scene_job_step(job, scene, n) does n of its steps (a face of the
+ * scene each, the blur when sigma > 0, then every filtered level in one step: 7 or 8 in all,
+ * t3_pmrem_scene_job_steps_left) and returns the PMREM (a new reference, as from_scene_ex's) from the call that
+ * finishes it, else NULL. The faces are drawn at the times of their own steps. A job keeps a source cube of its own
+ * (other PMREMs made between its steps leave it alone); free it before its generator. */
+typedef struct t3_pmrem_scene_job t3_pmrem_scene_job;
+t3_pmrem_scene_job *t3_pmrem_scene_job_new(t3_pmrem_generator *g);
+void t3_pmrem_scene_job_free(t3_pmrem_scene_job *job);
+void t3_pmrem_scene_job_start(t3_pmrem_scene_job *job, float sigma, float near, float far, const t3_pmrem_scene_options *options);
+int t3_pmrem_scene_job_steps_left(const t3_pmrem_scene_job *job);
+t3_render_target *t3_pmrem_scene_job_step(t3_pmrem_scene_job *job, t3_scene *scene, int steps);
 /* fromCubemap / fromEquirectangular(texture, renderTarget): the same, drawn
  * into rt when it is the right size (a new target otherwise); a new
  * reference either way */

@@ -335,7 +335,12 @@ Several pieces follow r187's own code:
   draws a cube or equirectangular map, or a scene, into a mipmapped source
   cube, blurs scene captures, and fills a cube render target's mip levels: GGX
   sampling on the sharp ones, integration over a small source mip on the rough
-  ones, all with r187's own generated programs. A PMREM is the cube texture with
+  ones, all with r187's own generated programs. The filtered levels (1 and
+  down) are drawn side by side into one 2D target, a level a row and its six
+  faces along it, and copied into the cube's faces (glBlitFramebuffer, WebGPU
+  copyTextureToTexture); level 0 is the source's faces, copied. r187 draws each
+  face of each level into the cube on its own, and each of those passes waited
+  for the one before it. A PMREM is the cube texture with
   `mip_levels` set (`t3_cube_render_target_new`, drawn by face and level with
   `t3_renderer_set_render_target_ex`). On WebGPU a cube target's mip chain goes
   through a 2D texture per level and a copy, since compatibility mode samples a
@@ -344,8 +349,10 @@ Several pieces follow r187's own code:
   the position the cube camera renders from, and a target to draw into
   again), and `t3_pmrem_from_cubemap_into` / `_equirectangular_into` are
   fromCubemap / fromEquirectangular's target argument, so a reflection probe
-  refreshed every few frames keeps one target. The `r11-pmrem-probe` scene
-  checks it.
+  refreshed every few frames keeps one target. `min_size` lets a capture be
+  smaller than r187's 256 (16 at least), and `t3_pmrem_scene_job_*` spreads one
+  over several calls (a face of the scene a step, then the levels). The
+  `r11-pmrem-probe` scene checks it.
 - **Shadows:** depth maps drawn with the captured caster programs.
   Point lights use a cube map with r187's face directions for each backend.
   A renderer keeps depth maps for up to 16 shadow-casting lights at a time.

@@ -111,6 +111,8 @@ typedef struct {
 void t3_wgpu_render_target(t3_wgpu *w, t3_render_target *rt, t3_wgpu_rt *out);
 /* after a render into rt: its texture's mipmaps */
 void t3_wgpu_render_target_done(t3_wgpu *w, t3_render_target *rt);
+/* a square of src's texture (layer, level, origin from the top left) into dst's (layer, level), on the open frame's encoder */
+void t3_wgpu_copy_target(t3_wgpu *w, t3_render_target *src, int sx, int sy, int slayer, int smip, t3_render_target *dst, int dlayer, int dmip, int size);
 /* transmission's framebuffer copy (r187 ViewportTextureNode): src is the colour
  * attachment just drawn into, with no pass open; returns the mipmapped copy */
 WGPUTextureView t3_wgpu_viewport_copy(t3_wgpu *w, void **slot, WGPUTextureView src, WGPUTextureFormat fmt, int width, int height, bool flip);

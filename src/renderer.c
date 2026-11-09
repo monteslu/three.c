@@ -133,6 +133,7 @@ struct t3_renderer {
   bool shadow_map_enabled;
   /* r187 shadowMap.autoUpdate (false: shadow_manual) */
   bool shadow_manual;
+  bool shadow_hold;       /* t3_renderer_set_shadow_hold */
   t3_shadow_map_type shadow_map_type;
   t3_color_space output_color_space;
   t3_tone_mapping tone_mapping;
@@ -771,8 +772,12 @@ void t3_renderer_shadow_needs_update(t3_renderer *r) {
 /* shadowMap.autoUpdate off: a light keeps the map it drew since the last
  * needsUpdate (one it has not drawn, or drew at another size, is drawn) */
 static bool shadow_keep(const t3_renderer *r, const struct gen_shadow *s, int w, int h, bool cube) {
-  return r->shadow_manual && s->rendered && s->w == w && s->h == h && s->cube == cube;
+  bool same = s->w == w && s->h == h && s->cube == cube;
+  /* held: any map drawn before is used as it stands (and still drawn by the next render after the hold) */
+  if (r->shadow_hold && same) return true;
+  return r->shadow_manual && s->rendered && same;
 }
+void t3_renderer_set_shadow_hold(t3_renderer *r, bool hold) { r->shadow_hold = hold; }
 
 void t3_renderer_set_output_color_space(t3_renderer *r, t3_color_space e) { r->output_color_space = e; }
 void t3_renderer_set_tone_mapping(t3_renderer *r, t3_tone_mapping tm, float exposure) {

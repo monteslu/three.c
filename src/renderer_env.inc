@@ -17,6 +17,7 @@
 struct pm187 {
   int cube_size;
   t3_render_target *source;     /* _sourceTarget: the cube the levels are filtered from, mipmapped */
+  t3_render_target *atlas;      /* the filtered levels side by side (pm_apply) */
   t3_mesh *box;                 /* _boxMesh */
   t3_camera *faces[6];          /* _cubeCamera's cameras, this backend's */
   struct { const t3_texture *src; uint32_t version; t3_render_target *rt; } cache[16];
@@ -27,6 +28,7 @@ static void pm187_free(t3_renderer *r) {
   struct pm187 *p = r->pm187;
   if (!p) return;
   t3_release(p->source);
+  t3_release(p->atlas);
   t3_release(p->box);
   for (int i = 0; i < 6; i++) t3_release(p->faces[i]);
   for (int i = 0; i < p->cache_n; i++) t3_release(p->cache[i].rt);
@@ -77,11 +79,15 @@ static t3_render_target *pm_target(int size, bool generate_mipmaps, bool depth) 
   o.depth_buffer = depth;
   return t3_cube_render_target_new(size, &o);
 }
-static void pm_set_size(struct pm187 *p, int cube_size) {
+/* _setSize: a power of two, at least min (r187's MIN_SIZE, 256, unless a scene capture asks for less:
+ * t3_pmrem_scene_options.min_size; never under the integration's 16 source texels) */
+static int pm_size_of(int cube_size, int min) {
   int s = 1;
   while (s * 2 <= cube_size) s *= 2;
-  p->cube_size = s > PM_MIN_SIZE ? s : PM_MIN_SIZE;
+  if (min < PM_INTEGRATION_SIZE) min = PM_INTEGRATION_SIZE;
+  return s > min ? s : min;
 }
+static void pm_set_size(struct pm187 *p, int cube_size) { p->cube_size = pm_size_of(cube_size, PM_MIN_SIZE); }
 /* log2(size) - LOD_MIN + 1 levels */
 static int pm_levels(int size) {
   int n = 1;
@@ -165,25 +171,140 @@ static void pm_source_mips(t3_renderer *r, t3_render_target *s) {
   r->target = saved;
 }
 
+/* The filtered levels (1 and down) are drawn side by side into one 2D target,
+ * the atlas: a level a row, its six faces along it (level l, face f at
+ * x = f * (size >> l), y = size - 2 * (size >> l), from the top), all in one
+ * binding of one target, then copied into the cube's faces. Drawn face by face
+ * into the cube (r187's _renderCube), every one of the 30-odd passes waits for
+ * the one before it on the GPU (a new attachment each, and on WebGPU a submit
+ * each): the rough levels' 768-tap loops over a few dozen texels ran one after
+ * another, most of a capture's GPU time, where in one target they overlap. The
+ * same programs, cameras and values draw every texel, so the levels are the ones
+ * r187 makes. */
+static int pm_atlas_y(int size, int lod) { return size - 2 * (size >> lod); }
+static t3_render_target *pm_atlas(struct pm187 *p, int size) {
+  int w = 3 * size, h = size;
+  t3_render_target *a = p->atlas;
+  if (a && a->width == w && a->height == h) return a;
+  t3_release(a);
+  t3_render_target_options o = t3_render_target_options_default();
+  o.type = T3_HALF_FLOAT_TYPE;
+  o.mag_filter = o.min_filter = T3_NEAREST;
+  o.generate_mipmaps = false;
+  o.depth_buffer = false;
+  p->atlas = t3_render_target_new(w, h, &o);
+  return p->atlas;
+}
+/* level lod's values for its program: roughness, and the GGX levels' source mip bias */
+static const char *pm_level(t3_renderer *r, int size, int lod, int max_lod) {
+  double rough = max_lod > 0 ? 1 - sqrt(1 - (double)lod / max_lod) : 0;   /* lodToRoughness */
+  r->aux.pm_rough = (float)rough;
+  if (lod > max_lod - PM_INTEGRATION_LEVELS) return "pmremintegration";
+  /* for V = N, pdf( L ) = D( H ) / 4: the source texel's solid angle matched to 1 / ( GGX_SAMPLES * pdf ), a half-mip bias */
+  r->aux.pm_lod_bias = rough > 0 ? (float)(log2((double)size) + 0.5 * log2(6 / (PM_GGX_SAMPLES * pow(rough, 4))) + 0.5) : 0;
+  return "pmremggx";
+}
+static bool pm_box_item(t3_renderer *r, struct pm187 *p, const char *name, render_item *it, t3_gen_gl **gl) {
+  const t3_gen_program *src = gen_by_name(r, name);
+  if (!src) { char b[96]; snprintf(b, sizeof b, "PMREM: no program %s in the table", name); gen_note(r, b); return false; }
+  *gl = gen_program_p(r, src, false, (t3_gen_params){ 0, 0, 0 });
+  if (!*gl || !(*gl)->complete) return false;
+  memset(it, 0, sizeof *it);
+  it->object = &p->box->base;
+  it->geometry = p->box->geometry;
+  it->material = p->box->materials[0];
+  it->gen_off = -1;
+  return true;
+}
+/* GL: a size x size square of src (face sface, level smip; origin x, y from the top of that level) into dst's face
+ * dface, level dmip (glBlitFramebuffer, nearest, the same size: an exact copy). Leaves no framebuffer bound that the
+ * renderer's cache believes in. */
+static void pm_gl_copy(t3_renderer *r, t3_render_target *src, int sface, int smip, int x, int y, t3_render_target *dst, int dface, int dmip, int size) {
+  t3_render_target *saved = r->target;
+  src->active_face = sface, src->active_mip = smip;
+  r->target = src;
+  GLuint from = target_fbo(r);
+  dst->active_face = dface, dst->active_mip = dmip;
+  r->target = dst;
+  GLuint to = target_fbo(r);
+  int h = src->height >> smip, gy = h - y - size;
+  if (r->cur_scissor) { glDisable(GL_SCISSOR_TEST); r->cur_scissor = 0; }
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, from);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, to);
+  glBlitFramebuffer(x, gy, x + size, gy + size, 0, 0, size, size, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+  glBindFramebuffer(GL_FRAMEBUFFER, to);
+  r->fb_known = true, r->cur_fbo = to;
+  r->target = saved;
+}
+
 /* _applyPMREM: every level from the source, GGX sampled on the sharp ones and
- * integrated over a small source mip on the rough ones */
-static void pm_apply(t3_renderer *r, struct pm187 *p, t3_render_target *rt) {
-  int size = p->cube_size, max_lod = rt->texture->mip_levels - 1;
-  float log2_size = log2f((float)size);
-  r->aux.pm_src = p->source->texture;
+ * integrated over a small source mip on the rough ones. Level 0 (roughness 0)
+ * is the source itself: r187's GGX pass reads it once a texel there (its
+ * roughness < 0.001 branch), so it is copied. */
+static void pm_apply(t3_renderer *r, struct pm187 *p, t3_render_target *rt, t3_render_target *source) {
+  int size = rt->width, max_lod = rt->texture->mip_levels - 1;
+  t3_render_target *atlas = max_lod > 0 ? pm_atlas(p, size) : NULL;
+  r->aux.pm_src = source->texture;
   r->aux.pm_source_lod = log2f((float)size / PM_INTEGRATION_SIZE);
-  for (int lod = 0; lod <= max_lod; lod++) {
-    double rough = max_lod > 0 ? 1 - sqrt(1 - (double)lod / max_lod) : 0;   /* lodToRoughness */
-    r->aux.pm_rough = (float)rough;
-    if (lod > max_lod - PM_INTEGRATION_LEVELS) pm_cube(r, p, rt, lod, "pmremintegration");
-    else {
-      /* for V = N, pdf( L ) = D( H ) / 4: the source texel's solid angle matched to 1 / ( GGX_SAMPLES * pdf ), a half-mip bias */
-      r->aux.pm_lod_bias = rough > 0 ? (float)(log2_size + 0.5 * log2(6 / (PM_GGX_SAMPLES * pow(rough, 4))) + 0.5) : 0;
-      pm_cube(r, p, rt, lod, "pmremggx");
+  t3_material *mat = p->box->materials[0];
+  t3_render_target *saved = r->target;
+#ifdef T3_WGPU
+  if (r->wgpu) {
+    t3_wgpu *wg = r->wgpu;
+    t3_wgpu_begin_frame(wg, 4096 + 1024 * (size_t)(6 * max_lod));
+    if (atlas) {
+      r->target = atlas;
+      wgpu_dest D;
+      wgpu_destination(r, &D);
+      t3_color cc = r->clear_color;
+      t3_wgpu_pass P = { .color = D.color, .resolve = D.resolve, .depth = D.depth, .load_color = false, .load_depth = false,
+                         .clear = { cc.r, cc.g, cc.b, r->clear_alpha } };
+      t3_wgpu_begin_pass(wg, &P);
+      for (int lod = 1; lod <= max_lod; lod++) {
+        render_item it;
+        t3_gen_gl *gl;
+        if (!pm_box_item(r, p, pm_level(r, size, lod, max_lod), &it, &gl)) continue;
+        int s = size >> lod, y = pm_atlas_y(size, lod);
+        for (int f = 0; f < 6; f++) {
+          wgpuRenderPassEncoderSetViewport(t3_wgpu_pass_encoder(wg), (float)(f * s), (float)y, (float)s, (float)s, 0, 1);
+          r->stamp++; /* a stamp of its own a draw: before the renderer's first render every stamp is 0 */
+          wgpu_draw_prog(r, &it, p->faces[f], gl, mat);
+        }
+      }
+      t3_wgpu_end_pass(wg);
     }
+    for (int f = 0; f < 6; f++) t3_wgpu_copy_target(wg, source, 0, 0, f, 0, rt, f, 0, size);
+    for (int lod = 1; lod <= max_lod; lod++)
+      for (int f = 0; f < 6; f++) t3_wgpu_copy_target(wg, atlas, f * (size >> lod), pm_atlas_y(size, lod), 0, 0, rt, f, lod, size >> lod);
+    t3_wgpu_end_frame(wg);
+  } else
+#endif
+  {
+    if (atlas) {
+      t3_renderer_set_render_target_ex(r, atlas, 0, 0);
+      for (int lod = 1; lod <= max_lod; lod++) {
+        render_item it;
+        t3_gen_gl *gl;
+        if (!pm_box_item(r, p, pm_level(r, size, lod, max_lod), &it, &gl)) continue;
+        int s = size >> lod, y = pm_atlas_y(size, lod);
+        for (int f = 0; f < 6; f++) {
+          atlas->viewport[0] = atlas->scissor[0] = f * s;
+          atlas->viewport[1] = atlas->scissor[1] = y;
+          atlas->viewport[2] = atlas->viewport[3] = atlas->scissor[2] = atlas->scissor[3] = s;
+          bind_target(r);
+          r->stamp++; /* a stamp of its own a draw: before the renderer's first render every stamp is 0 */
+          gen_draw_gl(r, &it, p->faces[f], gl, mat);
+        }
+      }
+    }
+    for (int f = 0; f < 6; f++) pm_gl_copy(r, source, f, 0, 0, 0, rt, f, 0, size);
+    for (int lod = 1; lod <= max_lod; lod++)
+      for (int f = 0; f < 6; f++) pm_gl_copy(r, atlas, 0, 0, f * (size >> lod), pm_atlas_y(size, lod), rt, f, lod, size >> lod);
   }
+  r->target = saved;
   r->aux.pm_src = NULL;
   rt->active_face = rt->active_mip = 0;
+  rt->viewport[0] = rt->viewport[1] = rt->scissor[0] = rt->scissor[1] = 0;
   rt->viewport[2] = rt->viewport[3] = rt->scissor[2] = rt->scissor[3] = rt->width;
 }
 
@@ -198,19 +319,15 @@ static t3_render_target *pm187_from_texture(t3_renderer *r, t3_texture *t, t3_re
   pm_cube(r, p, s, 0, cube ? "pmremcube" : "pmremequi");
   r->aux.pm_src = NULL;
   pm_source_mips(r, s);
-  pm_apply(r, p, rt);
+  pm_apply(r, p, rt, p->source);
   return rt;
 }
 
 /* fromScene: the scene drawn into the source's six faces (a -90 degree camera
  * per face, at position), an optional blur, then the levels. reuse: r187's
  * options.renderTarget */
-static t3_render_target *pm187_from_scene(t3_renderer *r, t3_scene *scene, float sigma, float near, float far, int size, t3_vec3 at,
-                                          t3_render_target *reuse) {
-  struct pm187 *p = pm_get(r);
-  pm_set_size(p, size);
-  t3_render_target *rt = pm_allocate(p, reuse);
-  t3_render_target *s = pm_source(p, true);
+/* faces f0 .. f1 - 1 of the scene into the source s (the last face, 5, builds its mip chain) */
+static void pm_scene_faces(t3_renderer *r, t3_scene *scene, t3_render_target *s, float near, float far, t3_vec3 at, int f0, int f1) {
   t3_camera *cc = t3_perspective_camera_new(-90, 1, near, far);
   t3_render_target *saved = r->target;
   bool auto_clear = r->auto_clear, had_bg = scene->has_background;
@@ -218,7 +335,7 @@ static t3_render_target *pm187_from_scene(t3_renderer *r, t3_scene *scene, float
   /* every face cleared, to the scene's background or the clear colour */
   r->auto_clear = true;
   if (!had_bg && !scene->background_texture) { scene->has_background = true; scene->background = r->clear_color; }
-  for (int i = 0; i < 6; i++) {
+  for (int i = f0; i < f1; i++) {
     pm_look(cc, r->wgpu != NULL, i, at);
     t3_renderer_set_render_target_ex(r, s, i, 0);
     t3_renderer_render(r, scene, cc);
@@ -228,18 +345,66 @@ static t3_render_target *pm187_from_scene(t3_renderer *r, t3_scene *scene, float
   r->auto_clear = auto_clear;
   r->target = saved;
   t3_release(cc);
-  if (sigma > 0) {
-    /* the variance split between two passes, sigma clamped to the sphere's largest angle (_blur) */
-    r->aux.pm_sigma = (sigma < 3.14159265f ? sigma : 3.14159265f) / 1.41421356f;
-    r->aux.pm_src = s->texture;
-    pm_cube(r, p, rt, 0, "pmremblur");
-    r->aux.pm_src = rt->texture;
-    pm_cube(r, p, s, 0, "pmremblur");
-    r->aux.pm_src = NULL;
-    pm_source_mips(r, s);
+}
+static void pm_scene_blur(t3_renderer *r, struct pm187 *p, t3_render_target *rt, t3_render_target *s, float sigma) {
+  /* the variance split between two passes, sigma clamped to the sphere's largest angle (_blur); level 0 of the
+   * PMREM is the intermediate target, as r187's */
+  r->aux.pm_sigma = (sigma < 3.14159265f ? sigma : 3.14159265f) / 1.41421356f;
+  r->aux.pm_src = s->texture;
+  pm_cube(r, p, rt, 0, "pmremblur");
+  r->aux.pm_src = rt->texture;
+  pm_cube(r, p, s, 0, "pmremblur");
+  r->aux.pm_src = NULL;
+  pm_source_mips(r, s);
+}
+
+/* a scene capture made over several calls (t3_pmrem_scene_job_*): its own source cube, so other PMREMs made between
+ * the calls (the sky's) leave its faces alone */
+struct t3_pmrem_scene_job {
+  t3_renderer *r;
+  t3_render_target *source, *rt;
+  int size, next, steps; /* next step: 0..5 the faces, then the blur (sigma > 0), then the levels; steps: their count */
+  float sigma, near, far;
+  t3_vec3 at;
+};
+/* one step of a capture: a face, the blur or the levels; true after the levels */
+static bool pm_job_step(struct t3_pmrem_scene_job *j, t3_scene *scene) {
+  t3_renderer *r = j->r;
+  struct pm187 *p = pm_get(r);
+  if (j->next < 6) pm_scene_faces(r, scene, j->source, j->near, j->far, j->at, j->next, j->next + 1);
+  else if (j->next == 6 && j->sigma > 0) pm_scene_blur(r, p, j->rt, j->source, j->sigma);
+  else pm_apply(r, p, j->rt, j->source);
+  return ++j->next == j->steps;
+}
+static void pm_job_begin(struct t3_pmrem_scene_job *j, float sigma, float near, float far, int size, int min_size, t3_vec3 at, t3_render_target *reuse) {
+  struct pm187 *p = pm_get(j->r);
+  j->size = pm_size_of(size, min_size > 0 ? min_size : PM_MIN_SIZE);
+  int saved = p->cube_size;
+  p->cube_size = j->size;
+  t3_render_target *rt = pm_allocate(p, reuse);
+  p->cube_size = saved;
+  t3_release(j->rt);
+  j->rt = rt;
+  if (!j->source || j->source->width != j->size) {
+    t3_release(j->source);
+    j->source = pm_target(j->size, true, true);
   }
-  pm_apply(r, p, rt);
-  return rt;
+  j->sigma = sigma, j->near = near, j->far = far, j->at = at;
+  j->next = 0;
+  j->steps = 6 + (sigma > 0) + 1;
+}
+static t3_render_target *pm187_from_scene(t3_renderer *r, t3_scene *scene, float sigma, float near, float far, int size, int min_size,
+                                          t3_vec3 at, t3_render_target *reuse) {
+  struct pm187 *p = pm_get(r);
+  /* the generator's own source, as r187's (a job of its own would keep a second cube) */
+  pm_set_size(p, size);
+  if (min_size > 0) p->cube_size = pm_size_of(size, min_size);
+  struct t3_pmrem_scene_job j = { .r = r, .source = pm_source(p, true) };
+  t3_retain(j.source);
+  pm_job_begin(&j, sigma, near, far, size, min_size, at, reuse);
+  while (!pm_job_step(&j, scene)) {}
+  t3_release(j.source);
+  return j.rt;
 }
 
 /* PMREMNode: a cube or equirect texture's PMREM, made once per version */
@@ -368,12 +533,40 @@ t3_render_target *t3_pmrem_from_equirectangular_into(t3_pmrem_generator *g, t3_t
   return pm187_from_texture(g->r, e, rt);
 }
 t3_render_target *t3_pmrem_from_scene(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far) {
-  return pm187_from_scene(g->r, scene, sigma, near, far, 256, t3_v3(0, 0, 0), NULL);
+  return pm187_from_scene(g->r, scene, sigma, near, far, 256, 0, t3_v3(0, 0, 0), NULL);
 }
 t3_render_target *t3_pmrem_from_scene_ex(t3_pmrem_generator *g, t3_scene *scene, float sigma, float near, float far,
                                          const t3_pmrem_scene_options *o) {
   if (!o) return t3_pmrem_from_scene(g, scene, sigma, near, far);
-  return pm187_from_scene(g->r, scene, sigma, near, far, o->size > 0 ? o->size : 256, o->position, o->render_target);
+  return pm187_from_scene(g->r, scene, sigma, near, far, o->size > 0 ? o->size : 256, o->min_size, o->position, o->render_target);
+}
+t3_pmrem_scene_job *t3_pmrem_scene_job_new(t3_pmrem_generator *g) {
+  t3_pmrem_scene_job *j = calloc(1, sizeof *j);
+  T3_CHECK_ALLOC(j);
+  j->r = g->r;
+  return j;
+}
+void t3_pmrem_scene_job_free(t3_pmrem_scene_job *j) {
+  if (!j) return;
+  t3_release(j->source);
+  t3_release(j->rt);
+  free(j);
+}
+void t3_pmrem_scene_job_start(t3_pmrem_scene_job *j, float sigma, float near, float far, const t3_pmrem_scene_options *o) {
+  t3_pmrem_scene_options d = { .size = 256 };
+  if (!o) o = &d;
+  pm_job_begin(j, sigma, near, far, o->size > 0 ? o->size : 256, o->min_size, o->position, o->render_target);
+}
+int t3_pmrem_scene_job_steps_left(const t3_pmrem_scene_job *j) { return j && j->rt ? j->steps - j->next : 0; }
+t3_render_target *t3_pmrem_scene_job_step(t3_pmrem_scene_job *j, t3_scene *scene, int steps) {
+  if (!j || !j->rt) return NULL;
+  for (int i = 0; i < (steps < 1 ? 1 : steps); i++)
+    if (pm_job_step(j, scene)) {
+      t3_render_target *rt = j->rt;
+      j->rt = NULL;
+      return rt;
+    }
+  return NULL;
 }
 
 /* ── depth passes for embedders (three.h): the shadow pass's caster programs
