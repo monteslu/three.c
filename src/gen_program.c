@@ -388,8 +388,12 @@ t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params
   char *vt = apply_templates(vsrc, src, params, err, errcap);
   free(vsrc);
   if (!vt) return NULL;
-  char *vs = renumber_attributes(vt, src->state, err, errcap);
+  char *vr = renumber_attributes(vt, src->state, err, errcap);
   free(vt);
+  if (!vr) return NULL;
+  /* the clip position computed the same in the depth prepass and the colour pass (t3_gen_glsl_invariant_position) */
+  char *vs = t3_gen_glsl_invariant_position(vr, src->state, err, errcap);
+  free(vr);
   if (!vs) return NULL;
   GLuint v = compile(GL_VERTEX_SHADER, vs, err, errcap);
   free(vs);
@@ -607,6 +611,22 @@ char *t3_gen_wgsl_invariant_position(const char *text, const char *state, char *
   memcpy(out, text, pre);
   memcpy(out + pre, inv, sizeof inv - 1);
   memcpy(out + pre + sizeof inv - 1, at, len - pre + 1);
+  return out;
+}
+
+char *t3_gen_glsl_invariant_position(const char *text, const char *state, char *err, size_t errcap) {
+  static const char mainp[] = "\nvoid main(", inv[] = "invariant gl_Position;\n";
+  const char *at = strstr(text, mainp);
+  if (!at || strstr(at + 1, mainp)) {
+    snprintf(err, errcap, "%s: the vertex program has %s", state, at ? "more than one void main" : "no void main at the start of a line");
+    return NULL;
+  }
+  size_t pre = (size_t)(at - text) + 1, len = strlen(text);
+  char *out = malloc(len + sizeof inv);
+  if (!out) { snprintf(err, errcap, "%s: out of memory", state); return NULL; }
+  memcpy(out, text, pre);
+  memcpy(out + pre, inv, sizeof inv - 1);
+  memcpy(out + pre + sizeof inv - 1, text + pre, len - pre + 1);
   return out;
 }
 

@@ -5,6 +5,21 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.8 (2026-11-18)
+
+### Fixed
+- **Distant surfaces no longer break up into holes on Metal when a depth prepass runs.** The prepass and the
+  colour pass draw the same vertices through two programs (WebGPU: two pipelines), and the colour pass keeps a pixel
+  only where its depth is not behind the prepass's. Nothing told the compiler to compute the clip position the same
+  in both, and Metal (Dawn, so Chrome on macOS and native WebGPU there) did not: about half the pixels of distant,
+  nearly flat-on ground failed the depth test and the background showed through in blotches (a racing game's far
+  mountains looked bright and patchy). Every WebGPU vertex program now declares its position `@invariant` and every
+  GL vertex program `invariant gl_Position` (GL has the prepass too, and WebGL on a Mac runs on Metal through
+  ANGLE). `t3_gen_wgsl_invariant_position`, `t3_gen_glsl_invariant_position` (gen_program.h); a program without
+  the one declaration they expect is refused, naming it. test/test_invariant_position.c checks all 340 WebGPU and
+  340 GL vertex programs of the base tables; its control (the programs without the rewrite) fails. Proved on a
+  macOS runner (Apple GPU): the game's cart in Chrome draws the mountains whole with this, with holes without it.
+
 ## v0.187.7 (2026-11-09)
 
 ### Added

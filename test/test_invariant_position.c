@@ -34,6 +34,26 @@ int main(void) {
     if (b != v) free(b);
     free(v);
   }
+  /* GL: every vertex program of the base GL table gets invariant gl_Position once, before its main */
+  int ngl = 0;
+  for (unsigned i = 0; i < t3_gen_base_gl.count; i++) {
+    const t3_gen_program *p = &t3_gen_base_gl.programs[i];
+    char *v = t3_gen_source(p, false, err, sizeof err);
+    if (!v) { fprintf(stderr, "FAIL %s\n", err); bad++; continue; }
+    char *b = control ? v : t3_gen_glsl_invariant_position(v, p->state, err, sizeof err);
+    if (!b) { fprintf(stderr, "FAIL %s\n", err); bad++; free(v); continue; }
+    ngl++;
+    const char *inv = strstr(b, "invariant gl_Position;"), *m = strstr(b, "\nvoid main(");
+    if (count(b, "invariant gl_Position;") != 1 || !m || inv > m) {
+      if (bad < 5) fprintf(stderr, "FAIL %s (GL): gl_Position is not declared invariant once before main\n", p->state);
+      bad++;
+    }
+    if (b != v) free(b);
+    free(v);
+  }
+  printf("%d GL vertex programs\n", ngl);
+  char *g0 = t3_gen_glsl_invariant_position("#version 300 es\nint f(){return 1;}\n", "nomain", err, sizeof err);
+  if (g0 || !strstr(err, "nomain")) { fprintf(stderr, "FAIL a GL program with no main was not refused\n"); bad++; free(g0); }
   /* a vertex program that does not declare the position where r187 does is refused, naming the program */
   const char *none = "@vertex fn main() -> @builtin( position ) vec4<f32> { return vec4<f32>(0.0); }";
   char *r = t3_gen_wgsl_invariant_position(none, "none", err, sizeof err);

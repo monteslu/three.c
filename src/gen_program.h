@@ -191,6 +191,10 @@ char *t3_gen_apply_templates(const char *text, const t3_gen_program *src, t3_gen
  * schedules it with whatever the fragment stage reads, and the prepass writes no colour; a last-bit difference then
  * fails about half the pixels of a distant surface (holes through which the background shows). */
 char *t3_gen_wgsl_invariant_position(const char *text, const char *state, char *err, size_t errcap);
+/* The same for a GLSL vertex program: `invariant gl_Position;` at global scope, just before its one `void main`
+ * (after every #extension and declaration). GL has the prepass too, and WebGL in a browser on a Mac runs on Metal
+ * through ANGLE. NULL with err set when the text has no single `void main` at the start of a line. */
+char *t3_gen_glsl_invariant_position(const char *text, const char *state, char *err, size_t errcap);
 /* an op's bytes in its group mirror (marks the group dirty) */
 static inline uint8_t *t3_gen_gl_op(t3_gen_gl *g, const struct t3_gen_op *op) {
   g->dirty[op->group] = true;

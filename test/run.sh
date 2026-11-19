@@ -19,7 +19,7 @@ run test_instance_stream ./build/test/test_instance_stream
 run test_prepass_mask ./build/test/test_prepass_mask
 # every WebGPU vertex program's clip position @invariant (a prepass and the colour pass agree on Metal); the control
 # checks the table's programs without the rewrite and must fail
-"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_invariant_position.c src/gen/programs_wgpu.c \
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_invariant_position.c src/gen/programs_wgpu.c src/gen/programs_gl.c \
   build/native/libthree.a -lGLESv2 -lz -lm -o build/test/test_invariant_position
 run test_invariant_position ./build/test/test_invariant_position
 run test_invariant_position_control sh -c "! T3_TEST_CONTROL=1 ./build/test/test_invariant_position >/dev/null 2>&1"
