@@ -184,6 +184,13 @@ uint32_t t3_gen_vertex_buffer_count(const t3_gen_program *src);
 void t3_gen_common(t3_gen_gl *g);
 /* the program text with the object's template values (gen_program.c) */
 char *t3_gen_apply_templates(const char *text, const t3_gen_program *src, t3_gen_params p, char *err, size_t errcap);
+/* A WGSL vertex program with its clip position declared @invariant (malloc'd; NULL with err set when the text does not
+ * declare it exactly once, as every r187 vertex program does). A depth prepass and the colour pass draw the same
+ * vertices through two pipelines, and the colour pass keeps a pixel only where its depth is not behind the one the
+ * prepass wrote. Without @invariant a compiler may evaluate the same position differently in each pipeline: Metal
+ * schedules it with whatever the fragment stage reads, and the prepass writes no colour; a last-bit difference then
+ * fails about half the pixels of a distant surface (holes through which the background shows). */
+char *t3_gen_wgsl_invariant_position(const char *text, const char *state, char *err, size_t errcap);
 /* an op's bytes in its group mirror (marks the group dirty) */
 static inline uint8_t *t3_gen_gl_op(t3_gen_gl *g, const struct t3_gen_op *op) {
   g->dirty[op->group] = true;

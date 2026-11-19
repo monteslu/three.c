@@ -331,8 +331,12 @@ t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_param
   }
   char *vsrc = t3_gen_source(src, false, err, errcap);
   if (!vsrc) return NULL;
-  char *vt = t3_gen_apply_templates(vsrc, src, params, err, errcap);
+  char *vtt = t3_gen_apply_templates(vsrc, src, params, err, errcap);
   free(vsrc);
+  if (!vtt) return NULL;
+  /* the same position in every pipeline of the program: a depth prepass's and the colour pass's (gen_program.h) */
+  char *vt = t3_gen_wgsl_invariant_position(vtt, src->state, err, errcap);
+  free(vtt);
   if (!vt) return NULL;
   char *fsrc = t3_gen_source(src, true, err, errcap);
   if (!fsrc) { free(vt); return NULL; }

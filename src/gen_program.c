@@ -594,6 +594,22 @@ char *t3_gen_apply_templates(const char *text, const t3_gen_program *src, t3_gen
   return apply_templates(text, src, p, err, errcap);
 }
 
+char *t3_gen_wgsl_invariant_position(const char *text, const char *state, char *err, size_t errcap) {
+  static const char decl[] = "@builtin( position ) builtinClipSpace", inv[] = "@invariant ";
+  const char *at = strstr(text, decl);
+  if (!at || strstr(at + 1, decl)) {
+    snprintf(err, errcap, "%s: the vertex program declares its position %s", state, at ? "more than once" : "nowhere r187 puts it");
+    return NULL;
+  }
+  size_t pre = (size_t)(at - text), len = strlen(text);
+  char *out = malloc(len + sizeof inv);
+  if (!out) { snprintf(err, errcap, "%s: out of memory", state); return NULL; }
+  memcpy(out, text, pre);
+  memcpy(out + pre, inv, sizeof inv - 1);
+  memcpy(out + pre + sizeof inv - 1, at, len - pre + 1);
+  return out;
+}
+
 void t3_gen_gl_free(t3_gen_gl *g) {
   if (!g) return;
   for (int i = 0; i < g->n_groups; i++) {

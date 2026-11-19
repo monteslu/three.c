@@ -17,6 +17,12 @@ run test_shadow_cache ./build/test/test_shadow_cache
 run test_instance_stream ./build/test/test_instance_stream
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -ffunction-sections -fdata-sections -I include -I src test/test_prepass_mask.c -Wl,--gc-sections -lGLESv2 -lm -o build/test/test_prepass_mask
 run test_prepass_mask ./build/test/test_prepass_mask
+# every WebGPU vertex program's clip position @invariant (a prepass and the colour pass agree on Metal); the control
+# checks the table's programs without the rewrite and must fail
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_invariant_position.c src/gen/programs_wgpu.c \
+  build/native/libthree.a -lGLESv2 -lz -lm -o build/test/test_invariant_position
+run test_invariant_position ./build/test/test_invariant_position
+run test_invariant_position_control sh -c "! T3_TEST_CONTROL=1 ./build/test/test_invariant_position >/dev/null 2>&1"
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -ffunction-sections -fdata-sections -I include -I src \
   test/test_scene_sort.c build/native/libthree.a -Wl,--gc-sections -lGLESv2 -lm -o build/test/test_scene_sort
 run test_scene_sort ./build/test/test_scene_sort

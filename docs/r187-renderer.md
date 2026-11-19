@@ -316,13 +316,19 @@ For an embedder that composes three.c's drawing with its own:
   materials are left out. Shadows and the rest of the scene setup run as in
   `t3_renderer_render`, and no material is changed, so the next ordinary
   render draws the transparents again.
-- `t3_renderer_render_prepass(r, scene, camera)` (GLES; does nothing on
-  WebGPU) is a depth prepass into the embedder's scene framebuffer: the
+- `t3_renderer_render_prepass(r, scene, camera)` (GLES and, since
+  0.186.22, WebGPU) is a depth prepass into the embedder's scene framebuffer: the
   opaque queue with colour writes off whatever the materials say, alpha
   discard and vertex displacement kept, and no background or output pass.
   The usual clearing and render target rules apply, and colour writes are
   back on when it returns. `test/test_prepass_mask.c` checks that no
-  material turns colour writes back on during it.
+  material turns colour writes back on during it. On WebGPU every vertex
+  program declares its clip position `@invariant`, so the prepass's
+  pipeline and the colour pass's compute the same depth for a vertex (Metal
+  otherwise schedules the position with whatever the fragment stage
+  reads, and the colour pass then failed its depth test on about half the
+  pixels of distant ground); `test/test_invariant_position.c` checks every
+  vertex program of the WebGPU table.
 - `t3_renderer_render_depth` (GLES) and `t3_renderer_render_depth_to` (both
   backends, into a rect of a depth-only target) draw the shadow caster pass
   from any camera, for the embedder's own shadow maps.
