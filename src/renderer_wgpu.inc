@@ -37,6 +37,7 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
       const void *data = NULL;
       float tmp[4 * 256];
       if (gl->buf[bi].kind == T3_SRC_BONES && o && o->type == T3_SKINNED_MESH) data = ((const t3_skinned_mesh *)o)->skeleton->bone_matrices;
+      else if (gl->buf[bi].mirror) data = gl->buf[bi].mirror;   /* an extension's buffer, as its hook left it */
       else {
         /* (morph influences, or zeros for a buffer with no source here) */
         uint32_t bytes = gl->buf[bi].bytes < sizeof tmp ? gl->buf[bi].bytes : (uint32_t)sizeof tmp;

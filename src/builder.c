@@ -236,7 +236,7 @@ static t3_gen_program *bconvert(JSContext *c, JSValueConst m, t3_gen_backend be)
   t3_gen_property *pr = ZALLOC(sizeof *pr * p->n_properties);
   for (uint32_t i = 0; i < p->n_properties; i++) {
     JSValue x = JS_GetPropertyUint32(c, a, i);
-    pr[i] = (t3_gen_property){ S(c, x, "path"), (uint8_t)I(c, x, "group"), (uint16_t)I(c, x, "offset"), (uint16_t)I(c, x, "length"), I(c, x, "mat3") != 0 };
+    pr[i] = (t3_gen_property){ S(c, x, "path"), (uint8_t)I(c, x, "group"), (uint16_t)I(c, x, "offset"), (uint16_t)I(c, x, "length"), I(c, x, "mat3") != 0, (uint8_t)I(c, x, "buffer") };
     JS_FreeValue(c, x);
   }
   p->properties = pr;

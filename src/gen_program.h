@@ -139,7 +139,9 @@ typedef struct t3_gen_gl {
   /* the groups' extra buffers (bone matrices, morph influences): their own
    * blocks at binding points T3_GEN_MAX_GROUPS + i, uploaded per draw */
   int n_buffers;
-  struct { GLuint ubo; uint32_t bytes; const char *source, *name; GLuint point; uint8_t kind, group, index; } buf[T3_GEN_MAX_BUFFERS];   /* (group, index: where the layout lists it) */
+  /* (group, index: where the layout lists it; mirror: the bytes of a buffer an extension's hook fills, NULL for the
+   * others, uploaded when dirty) */
+  struct { GLuint ubo; uint32_t bytes; const char *source, *name; GLuint point; uint8_t kind, group, index; uint8_t *mirror; bool dirty; } buf[T3_GEN_MAX_BUFFERS];
   /* sampler uniforms by manifest texture, set to units 0.. at build */
   int n_textures;
   struct { GLint loc; const t3_bk_texture_layout *layout; uint8_t kind, arg; } tex[T3_GEN_MAX_TEXTURES];
@@ -162,7 +164,7 @@ typedef struct t3_gen_gl {
   int n_ext, n_ext_tex;
   /* the extension's own uniforms: a stack of shading parts on one material has
    * dozens (a splat terrain under clustered lights and cascades: 21) */
-  struct { const char *name; int8_t group; uint16_t off, len; bool mat3; } ext[64];
+  struct { const char *name; int8_t group, buf; uint16_t off, len; bool mat3; } ext[64];   /* (buf >= 0: in that buffer's mirror, not the group's) */
   /* an extension texture and its flipY flags: one per sample of it in the
    * program (a texture read at several places has several), n_flip of them */
   struct { const char *name; t3_texture *tex; uint8_t n_flip; int8_t flip_group[T3_GEN_MAX_FLIPS]; uint16_t flip_off[T3_GEN_MAX_FLIPS]; } ext_tex[T3_GEN_MAX_TEXTURES];

@@ -433,6 +433,7 @@ void t3_gen_wgpu_free(t3_gen_gl *g) {
     if (wg->bgl[i]) wgpuBindGroupLayoutRelease(wg->bgl[i]);
     free(g->mirror[i]);
   }
+  for (int i = 0; i < g->n_buffers; i++) free(g->buf[i].mirror);
   wgpuPipelineLayoutRelease(wg->layout);
   wgpuShaderModuleRelease(wg->vs);
   if (wg->vs_flip) wgpuShaderModuleRelease(wg->vs_flip);

@@ -515,7 +515,14 @@ void t3_gen_common(t3_gen_gl *g) {
   for (int k = 0; k < src->n_properties; k++) {
     const t3_gen_property *pr = &src->properties[k];
     if (strncmp(pr->path, "ext.", 4)) continue;
-    if (!g->bytes[pr->group]) continue;   /* its group was optimised out of the link */
+    int bi = -1;
+    if (pr->buffer) {
+      /* in a buffer of its group (an r187 uniformArray): the hook fills its mirror */
+      for (int i = 0; i < g->n_buffers; i++) if (g->buf[i].group == pr->group && g->buf[i].index == pr->buffer - 1) bi = i;
+      if (bi < 0) continue;   /* the buffer was optimised out of the link */
+      if (pr->offset + pr->length > g->buf[bi].bytes) { g->complete = false; snprintf(g->unsupported, sizeof g->unsupported, "%s (past the end of its buffer)", pr->path); continue; }
+      if (!g->buf[bi].mirror) { g->buf[bi].mirror = calloc(1, g->buf[bi].bytes); T3_CHECK_ALLOC(g->buf[bi].mirror); g->buf[bi].dirty = true; }
+    } else if (!g->bytes[pr->group]) continue;   /* its group was optimised out of the link */
     size_t nl = strcspn(pr->path, "#");
     if (nl > 10 && !strncmp(pr->path + nl - 6, ".flipY", 6)) {
       /* "ext.<texture>.flipY" */
@@ -533,6 +540,7 @@ void t3_gen_common(t3_gen_gl *g) {
     if (g->n_ext == (int)(sizeof g->ext / sizeof g->ext[0])) { g->complete = false; snprintf(g->unsupported, sizeof g->unsupported, "%s (too many extension uniforms)", pr->path); continue; }
     g->ext[g->n_ext].name = pr->path + 4;
     g->ext[g->n_ext].group = (int8_t)pr->group;
+    g->ext[g->n_ext].buf = (int8_t)bi;
     g->ext[g->n_ext].off = pr->offset;
     g->ext[g->n_ext].len = pr->length;
     g->ext[g->n_ext].mat3 = pr->std140_mat3;
@@ -576,7 +584,7 @@ void t3_gen_common(t3_gen_gl *g) {
     /* a buffer nothing fills (an r187 uniformArray from a table made before the
      * generator refused one) would be bound empty and the draw come out wrong
      * or not at all: the program is incomplete, and says which binding */
-    if (g->buf[i].kind != T3_SRC_BONES && g->buf[i].kind != T3_SRC_MORPH_INFLUENCES) {
+    if (g->buf[i].kind != T3_SRC_BONES && g->buf[i].kind != T3_SRC_MORPH_INFLUENCES && !g->buf[i].mirror) {
       g->complete = false;
       snprintf(g->unsupported, sizeof g->unsupported, "buffer binding %s of group %s (source %s) is one three.c does not fill (an r187 uniformArray is one)",
                g->buf[i].name ? g->buf[i].name : "?", g->src->groups[g->buf[i].group]->name, g->buf[i].source ? g->buf[i].source : "none");
@@ -653,7 +661,7 @@ void t3_gen_gl_free(t3_gen_gl *g) {
     free(g->mirror[i]);
   }
   free(g->ops);
-  for (int i = 0; i < g->n_buffers; i++) glDeleteBuffers(1, &g->buf[i].ubo);
+  for (int i = 0; i < g->n_buffers; i++) { glDeleteBuffers(1, &g->buf[i].ubo); free(g->buf[i].mirror); }
   glDeleteProgram(g->program);
   free(g);
 }

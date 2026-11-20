@@ -149,20 +149,34 @@ export function programModel(state, be, j, vert, frag) {
       }),
     };
   });
-  // a buffer three.c fills (bone matrices, morph influences) is named by its source; any other buffer (an
-  // extension's uniformArray, say) would be bound with nothing in it: refuse the program, naming the binding
-  {
-    const kinds = new Set(['boneMatrices', 'morphInfluences']);
-    for (const g of j.groups) for (const b of g.bindings)
-      if (b.kind === 'buffer' && !kinds.has(b.source))
-        throw new Error(`${state}.${be}: buffer binding ${b.shaderName ?? b.name} of group ${g.name} (source ${b.source ?? 'none'}) is one three.c does not fill (an r187 uniformArray is one): its values would never reach the program`);
+  // a buffer three.c fills (bone matrices, morph influences) is named by its source; any other (an extension's r187
+  // uniformArray) is filled by the extension's hook, through its "ext." properties: such a property names its
+  // buffer (k + 1, the group's buffer k) and its offset in it. A buffer neither fills would be bound with nothing in
+  // it, and a property of three.c's own in one has no op: refuse the program, naming the binding
+  const FILLED = new Set(['boneMatrices', 'morphInfluences']);
+  const extFilled = new Set();
+  for (const [path, v] of Object.entries(j.properties)) {
+    if (!v) continue;
+    const g = j.groups.find((G) => G.name === v.group);
+    const b = g && g.bindings.find((B) => B.kind === 'buffer' && B.name === v.binding);
+    if (!b || FILLED.has(b.source)) continue;
+    if (!path.startsWith('ext.'))
+      throw new Error(`${state}.${be}: property ${path} is in buffer binding ${b.shaderName ?? b.name} of group ${g.name}, which three.c does not fill`);
+    extFilled.add(g.name + '/' + b.name);
   }
+  for (const g of j.groups) for (const b of g.bindings)
+    if (b.kind === 'buffer' && !FILLED.has(b.source) && !extFilled.has(g.name + '/' + b.name))
+      throw new Error(`${state}.${be}: buffer binding ${b.shaderName ?? b.name} of group ${g.name} (source ${b.source ?? 'none'}) is one nothing fills: no extension property is in it, and three.c fills only bone matrices and morph influences`);
   const missing = Object.entries(j.properties).filter(([, v]) => !v).map(([k]) => k);
   if (missing.length) throw new Error(`${state}.${be}: properties without a slot: ${missing.join(' ')}`);
   const properties = Object.entries(j.properties).map(([path, v]) => {
     const gi = groupNames.indexOf(v.group);
     if (gi < 0) throw new Error(`${state}.${be}: property ${path} in unknown group ${v.group}`);
-    return { path, group: gi, offset: v.byteOffset, length: v.byteLength, mat3: !!v.layout };
+    const g = j.groups[gi];
+    const bufs = g.bindings.filter((B) => B.kind === 'buffer');
+    const k = bufs.findIndex((B) => B.name === v.binding);
+    const buffer = k >= 0 && !FILLED.has(bufs[k].source) ? k + 1 : 0;   // (an extension's buffer, above)
+    return { path, group: gi, offset: v.byteOffset, length: v.byteLength, mat3: !!v.layout, buffer };
   });
   if (j.unexplained && j.unexplained.length) throw new Error(`${state}.${be}: ${j.unexplained.length} unexplained uniform(s): ${j.unexplained.map((u) => u.name).join(' ')}`);
   const constants = (j.constants ?? []).map((c) => {

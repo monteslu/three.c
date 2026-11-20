@@ -82,7 +82,9 @@ typedef enum { T3_GEN_BASIC, T3_GEN_LAMBERT, T3_GEN_PHONG, T3_GEN_STANDARD, T3_G
 /* where a renderer-side property lives in the program's uniform data:
  * "material.color" -> group (index into groups), byte offset and length;
  * std140_mat3: three vec3 columns at 16-byte stride (length 44) */
-typedef struct { const char *path; uint8_t group; uint16_t offset, length; bool std140_mat3; } t3_gen_property;
+/* buffer: 0 = the group's uniform struct; k + 1 = the group's buffer k (an
+ * extension's r187 uniformArray, filled by its hook): offset is into that buffer */
+typedef struct { const char *path; uint8_t group; uint16_t offset, length; bool std140_mat3; uint8_t buffer; } t3_gen_property;
 typedef struct { const char *name, *type; uint8_t location; bool instanced; } t3_gen_attribute;
 /* a uniform nothing varies (a flag, an identity matrix, a default): the bytes
  * r187 uploaded, written once when the program is built */

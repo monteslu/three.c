@@ -137,7 +137,7 @@ ${guard ? `/* the ${guard === 'ifdef' ? 'core' : 'full'} table: T3_TABLE_CORE pi
     }
     out += `static const t3_bk_group_layout *const groups_${S}[] = { ${m.groups.map((g) => `&g_${S}_${sym(g.name)}`).join(', ')} };\n`;
     out += `static const t3_gen_property p_${S}[] = {\n`;
-    for (const p of m.properties) out += `  { ${cq(p.path)}, ${p.group}, ${p.offset}, ${p.length}, ${p.mat3} },\n`;
+    for (const p of m.properties) out += `  { ${cq(p.path)}, ${p.group}, ${p.offset}, ${p.length}, ${p.mat3}${p.buffer ? `, ${p.buffer}` : ''} },\n`;
     out += `};\n`;
     // constants: uniforms nothing varies, with the bytes r187 uploaded
     if (m.constants.length) {

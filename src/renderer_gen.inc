@@ -740,6 +740,13 @@ static bool ext_name_is(const char *manifest, const char *name) {
   return !strncmp(manifest, name, n) && (manifest[n] == 0 || manifest[n] == '#');
 }
 static void ext_uniform_put(t3_gen_gl *gl, int i, const float *v, int n, bool *ok) {
+  if (gl->ext[i].buf >= 0) {
+    /* in an extension buffer (an r187 uniformArray element) */
+    if (n < 1 || (size_t)n * 4 > gl->ext[i].len) { *ok = false; return; }
+    uint8_t *d = gl->buf[gl->ext[i].buf].mirror + gl->ext[i].off;
+    if (memcmp(d, v, (size_t)n * 4)) { memcpy(d, v, (size_t)n * 4); gl->buf[gl->ext[i].buf].dirty = true; }
+    return;
+  }
   if (gl->ext[i].mat3) {
     /* std140 / WGSL mat3x3: three columns at a 16-byte stride */
     if (n != 9) { *ok = false; return; }
@@ -764,7 +771,7 @@ bool t3_extension_set_uniform(t3_extension_ctx *c, const char *name, const float
   }
   int found = 0, first = -1;
   for (int i = 0; i < gl->n_ext; i++) {
-    if (!ext_name_is(gl->ext[i].name, name) || !gl->mirror[gl->ext[i].group]) continue;
+    if (!ext_name_is(gl->ext[i].name, name) || (gl->ext[i].buf < 0 && !gl->mirror[gl->ext[i].group])) continue;
     ext_uniform_put(gl, i, v, n, &ok);
     if (!ok) return false;
     if (!found++) first = i;
@@ -1378,6 +1385,12 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
       const t3_skeleton *sk = ((const t3_skinned_mesh *)o)->skeleton;
       glBindBuffer(GL_UNIFORM_BUFFER, gl->buf[i].ubo);
       glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)gl->buf[i].bytes, sk->bone_matrices);
+    }
+    if (gl->buf[i].mirror && gl->buf[i].dirty) {
+      /* an extension's buffer, as its hook left it for this draw */
+      glBindBuffer(GL_UNIFORM_BUFFER, gl->buf[i].ubo);
+      glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)gl->buf[i].bytes, gl->buf[i].mirror);
+      gl->buf[i].dirty = false;
     }
     glBindBufferBase(GL_UNIFORM_BUFFER, gl->buf[i].point, gl->buf[i].ubo);
   }

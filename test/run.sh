@@ -62,12 +62,24 @@ run test_ies node test/test_ies.mjs build/test/test_ies
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_batched.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_batched
 run test_batched env EGL_PLATFORM=surfaceless ./build/test/test_batched
 run test_batched_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_batched >/dev/null 2>&1"
-# an extension reading an r187 uniformArray (test/extensions/arr.mjs: a buffer binding three.c does not fill) is
-# refused by the generator, which names the binding; the tint example in the table below is the control that passes
-mkdir -p build/test/arrtab
+# an extension reading an r187 uniformArray (test/extensions/arr.mjs: a buffer binding of its own in the object group)
+# draws with the values its hook sets; the control leaves one element at zero and must come out black. One whose
+# elements no property names (arrbare.mjs: a buffer nothing fills) is refused by the generator, naming the binding;
+# the generator without the check is that one's control (it passes the program and the check fails)
+mkdir -p build/test/arrtab build/test/arrbare
 printf 'standard+xarr\n' > build/test/arrtab/states.txt
-run test_uniform_array_refused sh -c 'out=$(node tools/gen-project-table.mjs --name arrtab --out build/test/arrtab --states build/test/arrtab/states.txt \
-  --cache build/test/arrtab/cache --extend test/extensions/arr.mjs 2>&1) && exit 1; echo "$out" | grep -q "buffer binding NodeBuffer_object_1 of group object"'
+printf 'standard+xarrbare\n' > build/test/arrbare/states.txt
+run test_uniform_array_refused sh -c 'out=$(node tools/gen-project-table.mjs --name arrbare --out build/test/arrbare --states build/test/arrbare/states.txt \
+  --cache build/test/arrbare/cache --extend test/extensions/arrbare.mjs 2>&1) && exit 1; echo "$out" | grep -q "buffer binding NodeBuffer_object_1 of group object (source none) is one nothing fills"'
+if node tools/gen-project-table.mjs --name arrtab --out build/test/arrtab --states build/test/arrtab/states.txt \
+     --cache build/test/arrtab/cache --extend test/extensions/arr.mjs >/dev/null 2>&1; then
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_uniform_array.c build/test/arrtab/arrtab_gl.c \
+    build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_uniform_array
+  run test_uniform_array env EGL_PLATFORM=surfaceless ./build/test/test_uniform_array
+  run test_uniform_array_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_uniform_array >/dev/null 2>&1"
+else
+  echo "FAIL  test_uniform_array (gen-project-table)"; fail=1
+fi
 # extension materials auto-instanced (t3_renderer_set_extension_batching) and a texture sampled 24
 # times: a table of the tests' own (the tint example, plain and instanced; many), captured on the mock GPU
 mkdir -p build/test/exttab
@@ -196,6 +208,17 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
     set +e; ./build/test/test_extension_batch_wgpu > build/test/test_extension_batch_wgpu.log 2>&1; st=$?; set -e
     if [ $st = 0 ]; then echo "ok    test_extension_batch_wgpu"; elif [ $st = 77 ]; then echo "skip  test_extension_batch_wgpu (no WebGPU adapter)"
     else echo "FAIL  test_extension_batch_wgpu"; grep -v '^Warning' build/test/test_extension_batch_wgpu.log; fail=1; fi
+    if [ -f build/test/arrtab/arrtab_wgpu.c ]; then
+      "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_uniform_array.c \
+        build/test/arrtab/arrtab_gl.c build/test/arrtab/arrtab_wgpu.c build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn \
+        -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_uniform_array_wgpu
+      set +e; ./build/test/test_uniform_array_wgpu > build/test/test_uniform_array_wgpu.log 2>&1; st=$?; set -e
+      if [ $st = 0 ]; then echo "ok    test_uniform_array_wgpu"; elif [ $st = 77 ]; then echo "skip  test_uniform_array_wgpu (no WebGPU adapter)"
+      else echo "FAIL  test_uniform_array_wgpu"; grep -v '^Warning' build/test/test_uniform_array_wgpu.log; fail=1; fi
+      set +e; T3_TEST_CONTROL=1 ./build/test/test_uniform_array_wgpu > /dev/null 2>&1; st=$?; set -e
+      if [ $st = 77 ]; then echo "skip  test_uniform_array_wgpu_control (no WebGPU adapter)"
+      elif [ $st != 0 ]; then echo "ok    test_uniform_array_wgpu_control"; else echo "FAIL  test_uniform_array_wgpu_control (the control passed)"; fail=1; fi
+    fi
   fi
   # a WebGPU renderer makes no GL call when destroyed (a dual cart traps on one); the control, a GLES renderer, must fail
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_wgpu_destroy.c \
