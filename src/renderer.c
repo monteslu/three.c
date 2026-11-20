@@ -220,6 +220,7 @@ struct t3_renderer {
   t3_mat4 proj_screen;
   t3_frustum frustum;
   const t3_camera *camera;
+  const t3_camera *ext_cam;   /* the camera of the draw an extension hook fills (t3_extension_camera) */
 
   /* renderer.setViewport / setScissor / autoClear */
   int view_x, view_y, view_w, view_h;

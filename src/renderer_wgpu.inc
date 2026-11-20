@@ -177,6 +177,7 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   if (gl->render_stamp != r->stamp) { gen_fill_frame(r, gl, cam); gl->render_stamp = r->stamp; }
   gen_set_aux(r, m);
   gen_fill_draw(r, gl, m, o, batched);
+  r->ext_cam = cam;
   if (!gen_fill_ext(r, gl, m, o)) { r->info.skipped++; return; }
   t3_wgpu *w = r->wgpu;
   WGPURenderPassEncoder pass = t3_wgpu_pass_encoder(w);

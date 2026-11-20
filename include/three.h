@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.17"
+#define T3_VERSION "0.187.18"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1306,6 +1306,11 @@ void t3_renderer_set_extension_batching(t3_renderer *r, const char *name, bool o
 /* what the draw being filled draws */
 const t3_object *t3_extension_object(const t3_extension_ctx *c);
 const t3_material *t3_extension_material(const t3_extension_ctx *c);
+/* the camera the draw is drawn from: the render's camera, a view of an ArrayCamera, a shadow pass's light camera,
+ * a cube face's camera in a PMREM scene capture (r187: a node reads the camera of the render it is built for, as
+ * LightsNode lights in the render camera's view). Values a hook derives from a camera follow it. */
+const t3_camera *t3_extension_camera(const t3_extension_ctx *c);
+#define T3_EXTENSION_CAMERA 1
 /* uniform "ext.<name>" from n floats: 1 to 4 for a float or vector, 9 for a
  * mat3 (column-major), 16 for a mat4. false when the program has no such
  * uniform (also when the driver optimised it out) or n does not fit it */

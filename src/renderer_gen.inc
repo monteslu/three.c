@@ -727,6 +727,7 @@ static void gen_fill_draw(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, c
  * fills its "ext.<name>" uniforms and textures for each draw ── */
 struct t3_extension_ctx { t3_renderer *r; t3_gen_gl *gl; const t3_material *m; const t3_object *o; };
 const t3_object *t3_extension_object(const t3_extension_ctx *c) { return c->o; }
+const t3_camera *t3_extension_camera(const t3_extension_ctx *c) { return c->r->ext_cam; }
 const t3_material *t3_extension_material(const t3_extension_ctx *c) { return c->m; }
 /* bytes into a group's mirror, marking it dirty only when they change (a
  * shared group then uploads, or streams, only when its values do) */
@@ -1004,6 +1005,7 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
     if (r->gen_align <= 0) r->gen_align = 256;
   }
   r->cast_stage_n = 0;
+  r->ext_cam = sc;
   t3_gen_gl *prev_gl = NULL;
   int prev_off = -1;
   for (int i = 0; i < r->cast_n; i++) {
@@ -1288,6 +1290,7 @@ static void gen_bind_textures_g(t3_renderer *r, t3_gen_gl *gl, const t3_material
  * with one call. A block equal to the previous one of the same program reuses
  * its offset. */
 static void gen_prepare_list(t3_renderer *r, render_list *l, const t3_camera *cam) {
+  r->ext_cam = cam;
   t3_gen_gl *prev_gl = NULL;
   int prev_off = -1;
   for (int i = 0; i < l->n; i++) {
@@ -1419,6 +1422,7 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
   gen_set_aux(r, m);
   bool streamed = it->gen_gl && gl->draw_group >= 0 && it->gen_off >= 0;
   if (!streamed) gen_fill_draw(r, gl, m, o, it->batch_count > 0);
+  r->ext_cam = cam;
   /* (again when streamed: the block went out with the frame's, but the
    * extension's own groups and textures are bound now) */
   if (!gen_fill_ext(r, gl, m, o)) { r->info.skipped++; return; }

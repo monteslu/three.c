@@ -5,6 +5,16 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.18 (2026-11-19)
+
+### Added
+- **`t3_extension_camera`**: an extension hook can ask which camera the draw it fills is drawn from (the render's
+  camera, a view of an ArrayCamera, a shadow pass's light camera, a cube face's camera in a PMREM scene capture), so
+  values it derives from a camera (view-space light positions, say) follow the camera of each render, as r187's
+  nodes are built per render camera. `T3_EXTENSION_CAMERA` says it exists. test/test_extension.c checks every
+  draw of two renders with two cameras (GLES, WebGPU, compatibility mode); its control expects the first camera for
+  the second render and fails.
+
 ## v0.187.17 (2026-11-19)
 
 ### Fixed

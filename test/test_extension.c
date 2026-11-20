@@ -135,9 +135,13 @@ static t3_texture *tint_map;
 static const t3_object *left;
 static bool set_texture = true;
 static int fills;
+/* t3_extension_camera: the camera each draw is drawn from (counted against the render's) */
+static const t3_camera *expect_cam;
+static int cam_seen, cam_wrong;
 static void fill(t3_extension_ctx *c, void *user) {
   (void)user;
   fills++;
+  if (expect_cam) { cam_seen++; cam_wrong += t3_extension_camera(c) != expect_cam; }
   float s = t3_extension_object(c) == left ? left_scale : 1;
   t3_extension_set_uniform(c, "tint", tint, 3);
   t3_extension_set_uniform(c, "tintScale", &s, 1);
@@ -173,6 +177,7 @@ static t3_scene *scene;
 static t3_camera *cam;
 static t3_material *mat;
 static void render(t3_renderer *r, uint8_t *px) {
+  expect_cam = cam;
   t3_renderer_render(r, scene, cam);
 #ifdef T3_WGPU
   t3_renderer_wgpu_submit(r);
@@ -483,6 +488,38 @@ int main(int argc, char **argv) {
     t3_release(mosaic_height);
   }
 
+  /* the hook sees the camera of each render: the test's, then another (T3_TEST_CONTROL: expects the first one in both,
+   * which must fail) */
+  {
+    static uint8_t px[W * H * 4];
+    t3_scene *keep_scene = scene, *cs = t3_scene_new();
+    t3_camera *keep = cam, *cam2 = t3_perspective_camera_new(45, (float)W / H, 0.1f, 50);
+    t3_material_set_extension(mat, "tint");
+    t3_mesh *box = t3_mesh_new(g, mat);
+    t3_object_add(&cs->base, box);
+    t3_release(box);
+    t3_light *amb = t3_ambient_light_new(0xffffff, 1);
+    t3_object_add(&cs->base, amb);
+    t3_release(amb);
+    t3_renderer *rc = renderer();
+    t3_renderer_set_extension(rc, "tint", fill, NULL);
+    scene = cs;
+    cam_seen = cam_wrong = 0;
+    render(rc, px);
+    t3_object_set_position(cam2, 1, 2, 6);
+    t3_object_look_at(cam2, 0, 0, 0);
+    cam = cam2;
+    render(rc, px);
+    if (getenv("T3_TEST_CONTROL")) { expect_cam = keep; t3_renderer_render(rc, scene, cam2); }
+    cam = keep;
+    scene = keep_scene;
+    t3_release(cam2);
+    t3_release(cs);
+    t3_renderer_destroy(rc);
+    t3_material_set_extension(mat, NULL);
+    CHECK(cam_seen > 0 && cam_wrong == 0, "t3_extension_camera: %d of %d draws saw another camera than their render's", cam_wrong, cam_seen);
+    expect_cam = NULL;
+  }
   t3_release(scene); t3_release(cam);
   t3_release(other); t3_release(tint_map); t3_release(map); t3_release(g); t3_release(mat);
   t3_renderer_destroy(r); t3_renderer_destroy(r2); t3_renderer_destroy(r3);
