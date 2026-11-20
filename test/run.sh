@@ -84,6 +84,11 @@ if node tools/gen-project-table.mjs --name arrtab --out build/test/arrtab --stat
 else
   echo "FAIL  test_uniform_array (gen-project-table)"; fail=1
 fi
+# auto-instanced meshes cast as one instanced draw (depth+instbig): 200 boxes, 4 draws instead of 203, the same picture;
+# the control draws the casters one by one in both renderers and must fail
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_cast_batch.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_cast_batch
+run test_cast_batch env EGL_PLATFORM=surfaceless ./build/test/test_cast_batch
+run test_cast_batch_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_cast_batch >/dev/null 2>&1"
 # extension materials auto-instanced (t3_renderer_set_extension_batching) and a texture sampled 24
 # times: a table of the tests' own (the tint example, plain and instanced; many), captured on the mock GPU
 mkdir -p build/test/exttab
@@ -212,6 +217,14 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
     set +e; ./build/test/test_extension_batch_wgpu > build/test/test_extension_batch_wgpu.log 2>&1; st=$?; set -e
     if [ $st = 0 ]; then echo "ok    test_extension_batch_wgpu"; elif [ $st = 77 ]; then echo "skip  test_extension_batch_wgpu (no WebGPU adapter)"
     else echo "FAIL  test_extension_batch_wgpu"; grep -v '^Warning' build/test/test_extension_batch_wgpu.log; fail=1; fi
+    "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_cast_batch.c \
+      build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_cast_batch_wgpu
+    set +e; ./build/test/test_cast_batch_wgpu > build/test/test_cast_batch_wgpu.log 2>&1; st=$?; set -e
+    if [ $st = 0 ]; then echo "ok    test_cast_batch_wgpu"; elif [ $st = 77 ]; then echo "skip  test_cast_batch_wgpu (no WebGPU adapter)"
+    else echo "FAIL  test_cast_batch_wgpu"; grep -v "^Warning" build/test/test_cast_batch_wgpu.log; fail=1; fi
+    set +e; T3_TEST_CONTROL=1 ./build/test/test_cast_batch_wgpu > /dev/null 2>&1; st=$?; set -e
+    if [ $st = 77 ]; then echo "skip  test_cast_batch_wgpu_control (no WebGPU adapter)"
+    elif [ $st != 0 ]; then echo "ok    test_cast_batch_wgpu_control"; else echo "FAIL  test_cast_batch_wgpu_control (the control passed)"; fail=1; fi
     if [ -f build/test/arrtab/arrtab_wgpu.c ]; then
       "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_uniform_array.c \
         build/test/arrtab/arrtab_gl.c build/test/arrtab/arrtab_wgpu.c build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn \

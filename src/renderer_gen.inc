@@ -947,11 +947,13 @@ static void gen_bind_shadow(t3_renderer *r, uint8_t kind, int idx, int unit) {
 
 /* the caster program for an object (r187 draws the shadow pass with an
  * override NodeMaterial: kind depth, plus the object's deformations) */
-static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t3_geometry *g, const t3_material *m) {
+static t3_gen_gl *gen_caster_program_b(t3_renderer *r, const t3_object *o, const t3_geometry *g, const t3_material *m, bool batched);
+/* (batched: an auto-instanced group of meshes, drawn with the InstancedMesh caster) */
+static t3_gen_gl *gen_caster_program_b(t3_renderer *r, const t3_object *o, const t3_geometry *g, const t3_material *m, bool batched) {
   if (g->morph_count && (g->morph_normal || o->type != T3_MESH)) return NULL;
   uint64_t f = 0;
   if (g->morph_count) f |= T3_GEN_MORPH;
-  if (o->type == T3_INSTANCED_MESH) f |= T3_GEN_INSTBIG;
+  if (o->type == T3_INSTANCED_MESH || batched) f |= T3_GEN_INSTBIG;
   if (o->type == T3_SKINNED_MESH) f |= T3_GEN_SKIN;
   /* (the caster program does not depend on the lights: look it up by name) */
   if (o->type == T3_BATCHED_MESH) f |= T3_GEN_BATCH;
@@ -987,12 +989,15 @@ static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *s
 /* the caster draws: on GLES collected, their per-draw blocks packed and
  * uploaded with one call, then drawn (one upload a shadow map, not one a
  * draw); WebGPU draws as it walks (its blocks go to the frame stream) */
+static void gen_cast_batches(t3_renderer *r, const t3_camera *sc);
 static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
+  r->ccand_n = 0;
 #ifdef T3_WGPU
-  if (r->wgpu) { gen_collect_casters(r, o, sc); return; }
+  if (r->wgpu) { gen_collect_casters(r, o, sc); gen_cast_batches(r, sc); return; }
 #endif
   r->cast_n = 0;
   gen_collect_casters(r, o, sc);
+  gen_cast_batches(r, sc);
   if (!r->cast_n) return;
   if (!r->gen_align) {
     glGetIntegerv(0x8A34 /* GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT */, &r->gen_align);
@@ -1008,7 +1013,7 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
     c->it.gen_off = -1;
     if (gl->draw_group < 0) continue;
     gen_set_aux(r, c->it.material);
-    gen_fill_draw(r, gl, c->it.material, c->it.object, false);
+    gen_fill_draw(r, gl, c->it.material, c->it.object, c->it.batch_count > 0);
     gen_fill_ext(r, gl, c->it.material, c->it.object);   /* (a failure skips the draw, in gen_draw_gl) */
     uint32_t n = gl->bytes[gl->draw_group];
     const uint8_t *blk = gl->mirror[gl->draw_group];
@@ -1035,6 +1040,7 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
   }
   GLuint keep = r->gen_stream_ubo;
   r->gen_stream_ubo = r->cast_ubo;
+  r->batch_vbo = r->cast_inst_vbo;   /* (batched casters read the pass's own instance stream) */
   /* the caster's state: the material with r187's shadow overrides, copied
    * once for a run of casters sharing a material */
   t3_material state;
@@ -1055,9 +1061,12 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
     gen_draw_gl(r, &c->it, sc, c->gl, &state);
   }
   r->gen_stream_ubo = keep;
+  r->batch_vbo = 0;
   /* the main lists bind gen_ubo again (the slots now hold cast_ubo ranges) */
   for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) if (r->gen_bound_buf[i] == r->cast_ubo) r->gen_bound_buf[i] = 0;
 }
+static void gen_cast_one(t3_renderer *r, t3_object *o, t3_geometry *g, const t3_material *src, const t3_group *grp,
+                         const t3_camera *sc, int count, int offset);
 static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
   if (!o->visible) return;
   if ((o->type == T3_MESH || o->type == T3_INSTANCED_MESH || o->type == T3_SKINNED_MESH || o->type == T3_BATCHED_MESH) && o->cast_shadow) {
@@ -1069,34 +1078,108 @@ static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *s
         int mi = grp ? grp->material_index : 0;
         if (mi < 0 || mi >= mesh->material_count || !mesh->materials[mi]->visible) continue;
         const t3_material *src = mesh->materials[mi];
-        t3_gen_gl *gl = gen_caster_program(r, o, g, src);
-        if (!gl) continue;
-        render_item it = { o, g, (t3_material *)src, grp, 0, 0, 0, 0 };
-        it.gen_off = -1;
-#ifdef T3_WGPU
-        if (r->wgpu) {
-          /* overrideMaterial.side = material.shadowSide ?? shadowSide[material.side] */
-          static const t3_side flip[3] = { T3_BACK_SIDE, T3_FRONT_SIDE, T3_DOUBLE_SIDE };
-          t3_material state = *src;
-          state.side = src->shadow_side >= 0 ? (t3_side)src->shadow_side : flip[src->side];
-          state.transparent = false;
-          state.blending = T3_NO_BLENDING;
-          state.depth_test = state.depth_write = true;
-          state.color_write = true;
-          wgpu_draw_prog(r, &it, sc, gl, &state);
+        /* a mesh render's lists would auto-instance (renderer.c push_mesh_item): grouped after the walk */
+        bool tr = src->transparent || (src->type == T3_MESH_PHYSICAL_MATERIAL && src->transmission > 0);
+        if (r->auto_instancing && o->type == T3_MESH && !g->morph_count && !tr && (!src->extension || ext_batches(r, src->extension)) &&
+            batchable_matrix(&o->matrix_world) && !r->cast_batch_off) {
+          if (r->ccand_n == r->ccand_cap) {
+            r->ccand_cap = r->ccand_cap ? r->ccand_cap * 2 : 256;
+            r->ccand = realloc(r->ccand, sizeof *r->ccand * (size_t)r->ccand_cap);
+            T3_CHECK_ALLOC(r->ccand);
+          }
+          r->ccand[r->ccand_n] = (struct cast_cand){ o, g, (t3_material *)src, grp, r->ccand_n };
+          r->ccand_n++;
           continue;
         }
-#endif
-        if (r->cast_n == r->cast_cap) {
-          r->cast_cap = r->cast_cap ? r->cast_cap * 2 : 64;
-          r->cast = realloc(r->cast, sizeof *r->cast * (size_t)r->cast_cap);
-          T3_CHECK_ALLOC(r->cast);
-        }
-        r->cast[r->cast_n++] = (struct cast_item){ it, gl };
+        gen_cast_one(r, o, g, src, grp, sc, 0, 0);
       }
     }
   }
   for (int i = 0; i < o->child_count; i++) gen_collect_casters(r, o->children[i], sc);
+}
+/* one caster draw (count > 0: an auto-instanced group, its matrices at offset in the pass's instance stream): drawn
+ * now on WebGPU, collected on GLES */
+static void gen_cast_one(t3_renderer *r, t3_object *o, t3_geometry *g, const t3_material *src, const t3_group *grp,
+                         const t3_camera *sc, int count, int offset) {
+  t3_gen_gl *gl = gen_caster_program_b(r, o, g, src, count > 0);
+  if (!gl) return;
+  render_item it = { o, g, (t3_material *)src, grp, 0, 0, count, offset };
+  it.gen_off = -1;
+#ifdef T3_WGPU
+  if (r->wgpu) {
+    /* overrideMaterial.side = material.shadowSide ?? shadowSide[material.side] */
+    static const t3_side flip[3] = { T3_BACK_SIDE, T3_FRONT_SIDE, T3_DOUBLE_SIDE };
+    t3_material state = *src;
+    state.side = src->shadow_side >= 0 ? (t3_side)src->shadow_side : flip[src->side];
+    state.transparent = false;
+    state.blending = T3_NO_BLENDING;
+    state.depth_test = state.depth_write = true;
+    state.color_write = true;
+    wgpu_draw_prog(r, &it, sc, gl, &state);
+    return;
+  }
+#endif
+  if (r->cast_n == r->cast_cap) {
+    r->cast_cap = r->cast_cap ? r->cast_cap * 2 : 64;
+    r->cast = realloc(r->cast, sizeof *r->cast * (size_t)r->cast_cap);
+    T3_CHECK_ALLOC(r->cast);
+  }
+  r->cast[r->cast_n++] = (struct cast_item){ it, gl };
+}
+static int cast_cand_cmp(const void *a, const void *b) {
+  const struct cast_cand *x = a, *y = b;
+  if (x->m != y->m) return (uintptr_t)x->m < (uintptr_t)y->m ? -1 : 1;
+  if (x->g != y->g) return (uintptr_t)x->g < (uintptr_t)y->g ? -1 : 1;
+  if (x->grp != y->grp) return (uintptr_t)x->grp < (uintptr_t)y->grp ? -1 : 1;
+  return x->i - y->i;
+}
+/* the deferred meshes of a caster pass: a run sharing material, geometry and group is one instanced draw (its world
+ * matrices the instance attribute, as render's batches), a lone one an ordinary caster; a run whose instanced caster
+ * the tables lack draws one by one */
+static void gen_cast_batches(t3_renderer *r, const t3_camera *sc) {
+  if (!r->ccand_n) return;
+  qsort(r->ccand, (size_t)r->ccand_n, sizeof *r->ccand, cast_cand_cmp);
+  r->cinst_n = 0;
+  /* the matrices first (one upload a pass), then the draws */
+  for (int pass = 0; pass < 2; pass++) {
+    int off = 0;
+    for (int i = 0; i < r->ccand_n;) {
+      int j = i + 1;
+      const struct cast_cand *c = &r->ccand[i];
+      while (j < r->ccand_n && r->ccand[j].m == c->m && r->ccand[j].g == c->g && r->ccand[j].grp == c->grp) j++;
+      int n = j - i;
+      bool inst = n > 1 && gen_caster_program_b(r, c->o, c->g, c->m, true);
+      if (pass == 0 && inst) {
+        if (r->cinst_n + n > r->cinst_cap) {
+          while (r->cinst_cap < r->cinst_n + n) r->cinst_cap = r->cinst_cap ? r->cinst_cap * 2 : 1024;
+          r->cinst = realloc(r->cinst, (size_t)r->cinst_cap * INST_FLOATS * sizeof(float));
+          T3_CHECK_ALLOC(r->cinst);
+        }
+        for (int k = i; k < j; k++) {
+          float *dst = r->cinst + (size_t)r->cinst_n++ * INST_FLOATS;
+          memcpy(dst, r->ccand[k].o->matrix_world.e, 16 * sizeof(float));
+          dst[16] = dst[17] = dst[18] = 1; dst[19] = 0;
+        }
+      }
+      if (pass == 1) {
+        if (inst) gen_cast_one(r, c->o, c->g, c->m, c->grp, sc, n, off), off += n;
+        else for (int k = i; k < j; k++) gen_cast_one(r, r->ccand[k].o, r->ccand[k].g, r->ccand[k].m, r->ccand[k].grp, sc, 0, 0);
+      }
+      i = j;
+    }
+    if (pass == 0 && r->cinst_n) {
+#ifdef T3_WGPU
+      if (r->wgpu) { t3_wgpu_floats(r->wgpu, &r->wg_cast_inst, r->cinst, (size_t)r->cinst_n * INST_FLOATS); r->wg_inst_slot = &r->wg_cast_inst; continue; }
+#endif
+      if (!r->cast_inst_vbo) glGenBuffers(1, &r->cast_inst_vbo);
+      glBindBuffer(GL_ARRAY_BUFFER, r->cast_inst_vbo);
+      /* (a new store each pass: the GPU may still read the last pass's matrices) */
+      glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)r->cinst_n * INST_STRIDE, r->cinst, GL_STREAM_DRAW);
+    }
+  }
+#ifdef T3_WGPU
+  r->wg_inst_slot = NULL;
+#endif
 }
 static void gen_render_shadow_maps(t3_renderer *r, t3_scene *scene) {
   if (!r->shadow_map_enabled || !r->caster_count) return;

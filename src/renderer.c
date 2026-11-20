@@ -185,6 +185,7 @@ struct t3_renderer {
    * instance attribute. Same pixels as drawing them one by one (r187's
    * instanced program), a fraction of the draw calls. */
   bool auto_instancing;
+  bool cast_batch_off;   /* T3_TEST_CAST_ONE_BY_ONE: casters one by one, as before (a test's control) */
   bool sort_bounds;
   /* antialias: the canvas is multisampled; here a
    * multisampled framebuffer resolved into the default one after a render */
@@ -270,6 +271,8 @@ struct t3_renderer {
 #else
   void *wgpu;
 #endif
+  void *wg_cast_inst;
+  void **wg_inst_slot;   /* the instance stream batched draws read: &wg_inst, or &wg_cast_inst while casters draw */
   void *wg_dfg, *wg_inst, *wg_quad, *wg_color, *wg_depth, *wg_out;
   int wg_out_format;
   bool exact_output;   /* t3_renderer_set_exact_output: always r187's output pass */
@@ -307,6 +310,13 @@ struct t3_renderer {
   /* a caster pass (gen_casters) collects its draws, then uploads their
    * per-draw blocks with one call, as gen_prepare does for render's lists */
   struct cast_item { render_item it; struct t3_gen_gl *gl; } *cast; int cast_n, cast_cap;
+  /* a caster pass's meshes that may be auto-instanced, as render's lists batch them: grouped after the walk, a group
+   * of two or more drawn as one instanced caster (depth+instbig), its world matrices in the pass's own instance
+   * stream (cinst; GLES cast_inst_vbo, WebGPU wg_cast_inst) */
+  struct cast_cand { t3_object *o; t3_geometry *g; t3_material *m; const t3_group *grp; int i; } *ccand; int ccand_n, ccand_cap;
+  float *cinst; int cinst_n, cinst_cap;
+  GLuint cast_inst_vbo;
+  GLuint batch_vbo;   /* the instance buffer batched draws read: inst_vbo, or cast_inst_vbo while casters draw */
   uint8_t *cast_stage; size_t cast_stage_n, cast_stage_cap;
   GLuint cast_ubo; size_t cast_ubo_size;
   GLint gen_align;
@@ -408,6 +418,7 @@ t3_renderer *t3_renderer_new(int width, int height) {
   r->cur_cull = r->cur_depth_test = r->cur_depth_write = r->cur_blend = r->cur_a2c = -1;
   r->cur_color_mask = 1;
   r->auto_instancing = true;
+  r->cast_batch_off = getenv("T3_TEST_CAST_ONE_BY_ONE") != NULL;
   r->auto_clear = true;
   r->fb0_samples = -1;
   r->cur_scissor = -1;
@@ -433,6 +444,7 @@ void t3_renderer_destroy(t3_renderer *r) {
 #ifdef T3_WGPU
   for (int i = 0; i < r->gen_n; i++) if (r->wgpu) t3_gen_wgpu_free(r->gen[i].gl); else t3_gen_gl_free(r->gen[i].gl);
   t3_wgpu_floats_free(&r->wg_inst);
+  t3_wgpu_floats_free(&r->wg_cast_inst);
   t3_wgpu_floats_free(&r->wg_quad);
   t3_wgpu_destroy(r->wgpu);
 #else
@@ -467,7 +479,10 @@ void t3_renderer_destroy(t3_renderer *r) {
   free(r->batches); free(r->htab); free(r->mobj); free(r->mnext);
   free(r->prev_inst);
   free(r->inst);
+  free(r->ccand);
+  free(r->cinst);
   if (gl && r->inst_vbo) glDeleteBuffers(1, &r->inst_vbo);
+  if (gl && r->cast_inst_vbo) glDeleteBuffers(1, &r->cast_inst_vbo);
   free(r->lights);
   if (gl && r->msaa_fbo) { glDeleteFramebuffers(1, &r->msaa_fbo); glDeleteRenderbuffers(2, r->msaa_rb); }
   if (gl && r->resolve_fbo) { glDeleteFramebuffers(1, &r->resolve_fbo); glDeleteRenderbuffers(1, &r->resolve_rb); }
@@ -2244,7 +2259,8 @@ static void use_batch_geometry(t3_renderer *r, t3_object *o, t3_geometry *g, int
   int *off = &gg->batch_off;
   uint64_t *buf = &gg->batch_buf;
   /* keyed by renderer too: a destroyed renderer's buffer name can come back */
-  uint64_t key = (uint64_t)r->serial << 32 | r->inst_vbo;
+  GLuint vbo = r->batch_vbo ? r->batch_vbo : r->inst_vbo;
+  uint64_t key = (uint64_t)r->serial << 32 | vbo;
   if (!*vao) {
     *vao = build_vao(r, g, NULL);
     for (int c = 0; c < 4; c++) {
@@ -2257,7 +2273,7 @@ static void use_batch_geometry(t3_renderer *r, t3_object *o, t3_geometry *g, int
   /* The pointers are VAO state and the buffers keep their names across
    * re-uploads, so a batch at the same offset as last time needs none. */
   if (*off != offset || *buf != key) {
-    glBindBuffer(GL_ARRAY_BUFFER, r->inst_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     intptr_t base = (intptr_t)offset * INST_STRIDE;
     for (int c = 0; c < 4; c++)
       glVertexAttribPointer(A_INSTANCE_MATRIX + c, 4, GL_FLOAT, GL_FALSE, INST_STRIDE, (void *)(base + c * 16));

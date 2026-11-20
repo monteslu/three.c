@@ -5,6 +5,21 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.17 (2026-11-19)
+
+### Fixed
+- **Auto-instanced meshes cast their shadows as one instanced draw.** render's lists drew meshes sharing a geometry
+  and a material as one instanced draw, but each shadow pass still drew every one of them as a caster of its own:
+  200 boxes were 1 colour draw and 200 caster draws. A caster pass now groups the meshes render's lists would batch
+  (same rules: a plain mesh, no morph targets, a shear-free matrix, opaque, an extension only when it batches) by
+  material, geometry and group, and draws each group of two or more with the InstancedMesh caster r187 uses
+  (`depth+instbig`, or `depth+instbig+x<name>`), their world matrices in an instance stream of the pass's own; a
+  group whose instanced caster the tables lack draws one by one as before. Meshes outside the light's frustum are
+  left out of the group as before. test/test_cast_batch.c (GLES and WebGPU): 200 boxes on a ground plane under a
+  directional light's shadow, 4 draws instead of 203, the same picture texel for texel; its control (casters one
+  by one, `T3_TEST_CAST_ONE_BY_ONE`) fails. CPU per frame with the map drawn every frame, 890M: GLES 0.045 ms
+  against 0.076 to 0.089 one by one, WebGPU 0.077 against 0.093 to 0.116 (GPU time the same within noise, 0.03 ms).
+
 ## v0.187.16 (2026-11-19)
 
 ### Added

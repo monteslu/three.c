@@ -209,7 +209,7 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
     int slot = gl->attr_slot[a];
     if (slot == T3_ATTR_IN_INSTANCE_DONE) continue;
     if (slot == T3_ATTR_IN_INSTANCE) {
-      if (batched) { vbs[nvb] = t3_wgpu_floats(w, &r->wg_inst, NULL, 0); voffs[nvb++] = (uint64_t)it->batch_offset * INST_FLOATS * 4; }
+      if (batched) { vbs[nvb] = t3_wgpu_floats(w, r->wg_inst_slot ? r->wg_inst_slot : &r->wg_inst, NULL, 0); voffs[nvb++] = (uint64_t)it->batch_offset * INST_FLOATS * 4; }
       else if (o->type == T3_INSTANCED_MESH) { vbs[nvb] = t3_wgpu_attribute(w, ((t3_instanced_mesh *)o)->instance_matrix, false, NULL); voffs[nvb++] = 0; }
       else return;
       continue;
