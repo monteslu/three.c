@@ -18,6 +18,7 @@ static int fixed_location(const char *name) {
   if (!strcmp(name, "skinIndex")) return A_SKIN_INDEX;
   if (!strcmp(name, "outputDirection")) return A_NORMAL;   /* the PMREM passes' planes carry it in the normal slot */
   if (!strcmp(name, "skinWeight")) return A_SKIN_WEIGHT;
+  if (!strcmp(name, "t3_batchId")) return A_BATCH_ID;
   if (!strcmp(name, "instanceColor")) return A_INSTANCE_COLOR;   /* renamed by tools/emit-programs.mjs */
   if (!strncmp(name, "nodeAttribute", 13) && name[13] >= '0' && name[13] <= '3' && !name[14])
     return A_INSTANCE_MATRIX + (name[13] - '0');
@@ -585,6 +586,7 @@ void t3_gen_common(t3_gen_gl *g) {
     else if (!strcmp(n, "tangent")) slot = T3_ATTR_TANGENT;
     else if (!strcmp(n, "skinIndex")) slot = T3_ATTR_SKIN_INDEX;
     else if (!strcmp(n, "skinWeight")) slot = T3_ATTR_SKIN_WEIGHT;
+    else if (!strcmp(n, "t3_batchId")) slot = T3_ATTR_BATCH_ID;
     g->attr_slot[a] = slot;
   }
   /* constants: the bytes r187 uploaded for uniforms nothing varies */
@@ -653,6 +655,8 @@ uint8_t t3_gen_source_kind(const char *s, uint8_t *arg) {
   if (!strcmp(s, "background")) return T3_SRC_BG;
   if (!strcmp(s, "pmrem.source")) return T3_SRC_PMREM;
   if (!strncmp(s, "ies:spot[", 9)) { int idx = atoi(s + 9); *arg = (uint8_t)(idx < 0 || idx > 255 ? 255 : idx); return T3_SRC_IES; }
+  if (!strcmp(s, "batch.indirect")) return T3_SRC_BATCH_INDIRECT;
+  if (!strcmp(s, "batch.matrices")) return T3_SRC_BATCH_MATRICES;
   if (!strcmp(s, "boneMatrices")) return T3_SRC_BONES;
   if (!strcmp(s, "morphInfluences")) return T3_SRC_MORPH_INFLUENCES;
   if (!strncmp(s, "shadow:", 7)) {

@@ -962,6 +962,7 @@ t3_light *t3_spot_light_new(uint32_t color, float intensity, float distance, flo
   return l;
 }
 
+static void batched_free(t3_batched_mesh *b);
 static void object_free(t3_object *o) {
   if (o->on_destroy) o->on_destroy(o);
   for (int i = 0; i < o->child_count; i++) {
@@ -970,9 +971,10 @@ static void object_free(t3_object *o) {
   }
   free(o->children);
   switch (o->type) {
-  case T3_SKINNED_MESH: case T3_INSTANCED_MESH:
+  case T3_SKINNED_MESH: case T3_INSTANCED_MESH: case T3_BATCHED_MESH:
   case T3_MESH: case T3_LINE: case T3_LINE_SEGMENTS: case T3_LINE_LOOP: case T3_POINTS: case T3_SPRITE: {
     /* a SkinnedMesh is not an InstancedMesh: each frees only its own fields */
+    if (o->type == T3_BATCHED_MESH) batched_free((t3_batched_mesh *)o);
     if (o->type == T3_SKINNED_MESH) t3_release(((t3_skinned_mesh *)o)->skeleton);
     if (o->type == T3_INSTANCED_MESH) {
       t3_instanced_mesh *im = (t3_instanced_mesh *)o;
@@ -1456,4 +1458,273 @@ static void geometry_free(t3_geometry *g) {
   free(g->named);
   free(g->groups);
   free(g);
+}
+
+/* ── BatchedMesh ─────────────────────────────────────────────────── */
+typedef struct { t3_geometry *g; t3_sphere sphere; } batch_geo;
+typedef struct {
+  int geo, i0, icount;
+  bool visible, active;
+  t3_mat4 m;
+  float sph[4];   /* its bounding sphere in the mesh's space */
+} batch_inst;
+typedef struct batch_impl {
+  batch_geo *geos; int ngeo, geo_cap;
+  batch_inst *inst; int ninst, inst_cap, tex_cap;
+  int vcap, icap;        /* items the geometry's arrays hold room for */
+  int *runs; int runs_cap, last_runs, last_instances;
+  struct batch_order { float z; int id; } *order; int order_cap;
+} batch_impl;
+static const t3_attr_slot batch_slots[] = { T3_ATTR_POSITION, T3_ATTR_NORMAL, T3_ATTR_UV, T3_ATTR_COLOR, T3_ATTR_TANGENT, T3_ATTR_UV1 };
+
+/* r187 BatchedMesh._initMatricesTexture / _initIndirectTexture: square, the matrices' side a multiple of 4 */
+static void batch_textures(t3_batched_mesh *b, int cap) {
+  batch_impl *I = b->_impl;
+  int ms = (int)ceil(sqrt((double)cap * 4));
+  ms = (ms + 3) / 4 * 4;
+  if (ms < 4) ms = 4;
+  int is = (int)ceil(sqrt((double)cap));
+  if (is < 1) is = 1;
+  t3_texture *mt = t3_data_texture_new_typed(ms, ms, NULL, T3_FLOAT_TYPE);
+  t3_texture *it = t3_data_texture_new_format(is, is, NULL, T3_RED_INTEGER_FORMAT, T3_UNSIGNED_INT_TYPE);
+  float *mp = (float *)mt->pixels;
+  uint32_t *ip = (uint32_t *)it->pixels;
+  /* the indirect texture maps a draw's id to an instance: here the id is the instance's own */
+  for (int i = 0; i < is * is; i++) ip[i] = (uint32_t)i;
+  for (int i = 0; i < I->ninst; i++) memcpy(mp + (size_t)i * 16, I->inst[i].m.e, sizeof(float) * 16);
+  t3_release(b->matrices_texture);
+  t3_release(b->indirect_texture);
+  b->matrices_texture = mt;
+  b->indirect_texture = it;
+  I->tex_cap = cap;
+}
+
+t3_batched_mesh *t3_batched_mesh_new(int max_instance_count, int max_vertex_count, int max_index_count, t3_material *mat) {
+  t3_batched_mesh *b = object_alloc(sizeof *b, T3_BATCHED_MESH);
+  b->mesh.geometry = t3_geometry_new();
+  b->mesh.materials = calloc(1, sizeof *b->mesh.materials);
+  T3_CHECK_ALLOC(b->mesh.materials);
+  b->mesh.materials[0] = t3_retain(mat);
+  b->mesh.material_count = 1;
+  b->mesh.base.frustum_culled = false;   /* (its instances are culled one by one) */
+  b->per_object_frustum_culled = b->sort_objects = true;
+  batch_impl *I = calloc(1, sizeof *I);
+  T3_CHECK_ALLOC(I);
+  b->_impl = I;
+  I->vcap = max_vertex_count > 0 ? max_vertex_count : 0;
+  I->icap = max_index_count > 0 ? max_index_count : 0;
+  batch_textures(b, max_instance_count > 0 ? max_instance_count : 1);
+  return b;
+}
+
+static void batched_free(t3_batched_mesh *b) {
+  batch_impl *I = b->_impl;
+  for (int i = 0; i < I->ngeo; i++) t3_release(I->geos[i].g);
+  free(I->geos); free(I->inst); free(I->runs); free(I->order);
+  free(I);
+  t3_release(b->matrices_texture);
+  t3_release(b->indirect_texture);
+}
+
+int t3_batched_mesh_add_geometry(t3_batched_mesh *b, t3_geometry *g) {
+  batch_impl *I = b->_impl;
+  if (!g || !g->attributes[T3_ATTR_POSITION]) return -1;
+  if (I->ngeo) {
+    const t3_geometry *first = I->geos[0].g;
+    for (size_t s = 0; s < sizeof batch_slots / sizeof batch_slots[0]; s++) {
+      const t3_attribute *a = first->attributes[batch_slots[s]], *c = g->attributes[batch_slots[s]];
+      if ((a != NULL) != (c != NULL) || (a && (a->item_size != c->item_size || a->type != c->type))) return -1;
+    }
+  } else {
+    for (size_t s = 0; s < sizeof batch_slots / sizeof batch_slots[0]; s++)
+      if (g->attributes[batch_slots[s]] && g->attributes[batch_slots[s]]->type != T3_FLOAT32) return -1;
+  }
+  if (I->ngeo == I->geo_cap) {
+    I->geo_cap = I->geo_cap ? I->geo_cap * 2 : 16;
+    I->geos = realloc(I->geos, sizeof *I->geos * (size_t)I->geo_cap);
+    T3_CHECK_ALLOC(I->geos);
+  }
+  if (!g->has_bounding_sphere) t3_geometry_compute_bounding_sphere(g);
+  I->geos[I->ngeo] = (batch_geo){ t3_retain(g), g->bounding_sphere };
+  return I->ngeo++;
+}
+
+/* room for n more items of an attribute (made on first use) */
+static t3_attribute *batch_attr(t3_batched_mesh *b, t3_attr_slot slot, int item_size, int have, int more, int reserve) {
+  t3_geometry *mg = b->mesh.geometry;
+  t3_attribute *a = slot == T3_ATTR_COUNT ? mg->index : mg->attributes[slot];
+  size_t elem = slot == T3_ATTR_COUNT ? 4 : sizeof(float);
+  if (!a) {
+    a = t3_attribute_new(slot == T3_ATTR_COUNT ? T3_UINT32 : T3_FLOAT32, NULL, 0, item_size);
+    if (slot == T3_ATTR_COUNT) t3_geometry_set_index(mg, a); else t3_geometry_set_attribute(mg, slot, a);
+    t3_release(a);
+    free(a->array);
+    a->array = calloc((size_t)(reserve > 0 ? reserve : 1) * (size_t)item_size, elem);
+    T3_CHECK_ALLOC(a->array);
+  }
+  return a;
+  (void)have; (void)more;
+}
+
+int t3_batched_mesh_add_instance(t3_batched_mesh *b, int geometry_id) {
+  batch_impl *I = b->_impl;
+  if (geometry_id < 0 || geometry_id >= I->ngeo) return -1;
+  t3_geometry *g = I->geos[geometry_id].g, *mg = b->mesh.geometry;
+  int nv = g->attributes[T3_ATTR_POSITION]->count, ni = g->index ? g->index->count : nv;
+  int v0 = mg->attributes[T3_ATTR_POSITION] ? mg->attributes[T3_ATTR_POSITION]->count : 0, i0 = mg->index ? mg->index->count : 0;
+  int id = I->ninst;
+  /* grow the arrays (by half again) when the reservation runs out */
+  if (v0 + nv > I->vcap || !mg->attributes[T3_ATTR_POSITION]) {
+    int cap = I->vcap;
+    while (cap < v0 + nv) cap = cap + cap / 2 + 256;
+    for (size_t s = 0; s <= sizeof batch_slots / sizeof batch_slots[0]; s++) {
+      t3_attr_slot slot = s < sizeof batch_slots / sizeof batch_slots[0] ? batch_slots[s] : T3_ATTR_BATCH_ID;
+      const t3_attribute *src = slot == T3_ATTR_BATCH_ID ? NULL : g->attributes[slot];
+      if (slot != T3_ATTR_BATCH_ID && !src) continue;
+      t3_attribute *a = batch_attr(b, slot, src ? src->item_size : 1, v0, nv, cap);
+      a->array = realloc(a->array, (size_t)cap * (size_t)a->item_size * sizeof(float));
+      T3_CHECK_ALLOC(a->array);
+    }
+    I->vcap = cap;
+  }
+  if (i0 + ni > I->icap || !mg->index) {
+    int cap = I->icap;
+    while (cap < i0 + ni) cap = cap + cap / 2 + 768;
+    t3_attribute *a = batch_attr(b, T3_ATTR_COUNT, 1, i0, ni, cap);
+    a->array = realloc(a->array, (size_t)cap * 4);
+    T3_CHECK_ALLOC(a->array);
+    I->icap = cap;
+  }
+  for (size_t s = 0; s < sizeof batch_slots / sizeof batch_slots[0]; s++) {
+    const t3_attribute *src = g->attributes[batch_slots[s]];
+    t3_attribute *a = mg->attributes[batch_slots[s]];
+    if (!src || !a) continue;
+    memcpy((float *)a->array + (size_t)v0 * a->item_size, src->array, (size_t)nv * a->item_size * sizeof(float));
+    a->count = v0 + nv;
+    a->update_start = a->update_count = 0;
+    a->version++;
+  }
+  t3_attribute *ida = mg->attributes[T3_ATTR_BATCH_ID];
+  for (int k = 0; k < nv; k++) ((float *)ida->array)[v0 + k] = (float)id;
+  ida->count = v0 + nv;
+  ida->update_start = ida->update_count = 0;
+  ida->version++;
+  uint32_t *ix = (uint32_t *)mg->index->array + i0;
+  if (!g->index) for (int k = 0; k < ni; k++) ix[k] = (uint32_t)(v0 + k);
+  else if (g->index->type == T3_UINT16) for (int k = 0; k < ni; k++) ix[k] = (uint32_t)v0 + ((const uint16_t *)g->index->array)[k];
+  else for (int k = 0; k < ni; k++) ix[k] = (uint32_t)v0 + ((const uint32_t *)g->index->array)[k];
+  mg->index->count = i0 + ni;
+  mg->index->update_start = mg->index->update_count = 0;
+  mg->index->version++;
+  mg->version++;
+  if (I->ninst == I->inst_cap) {
+    I->inst_cap = I->inst_cap ? I->inst_cap * 2 : 64;
+    I->inst = realloc(I->inst, sizeof *I->inst * (size_t)I->inst_cap);
+    T3_CHECK_ALLOC(I->inst);
+  }
+  batch_inst *in = &I->inst[I->ninst++];
+  *in = (batch_inst){ geometry_id, i0, ni, true, true, { { 0 } }, { 0 } };
+  t3_mat4_identity(&in->m);
+  if (I->ninst > I->tex_cap) batch_textures(b, I->tex_cap * 2 > I->ninst ? I->tex_cap * 2 : I->ninst);
+  t3_batched_mesh_set_matrix_at(b, id, &in->m);
+  return id;
+}
+
+void t3_batched_mesh_set_matrix_at(t3_batched_mesh *b, int id, const t3_mat4 *m) {
+  batch_impl *I = b->_impl;
+  if (id < 0 || id >= I->ninst) return;
+  batch_inst *in = &I->inst[id];
+  in->m = *m;
+  b->version++;
+  memcpy((float *)b->matrices_texture->pixels + (size_t)id * 16, m->e, sizeof(float) * 16);
+  b->matrices_texture->version++;
+  const t3_sphere *s = &I->geos[in->geo].sphere;
+  t3_vec3 c = t3_vec3_apply_mat4(s->center, m);
+  in->sph[0] = c.x, in->sph[1] = c.y, in->sph[2] = c.z, in->sph[3] = s->radius * t3_mat4_max_scale_on_axis(m);
+}
+bool t3_batched_mesh_get_matrix_at(const t3_batched_mesh *b, int id, t3_mat4 *out) {
+  const batch_impl *I = b->_impl;
+  if (id < 0 || id >= I->ninst) return false;
+  *out = I->inst[id].m;
+  return true;
+}
+void t3_batched_mesh_set_visible_at(t3_batched_mesh *b, int id, bool visible) {
+  batch_impl *I = b->_impl;
+  if (id >= 0 && id < I->ninst && I->inst[id].visible != visible) { I->inst[id].visible = visible; b->version++; }
+}
+bool t3_batched_mesh_get_visible_at(const t3_batched_mesh *b, int id) {
+  const batch_impl *I = b->_impl;
+  return id >= 0 && id < I->ninst && I->inst[id].visible && I->inst[id].active;
+}
+void t3_batched_mesh_delete_instance(t3_batched_mesh *b, int id) {
+  batch_impl *I = b->_impl;
+  if (id >= 0 && id < I->ninst && I->inst[id].active) { I->inst[id].active = false; b->version++; }
+}
+int t3_batched_mesh_instance_count(const t3_batched_mesh *b) { return ((const batch_impl *)b->_impl)->ninst; }
+void t3_batched_mesh_last_draws(const t3_batched_mesh *b, int *runs, int *instances) {
+  const batch_impl *I = b->_impl;
+  if (runs) *runs = I->last_runs;
+  if (instances) *instances = I->last_instances;
+}
+
+static int batch_order_cmp(const void *a, const void *b) {
+  const struct batch_order *x = a, *y = b;
+  return x->z < y->z ? -1 : x->z > y->z ? 1 : x->id - y->id;   /* back to front: view z ascending */
+}
+int t3__batched_runs(t3_batched_mesh *b, const t3_frustum *f, const t3_mat4 *sort_view, const int **ranges) {
+  batch_impl *I = b->_impl;
+  if (I->runs_cap < I->ninst * 2) {
+    I->runs_cap = I->ninst * 2 + 16;
+    I->runs = realloc(I->runs, sizeof *I->runs * (size_t)I->runs_cap);
+    T3_CHECK_ALLOC(I->runs);
+  }
+  const t3_mat4 *w = &b->mesh.base.matrix_world;
+  float ws = t3_mat4_max_scale_on_axis(w);
+  bool cull = f && b->per_object_frustum_culled;
+  int n = 0, drawn = 0;
+  if (sort_view && b->sort_objects) {
+    if (I->order_cap < I->ninst) {
+      I->order_cap = I->ninst + 16;
+      I->order = realloc(I->order, sizeof *I->order * (size_t)I->order_cap);
+      T3_CHECK_ALLOC(I->order);
+    }
+    int k = 0;
+    for (int i = 0; i < I->ninst; i++) {
+      const batch_inst *in = &I->inst[i];
+      if (!in->visible || !in->active) continue;
+      t3_vec3 c = t3_vec3_apply_mat4(t3_v3(in->sph[0], in->sph[1], in->sph[2]), w);
+      if (cull && !t3_frustum_intersects_sphere(f, (t3_sphere){ c, in->sph[3] * ws })) continue;
+      I->order[k++] = (struct batch_order){ t3_vec3_apply_mat4(c, sort_view).z, i };
+    }
+    qsort(I->order, (size_t)k, sizeof *I->order, batch_order_cmp);
+    for (int j = 0; j < k; j++) {
+      const batch_inst *in = &I->inst[I->order[j].id];
+      if (n && I->runs[n * 2 - 2] + I->runs[n * 2 - 1] == in->i0) I->runs[n * 2 - 1] += in->icount;
+      else { I->runs[n * 2] = in->i0; I->runs[n * 2 + 1] = in->icount; n++; }
+    }
+    drawn = k;
+  } else {
+    bool open = false;
+    int gap = -1;   /* indices of instances out of view since the last run (-1: a hidden or deleted one is among them) */
+    for (int i = 0; i < I->ninst; i++) {
+      const batch_inst *in = &I->inst[i];
+      bool vis = in->visible && in->active;
+      if (!vis) { open = false; gap = -1; continue; }
+      if (cull) {
+        t3_vec3 c = t3_vec3_apply_mat4(t3_v3(in->sph[0], in->sph[1], in->sph[2]), w);
+        vis = t3_frustum_intersects_sphere(f, (t3_sphere){ c, in->sph[3] * ws });
+      }
+      if (!vis) { if (open) gap = 0; open = false; if (gap >= 0) gap += in->icount; continue; }
+      if (open) I->runs[n * 2 - 1] += in->icount;   /* (instances sit in the buffer in id order, one after another) */
+      else if (n && gap >= 0 && gap <= b->bridge_indices) I->runs[n * 2 - 1] += gap + in->icount;   /* over the gap: its instances are clipped */
+      else { I->runs[n * 2] = in->i0; I->runs[n * 2 + 1] = in->icount; n++; }
+      open = true;
+      gap = -1;
+      drawn++;
+    }
+  }
+  I->last_runs = n;
+  I->last_instances = drawn;
+  *ranges = I->runs;
+  return n;
 }

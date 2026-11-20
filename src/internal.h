@@ -49,6 +49,9 @@ extern uint32_t t3__graph_epoch;
  * sphere through matrix_world, as Mesh.raycast and Frustum.intersectsObject
  * compute it; cached until the world matrix or the geometry's bounds change. */
 const float *t3__world_sphere(t3_object *o, t3_geometry *g);
+/* a BatchedMesh's draws for a frustum (NULL: no culling) and, for a transparent material, a view matrix to sort by
+ * (NULL: buffer order): index ranges as (start, count) pairs, consecutive visible instances merged. Returns how many. */
+int t3__batched_runs(t3_batched_mesh *b, const t3_frustum *f, const t3_mat4 *sort_view, const int **ranges);
 #define T3_CHECK_ALLOC(p) do { if (!(p)) t3__fatal("out of memory"); } while (0)
 /* extension names (core.c): a process-wide id per name (1..), 0 for
  * NULL, for a name that is not [a-z0-9_]{1,31} or when the ids run out; and

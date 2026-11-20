@@ -5,6 +5,30 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.12 (2026-11-19)
+
+### Added
+- **BatchedMesh** (`t3_batched_mesh_new`, `_add_geometry`, `_add_instance`, `_set_matrix_at`,
+  `_set_visible_at`, `_delete_instance`, `per_object_frustum_culled`, `sort_objects`): many different
+  geometries with one material, each instance with its own matrix and visibility, drawn with r187's BatchedMesh
+  programs (matrices texture read through the indirect texture) and casting and receiving shadows
+  (`depth+batch`). **It feeds the instance id differently from r187, on purpose.** r187 gives the program the
+  id once per draw (a uniform on WebGL2, the instance index on WebGPU), so it issues one draw call an instance.
+  three.c writes the id into a vertex attribute (`T3_ATTR_BATCH_ID`; each instance owns a copy of its
+  geometry's vertices), so a run of visible instances that follow each other in the buffer is one draw on GLES
+  and on WebGPU, and culling an instance uploads nothing. The picture is r187's: the parity scene `b1-batched`
+  matches r187's BatchedMesh on WebGPU and GLES. Each instance is frustum culled by its bounding sphere, against
+  the light's frustum in a shadow pass. test/test_batched.c: a batch equals the same 60 meshes drawn one by one,
+  in 1 draw (3 with one hidden and one deleted), and a camera that sees part of the grid draws only those
+  instances; its control (another instance hidden) fails. `bridge_indices` (three.c's own, 0 by default) lets two runs with only
+  out-of-view instances between them draw as one, the gap clipped; `version` moves with every change to the
+  instances, for an embedder's shadow cache. Not there yet: setColorAt, setGeometryAt, optimize(),
+  raycasting; opaque instances are not depth sorted.
+- State feature `batch` (it takes the place of the feature name `clip`, which no state ever carried: no table
+  changes), texture sources `batch.indirect` / `batch.matrices`, 18 states in the base tables (396 in all).
+  `T3_ATTR_BATCH_ID` is appended to the attribute slots, so `T3_ATTR_COUNT` grows by one (code that loops to
+  it needs no change), and `T3_BATCHED_MESH` to the object types.
+
 ## v0.187.11 (2026-11-19)
 
 ### Added

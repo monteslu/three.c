@@ -146,7 +146,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   }
   bool lineish = o->type == T3_LINE || o->type == T3_LINE_SEGMENTS || o->type == T3_LINE_LOOP;
   if (kind == T3_GEN_POINTS ? o->type != T3_POINTS : kind == T3_GEN_LINE ? !lineish : kind == T3_GEN_SPRITE ? o->type != T3_SPRITE
-      : (o->type != T3_MESH && o->type != T3_INSTANCED_MESH && o->type != T3_SKINNED_MESH)) { *why = "object kind"; return false; }
+      : (o->type != T3_MESH && o->type != T3_INSTANCED_MESH && o->type != T3_SKINNED_MESH && o->type != T3_BATCHED_MESH)) { *why = "object kind"; return false; }
   if (g->morph_count && !g->morph_position) { *why = "morph targets without positions"; return false; }
   if (o->type == T3_SKINNED_MESH) {
     const t3_skeleton *sk = ((const t3_skinned_mesh *)o)->skeleton;
@@ -213,6 +213,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   if (o->type == T3_INSTANCED_MESH || batched) f |= T3_GEN_INSTBIG;
   if (o->type == T3_INSTANCED_MESH && ((const t3_instanced_mesh *)o)->instance_color) f |= T3_GEN_ICOL;
   if (o->type == T3_SKINNED_MESH) f |= T3_GEN_SKIN;
+  if (o->type == T3_BATCHED_MESH) f |= T3_GEN_BATCH;
   if (g->morph_count) { f |= T3_GEN_MORPH; if (g->morph_normal) f |= T3_GEN_MORPHN; }
   if (m->map) {
     f |= T3_GEN_MAP;
@@ -945,7 +946,8 @@ static t3_gen_gl *gen_caster_program(t3_renderer *r, const t3_object *o, const t
   if (o->type == T3_INSTANCED_MESH) f |= T3_GEN_INSTBIG;
   if (o->type == T3_SKINNED_MESH) f |= T3_GEN_SKIN;
   /* (the caster program does not depend on the lights: look it up by name) */
-  const char *base = f & T3_GEN_INSTBIG ? "depth+instbig" : f & T3_GEN_SKIN ? "depth+skin" : f & T3_GEN_MORPH ? "depth+morph" : "depth";
+  if (o->type == T3_BATCHED_MESH) f |= T3_GEN_BATCH;
+  const char *base = f & T3_GEN_BATCH ? "depth+batch" : f & T3_GEN_INSTBIG ? "depth+instbig" : f & T3_GEN_SKIN ? "depth+skin" : f & T3_GEN_MORPH ? "depth+morph" : "depth";
   const t3_gen_program *src = NULL;
   r->gen_cur_obj = o, r->gen_cur_mat = m; /* who asked, for the missing hook */
   if (m->extension) {
@@ -1050,7 +1052,7 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
 }
 static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
   if (!o->visible) return;
-  if ((o->type == T3_MESH || o->type == T3_INSTANCED_MESH || o->type == T3_SKINNED_MESH) && o->cast_shadow) {
+  if ((o->type == T3_MESH || o->type == T3_INSTANCED_MESH || o->type == T3_SKINNED_MESH || o->type == T3_BATCHED_MESH) && o->cast_shadow) {
     t3_mesh *mesh = (t3_mesh *)o;
     t3_geometry *g = mesh->geometry;
     if (g && g->attributes[T3_ATTR_POSITION] && (!o->frustum_culled || in_shadow_frustum(r, o, g))) {
@@ -1160,6 +1162,12 @@ static void gen_bind_textures_g(t3_renderer *r, t3_gen_gl *gl, const t3_material
       break;
     }
     case T3_SRC_SHADOW_DIR: case T3_SRC_SHADOW_SPOT: case T3_SRC_SHADOW_POINT: gen_bind_shadow(r, gl->tex[i].kind, arg, i); break;
+    case T3_SRC_BATCH_INDIRECT: case T3_SRC_BATCH_MATRICES:
+      if (r->gen_draw_obj && r->gen_draw_obj->type == T3_BATCHED_MESH) {
+        const t3_batched_mesh *bm = (const t3_batched_mesh *)r->gen_draw_obj;
+        bind_texture(gl->tex[i].kind == T3_SRC_BATCH_INDIRECT ? bm->indirect_texture : bm->matrices_texture, i);
+      }
+      break;
     case T3_SRC_IES: if (arg < r->ls.num_spot && r->ls.spot[arg]->ies_map) bind_texture(r->ls.spot[arg]->ies_map, i); break;
     case T3_SRC_EXT: {   /* (gen_fill_ext has checked it is set) */
       t3_texture *tx = gl->ext_tex[arg].tex;
@@ -1372,6 +1380,7 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
     }
     glBindBufferBase(GL_UNIFORM_BUFFER, gl->buf[i].point, gl->buf[i].ubo);
   }
+  r->gen_draw_obj = o;
   gen_bind_textures_g(r, gl, m, g);
   set_material_state(r, state);
   if (it->batch_count) use_batch_geometry(r, o, g, it->batch_offset);

@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.11"
+#define T3_VERSION "0.187.12"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -341,6 +341,7 @@ typedef enum {
   T3_ATTR_POSITION, T3_ATTR_NORMAL, T3_ATTR_UV, T3_ATTR_COLOR, T3_ATTR_TANGENT, T3_ATTR_UV1,
   T3_ATTR_INSTANCE_MATRIX, T3_ATTR_INSTANCE_COLOR,
   T3_ATTR_SKIN_INDEX, T3_ATTR_SKIN_WEIGHT,
+  T3_ATTR_BATCH_ID,   /* a BatchedMesh's own: the instance each vertex belongs to (one float) */
   T3_ATTR_COUNT
 } t3_attr_slot;
 
@@ -541,7 +542,8 @@ typedef enum {
   T3_PERSPECTIVE_CAMERA, T3_ORTHOGRAPHIC_CAMERA,
   T3_AMBIENT_LIGHT, T3_HEMISPHERE_LIGHT, T3_DIRECTIONAL_LIGHT, T3_POINT_LIGHT, T3_SPOT_LIGHT,
   T3_LINE, T3_LINE_SEGMENTS, T3_LINE_LOOP,
-  T3_SPRITE, T3_POINTS, T3_LOD
+  T3_SPRITE, T3_POINTS, T3_LOD,
+  T3_BATCHED_MESH
 } t3_object_type;
 
 typedef struct t3_object t3_object;
@@ -701,6 +703,62 @@ typedef struct t3_light {
    * axis, 0 to 180 degrees, its y the twist around it (one row: the same all the way round). NULL: a SpotLight. */
   t3_texture *ies_map;
 } t3_light;
+
+/* BatchedMesh: many different geometries drawn with one material in few draws,
+ * each instance with its own matrix and visibility. As in r187 the matrices
+ * live in a float texture (matrices_texture, four texels an instance) read
+ * through the indirect texture, and the program is r187's.
+ *
+ * What differs from r187, on purpose: r187 hands the program an instance's id
+ * per draw (a uniform on WebGL2, the instance index on WebGPU: one draw call
+ * an instance). three.c writes the id into a vertex attribute
+ * (T3_ATTR_BATCH_ID), so every instance owns a copy of its geometry's
+ * vertices in mesh.geometry and a run of visible instances that follow each
+ * other in the buffer is ONE draw, on GLES and WebGPU alike. Add instances in
+ * an order that keeps neighbours together (by region, say) and a view draws a
+ * handful of runs. The price is memory: an instance of a geometry costs that
+ * geometry's vertices again (an InstancedMesh is the tool for many copies of
+ * one geometry; this is for many different ones).
+ *
+ * The counts given to t3_batched_mesh_new are reservations: storage grows as
+ * needed. Every geometry needs the attributes the first one added has
+ * (position always; normal, uv, color, tangent, uv1 as that one). Deleted
+ * instances keep their storage (no optimize()). setColorAt, setGeometryAt
+ * and raycasting are not there yet.
+ *
+ * per_object_frustum_culled (true, r187's perObjectFrustumCulled): each
+ * instance is tested against the camera's frustum, and the light's in a
+ * shadow pass. sort_objects (true): a TRANSPARENT material's instances are
+ * drawn back to front, one draw each unless neighbours stay in order; opaque
+ * ones are drawn in buffer order whatever it says (r187 sorts them front to
+ * back, which costs it nothing since it draws one by one anyway). */
+typedef struct t3_batched_mesh {
+  t3_mesh mesh;
+  bool per_object_frustum_culled, sort_objects;
+  t3_texture *matrices_texture, *indirect_texture;   /* owned; replaced when the instance capacity grows */
+  /* three.c's own (0): two runs with only out-of-view instances between them, at most this many indices' worth,
+   * are drawn as one (the instances in the gap are drawn and clipped: vertex work for a draw call less). 0 keeps
+   * each run exact. */
+  int bridge_indices;
+  uint32_t version;   /* moves when an instance is added, moved, shown, hidden or deleted (an embedder's shadow cache reads it) */
+  void *_impl;
+} t3_batched_mesh;
+t3_batched_mesh *t3_batched_mesh_new(int max_instance_count, int max_vertex_count, int max_index_count, t3_material *m);
+/* addGeometry: g is kept (retained) as the source of its instances. Returns its id, or -1 when its attributes do
+ * not match the first geometry's. */
+int t3_batched_mesh_add_geometry(t3_batched_mesh *b, t3_geometry *g);
+/* addInstance: a new instance of that geometry at the identity, visible. Returns its id, or -1. */
+int t3_batched_mesh_add_instance(t3_batched_mesh *b, int geometry_id);
+void t3_batched_mesh_set_matrix_at(t3_batched_mesh *b, int instance_id, const t3_mat4 *m);
+bool t3_batched_mesh_get_matrix_at(const t3_batched_mesh *b, int instance_id, t3_mat4 *out);
+void t3_batched_mesh_set_visible_at(t3_batched_mesh *b, int instance_id, bool visible);
+bool t3_batched_mesh_get_visible_at(const t3_batched_mesh *b, int instance_id);
+/* deleteInstance: never drawn again; its id is not handed out again */
+void t3_batched_mesh_delete_instance(t3_batched_mesh *b, int instance_id);
+int t3_batched_mesh_instance_count(const t3_batched_mesh *b);   /* ids handed out so far */
+/* the draws the last render (or shadow pass) of this mesh took, and the instances they covered */
+void t3_batched_mesh_last_draws(const t3_batched_mesh *b, int *runs, int *instances);
+#define T3_BATCHED_MESH_API 1
 
 t3_object *t3_object_new(void);
 t3_object *t3_group_new(void);

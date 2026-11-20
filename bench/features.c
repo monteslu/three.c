@@ -1650,3 +1650,66 @@ static void l1_setup(void) {
   t3_release(ring); t3_release(lobes);
 }
 static void l1_frame(void) { t3_renderer_render(R, S, C); }
+
+/* ── b1-batched: BatchedMesh (four geometries, 48 instances, shadows, one hidden, one deleted) ── */
+static t3_batched_mesh *b1_batch;
+static void b1_setup(void) {
+  R = make_renderer(0x1c2430);
+  t3_renderer_set_shadow_map(R, true, T3_PCF_SHADOW_MAP);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(45, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 9, 14);
+  t3_object_look_at(C, 0, 0.5f, 0);
+  enum { N = 32 };
+  static uint8_t data[N * N * 4];
+  for (int y = 0; y < N; y++)
+    for (int x = 0; x < N; x++) {
+      uint8_t *p = data + (y * N + x) * 4;
+      int on = ((x >> 2) + (y >> 2)) & 1;
+      p[0] = on ? 235 : 150; p[1] = on ? 225 : 120; p[2] = on ? 200 : 90; p[3] = 255;
+    }
+  t3_texture *map = t3_data_texture_new(N, N, data);
+  map->mag_filter = map->min_filter = T3_LINEAR;
+  map->color_space = T3_SRGB_COLOR_SPACE;
+  t3_geometry *geos[4] = { t3_box_geometry_new(1, 1, 1, 1, 1, 1), t3_sphere_geometry_new(0.6f, 20, 12),
+                           t3_cone_geometry_new(0.55f, 1.2f, 16, 1, false), t3_torus_geometry_new(0.45f, 0.2f, 10, 24, 6.283185307179586f) };
+  t3_material *bm = t3_mesh_standard_material_new(0xffffff);
+  t3_material_set_texture(bm, T3_MAP, map);
+  bm->roughness = 0.7f;
+  t3_batched_mesh *b = b1_batch = t3_batched_mesh_new(48, 0, 0, bm);
+  b->mesh.base.cast_shadow = b->mesh.base.receive_shadow = true;
+  int ids[4], inst[48];
+  for (int k = 0; k < 4; k++) ids[k] = t3_batched_mesh_add_geometry(b, geos[k]);
+  for (int k = 0; k < 48; k++) {
+    int col = k % 8, row = k / 8;
+    inst[k] = t3_batched_mesh_add_instance(b, ids[(k * 7 + row) % 4]);
+    float sc = 0.7f + 0.1f * (float)(k % 4);
+    t3_mat4 m;
+    t3_mat4_compose(&m, t3_v3((float)((col - 3.5) * 1.9), 0.75f + 0.25f * (float)((k * 5) % 3), (float)((row - 2.5) * 1.9)),
+                    t3_quat_from_euler((t3_euler){ 0.3f * (float)(k % 5), 0.7f * (float)(k % 7), 0.2f * (float)(k % 3), T3_XYZ }), t3_v3(sc, sc, sc));
+    t3_batched_mesh_set_matrix_at(b, inst[k], &m);
+  }
+  t3_batched_mesh_set_visible_at(b, inst[10], false);
+  t3_batched_mesh_delete_instance(b, inst[29]);
+  t3_object_add(&S->base, b);
+  t3_release(b); t3_release(bm); t3_release(map);
+  for (int k = 0; k < 4; k++) t3_release(geos[k]);
+  t3_geometry *pg = t3_plane_geometry_new(24, 18, 1, 1);
+  t3_material *gm = t3_mesh_standard_material_new(0x70808c);
+  gm->roughness = 0.9f;
+  t3_mesh *ground = add_mesh(&S->base, pg, gm);
+  t3_object_set_rotation(ground, -3.141592653589793f / 2, 0, 0);
+  ground->base.receive_shadow = true;
+  t3_release(pg); t3_release(gm);
+  add_light(t3_ambient_light_new(0x404858, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 2.5f);
+  t3_object_set_position(sun, 6, 10, 5);
+  sun->base.cast_shadow = true;
+  sun->shadow->map_width = sun->shadow->map_height = 2048;
+  t3_camera *sh = sun->shadow->camera;
+  sh->left = -12; sh->right = 12; sh->top = 12; sh->bottom = -12; sh->near = 1; sh->far = 40;
+  t3_camera_update_projection_matrix(sh);
+  sun->shadow->bias = -0.0005f;
+  add_light(sun);
+}
+static void b1_frame(void) { t3_renderer_render(R, S, C); }

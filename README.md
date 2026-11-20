@@ -59,7 +59,8 @@ tangents), aoMap, emissiveMap, roughnessMap, metalnessMap, alphaMap and
 lightMap, vertex colours (rgb, or rgba with the alpha ignored), transparency, alphaTest, flat shading, double and
 back sides, Texture / DataTexture / CubeTexture / DepthTexture, Box / Plane
 / Sphere / Cylinder / Cone / Torus / TorusKnot / Circle / Ring / Polyhedron
-/ Icosahedron geometry, InstancedMesh (with instance colours), SkinnedMesh /
+/ Icosahedron geometry, InstancedMesh (with instance colours), BatchedMesh
+(different geometries, one material, a run of visible instances one draw), SkinnedMesh /
 Bone / Skeleton, morph targets (positions and normals), render targets
 (depth textures, mipmaps, half float and float, multisample, depth-only, cube
 targets drawn by face and mip level), a reversed depth buffer (WebGPU, and GLES
@@ -122,7 +123,7 @@ has on first use, the same program the tables would hold.
 
 ## Same pixels as three.js r187
 
-`tools/parity-r187.mjs` renders 46 scenes (three.lua's compare scenes and
+`tools/parity-r187.mjs` renders 47 scenes (three.lua's compare scenes and
 three.c's feature scenes in `test/scenes`) with three.c and with unmodified
 three.js r187 on the same backend, and compares frame 100 (frame 3 for the
 compare scenes). A scene matches when at most 8 pixels differ by more than 2
@@ -131,8 +132,8 @@ paths produces.
 
 | Backend | three.js reference | Match | Differ |
 | --- | --- | --- | --- |
-| WebGPU | r187 WebGPURenderer on webgpu-node | 46 | 0 |
-| GLES / WebGL2 | r187 WebGPURenderer (forceWebGL) on webgl-node | 38 | 6: 1 r187 defect and 5 notes below |
+| WebGPU | r187 WebGPURenderer on webgpu-node | 47 | 0 |
+| GLES / WebGL2 | r187 WebGPURenderer (forceWebGL) on webgl-node | 39 | 6: 1 r187 defect and 5 notes below |
 
 The one defect is three.js's, on WebGL: a DepthTexture map and a colour map
 share one program, so the first built wins (`tools/r187-defects/` reproduces it
@@ -181,6 +182,8 @@ renders it has.
 
 What makes it fast:
 
+- BatchedMesh draws a run of visible instances that follow each other in its buffer as one draw, on both
+  backends (r187 draws one call an instance), with each instance frustum culled on its own
 - automatic instancing: opaque meshes that share a geometry and a material
   are drawn as one instanced draw with r187's instanced program
 - an InstancedMesh's changed instance data goes to the GPU, on GLES, as new

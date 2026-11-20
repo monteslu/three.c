@@ -45,7 +45,7 @@ typedef enum { T3_GEN_BASIC, T3_GEN_LAMBERT, T3_GEN_PHONG, T3_GEN_STANDARD, T3_G
 #define T3_GEN_TMNEUTRAL 536870912ull
 #define T3_GEN_LIN 1073741824ull
 #define T3_GEN_FOG2 2147483648ull
-#define T3_GEN_CLIP 4294967296ull
+#define T3_GEN_BATCH 4294967296ull
 #define T3_GEN_CLIPI 8589934592ull
 #define T3_GEN_ATEST 17179869184ull
 #define T3_GEN_TAN 34359738368ull
@@ -77,7 +77,7 @@ typedef enum { T3_GEN_BASIC, T3_GEN_LAMBERT, T3_GEN_PHONG, T3_GEN_STANDARD, T3_G
 #define T3_GEN_RDEPTH 2305843009213693952ull
 #define T3_GEN_GMAP 4611686018427387904ull
 /* the feature names by bit, as in state names */
-#define T3_GEN_FEATURE_NAMES { "map", "vcol", "fog", "inst", "trans", "flat", "rep", "nearest", "instbig", "nmap", "ao", "emap", "rmap", "mmap", "amap", "bump", "spec", "shadow", "skin", "morph", "env", "senv", "lmap", "noatten", "tmlinear", "tmreinhard", "tmcineon", "tmaces", "tmagx", "tmneutral", "lin", "fog2", "clip", "clipi", "atest", "tan", "morphn", "dmap", "cenv", "refr", "mix", "add", "ds", "bs", "cm", "icol", "cc", "ccn", "sheen", "irid", "aniso", "transm", "eon", "c1map", "c1nmap", "c1ao", "c1emap", "c1rmap", "c1mmap", "c1amap", "c1lmap", "rdepth", "gmap" }
+#define T3_GEN_FEATURE_NAMES { "map", "vcol", "fog", "inst", "trans", "flat", "rep", "nearest", "instbig", "nmap", "ao", "emap", "rmap", "mmap", "amap", "bump", "spec", "shadow", "skin", "morph", "env", "senv", "lmap", "noatten", "tmlinear", "tmreinhard", "tmcineon", "tmaces", "tmagx", "tmneutral", "lin", "fog2", "batch", "clipi", "atest", "tan", "morphn", "dmap", "cenv", "refr", "mix", "add", "ds", "bs", "cm", "icol", "cc", "ccn", "sheen", "irid", "aniso", "transm", "eon", "c1map", "c1nmap", "c1ao", "c1emap", "c1rmap", "c1mmap", "c1amap", "c1lmap", "rdepth", "gmap" }
 
 /* where a renderer-side property lives in the program's uniform data:
  * "material.color" -> group (index into groups), byte offset and length;

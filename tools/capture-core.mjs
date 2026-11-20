@@ -74,6 +74,8 @@ const FEATURES = {
   // attribute program, so both are captured (inst = 4 instances, instbig = 2000)
   instbig: () => {},
   icol: () => {},
+  // the mesh is a BatchedMesh (three instances of the geometry): its matrices and indirect textures, the batch id
+  batch: () => {},
   // MeshPhysicalMaterial's optional lobes: r187 compiles each in when its strength is above 0
   cc: (m) => { needs(m, 'clearcoat'); m.clearcoat = 0.5; },
   ccn: (m) => { needs(m, 'clearcoatNormalMap'); m.clearcoatNormalMap = dataTexture(); },
@@ -174,6 +176,9 @@ function allStates() {
   for (const kind of ['basic', 'lambert', 'phong', 'standard']) out.push(`${kind}+lmap`);
   out.push('standard+l2200+shadow', 'standard+skin', 'standard+morph', 'standard+skin+morph', 'basic+skin', 'basic+morph');
   out.push('depth', 'depth+inst', 'depth+instbig', 'depth+skin', 'depth+morph');
+  // BatchedMesh: the lit kinds, with a map, receiving shadows, and its caster
+  for (const kind of ['basic', 'lambert', 'phong', 'standard', 'physical', 'toon']) out.push(`${kind}+batch`, `${kind}+map+batch`);
+  out.push('standard+batch+shadow', 'standard+map+batch+shadow', 'standard+vcol+batch', 'standard+map+nmap+batch', 'depth+batch');
   // InstancedMesh.instanceColor (three.c draws every InstancedMesh with the attribute program)
   for (const kind of ['basic', 'lambert', 'phong', 'standard', 'physical']) out.push(`${kind}+instbig+icol`);
   out.push('standard+instbig+icol+shadow');
@@ -502,7 +507,12 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     mesh = new THREE.Sprite(mat);
     if (kind === 'sprite') { const cx0 = sentinel(), cy0 = sentinel(); mesh.center.set(cx0, cy0); props['sprite.center'] = { kind: 'vec2', value: [cx0, cy0] }; }
   } else {
-    mesh = features.includes('instbig') ? new THREE.InstancedMesh(geo, mat, 2000) : features.includes('inst') ? new THREE.InstancedMesh(geo, mat, 4) : new THREE.Mesh(geo, mat);
+    mesh = features.includes('batch') ? (() => {
+      const b = new THREE.BatchedMesh(5, geo.attributes.position.count * 2, (geo.index ? geo.index.count : geo.attributes.position.count) * 2, mat);
+      const gid = b.addGeometry(geo), m4 = new THREE.Matrix4();
+      for (let i = 0; i < 3; i++) b.setMatrixAt(b.addInstance(gid), m4.makeTranslation(0.25 * i, 0.5 * i, -0.125 * i));
+      return b;
+    })() : features.includes('instbig') ? new THREE.InstancedMesh(geo, mat, 2000) : features.includes('inst') ? new THREE.InstancedMesh(geo, mat, 4) : new THREE.Mesh(geo, mat);
   }
   if (features.includes('icol')) {
     if (!mesh.isInstancedMesh) throw new Error(`${stateName}: icol needs inst or instbig`);
@@ -712,6 +722,8 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
       return `shadow:${type}[${scene.children.filter((o) => o.castShadow && ((o.isDirectionalLight && l.isDirectionalLight) || (o.isSpotLight && l.isSpotLight) || (o.isPointLight && l.isPointLight))).indexOf(l)}]`;
     }
     for (const k of ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'specularMap', 'envMap', 'lightMap', 'bumpMap', 'displacementMap', 'clearcoatNormalMap', 'gradientMap']) if (mat[k] === t) return k;
+    if (mesh.isBatchedMesh && t === mesh._indirectTexture) return 'batch.indirect';
+    if (mesh.isBatchedMesh && t === mesh._matricesTexture) return 'batch.matrices';
     if (typeof t.name === 'string' && t.name.startsWith('ies:')) return t.name;   // an IESSpotLight's profile
     if (scene.environment && t === scene.environment) return 'environment';   /* (the material's own is 'envMap') */
     if (t.name === 'DFG_LUT') return 'dfg_lut';

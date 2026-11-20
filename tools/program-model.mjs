@@ -3,17 +3,25 @@
 // plain values. tools/emit-programs.mjs writes it as C; the runtime builder
 // (src/builder.c) reads it straight from QuickJS. Plain JS, no Node.
 //
-// The only edit to three.js's text: r187 names instanced attributes by node
+// The edits to three.js's text: r187 names instanced attributes by node
 // id (nodeAttribute<n>), so the instance colour's number depends on the
 // state; it is renamed instanceColor. The instance matrix columns stay
 // nodeAttribute0..3, which is checked.
+// A BatchedMesh program (feature batch) takes the id of the instance a vertex
+// belongs to from one place, which r187 feeds per draw: a uniform on WebGL2
+// without WEBGL_multi_draw (nodeUniformDrawId), the instance index on WebGPU
+// (one draw an instance, firstInstance = its number). three.c feeds the same
+// value from a vertex attribute, t3_batchId (each instance owns its vertices),
+// so consecutive visible instances are one draw on both backends: the uniform's
+// declaration becomes the attribute's, the builtin parameter becomes a vertex
+// input. Everything the program computes from the id is r187's.
 
 export const KINDS = ['basic', 'lambert', 'phong', 'standard', 'physical', 'depth', 'points', 'psprite', 'line', 'sprite', 'normal', 'output',
   'bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremintegration', 'pmremblur', 'toon'];
 // feature bits (64): the order is the C ABI of the table, append only
 export const FEATURE_NAMES = ['map', 'vcol', 'fog', 'inst', 'trans', 'flat', 'rep', 'nearest', 'instbig', 'nmap', 'ao', 'emap', 'rmap', 'mmap',
   'amap', 'bump', 'spec', 'shadow', 'skin', 'morph', 'env', 'senv', 'lmap', 'noatten', 'tmlinear', 'tmreinhard', 'tmcineon', 'tmaces',
-  'tmagx', 'tmneutral', 'lin', 'fog2', 'clip', 'clipi', 'atest', 'tan', 'morphn', 'dmap', 'cenv', 'refr', 'mix', 'add', 'ds', 'bs', 'cm', 'icol', 'cc', 'ccn', 'sheen', 'irid', 'aniso', 'transm', 'eon',
+  'tmagx', 'tmneutral', 'lin', 'fog2', 'batch', 'clipi', 'atest', 'tan', 'morphn', 'dmap', 'cenv', 'refr', 'mix', 'add', 'ds', 'bs', 'cm', 'icol', 'cc', 'ccn', 'sheen', 'irid', 'aniso', 'transm', 'eon',
   'c1map', 'c1nmap', 'c1ao', 'c1emap', 'c1rmap', 'c1mmap', 'c1amap', 'c1lmap', 'rdepth', 'gmap'];
 // backend.h's t3_bk_sample_type / t3_bk_tex_dim, by index
 export const SAMPLES = ['float', 'unfilterable-float', 'depth', 'sint', 'uint'];
@@ -90,6 +98,20 @@ export function programModel(state, be, j, vert, frag) {
     vert = vert.replace(re, 'instanceColor');
     frag = frag.replace(re, 'instanceColor');
     a.name = 'instanceColor';
+  }
+  if (j.features.includes('batch')) {
+    const loc = attributes.length;
+    if (be === 'wgpu') {
+      const from = '@builtin( instance_index ) instanceIndex : u32,';
+      if (vert.split(from).length !== 2 || !/\bi32\( instanceIndex \)/.test(vert)) throw new Error(`${state}.${be}: a batch program without the one instance index parameter`);
+      vert = vert.replace(from, `@location( ${loc} ) t3_batchId : f32,`).replace(/\bi32\( instanceIndex \)/g, 'i32( t3_batchId )');
+      if (/\binstanceIndex\b/.test(vert)) throw new Error(`${state}.${be}: the instance index is read in a way three.c does not rewrite`);
+    } else {
+      const from = 'uniform uint nodeUniformDrawId;';
+      if (vert.split(from).length !== 2) throw new Error(`${state}.${be}: a batch program without the one draw id uniform`);
+      vert = vert.replace(from, `layout( location = ${loc} ) in float t3_batchId;\n#define nodeUniformDrawId uint( t3_batchId )`);
+    }
+    attributes.push({ name: 't3_batchId', type: 'float', location: loc, itemSize: 1, instanced: false });
   }
   if (be === 'wgpu') {
     const nvb = vertexBufferLayout(attributes).length;

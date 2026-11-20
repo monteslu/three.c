@@ -103,6 +103,15 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
         if (!views[nt]) return false;
         break;
       }
+      case T3_SRC_BATCH_INDIRECT: case T3_SRC_BATCH_MATRICES: {
+        if (!o || o->type != T3_BATCHED_MESH) return false;
+        const t3_batched_mesh *bm = (const t3_batched_mesh *)o;
+        t3_texture *tx = kind == T3_SRC_BATCH_INDIRECT ? bm->indirect_texture : bm->matrices_texture;
+        views[nt] = t3_wgpu_texture(w, tx);
+        samplers[nt] = t3_wgpu_sampler(w, tx, false);
+        if (!views[nt]) return false;
+        break;
+      }
       case T3_SRC_IES: {
         t3_texture *tx = arg < r->ls.num_spot ? r->ls.spot[arg]->ies_map : NULL;
         if (!tx) return false;
@@ -234,6 +243,21 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   int count = end - start;
   if (count <= 0) return;
   int instances = batched ? it->batch_count : o->type == T3_INSTANCED_MESH ? ((t3_instanced_mesh *)o)->count : 1;
+  if (o->type == T3_BATCHED_MESH && g->index) {
+    /* the runs of visible instances (t3__batched_runs), each one draw */
+    uint32_t fmt;
+    WGPUBuffer ib = t3_wgpu_attribute(w, g->index, true, &fmt);
+    t3_wgpu_set_index_buffer(w, ib, fmt);
+    const int *runs;
+    bool tr = state->transparent && !r->rendering_shadows;
+    int nr = t3__batched_runs((t3_batched_mesh *)o, r->rendering_shadows ? &r->shadow_frustum : &r->frustum, tr ? &cam->matrix_world_inverse : NULL, &runs);
+    for (int k = 0; k < nr; k++) {
+      wgpuRenderPassEncoderDrawIndexed(pass, (uint32_t)runs[k * 2 + 1], 1, (uint32_t)runs[k * 2], 0, 0);
+      r->info.calls++;
+      r->info.triangles += (unsigned)(runs[k * 2 + 1] / 3);
+    }
+    return;
+  }
   if (g->index) {
     uint32_t fmt;
     WGPUBuffer ib = t3_wgpu_attribute(w, g->index, true, &fmt);

@@ -142,6 +142,7 @@ struct t3_renderer {
   t3_render_target *target;
   const t3_texture *environment; /* the scene being rendered's environment */
   bool rendering_shadows;
+  const t3_object *gen_draw_obj;   /* the object whose textures a GLES draw binds (a BatchedMesh's) */
   /* GPU timing: a ring of GL_TIME_ELAPSED_EXT queries in flight */
   bool gpu_timing, gq_active;
   GLuint gq[4];
@@ -956,6 +957,7 @@ static GLuint build_vao(t3_renderer *r, t3_geometry *g, t3_instanced_mesh *im) {
     if (g->attributes[s]) bind_float_attr(g->attributes[s], locs[s]);
   if (g->attributes[T3_ATTR_SKIN_INDEX]) bind_float_attr(g->attributes[T3_ATTR_SKIN_INDEX], A_SKIN_INDEX);
   if (g->attributes[T3_ATTR_SKIN_WEIGHT]) bind_float_attr(g->attributes[T3_ATTR_SKIN_WEIGHT], A_SKIN_WEIGHT);
+  if (g->attributes[T3_ATTR_BATCH_ID]) bind_float_attr(g->attributes[T3_ATTR_BATCH_ID], A_BATCH_ID);
   if (g->index) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, attribute_buffer(g->index, GL_ELEMENT_ARRAY_BUFFER));
   if (im) {
     glBindBuffer(GL_ARRAY_BUFFER, attribute_buffer(im->instance_matrix, GL_ARRAY_BUFFER));
@@ -1847,7 +1849,7 @@ T3_HOT static void project_one(t3_renderer *r, t3_object *o, int in_frustum) {
       r->casters[r->caster_count++] = (t3_light *)o;
     }
     break;
-  case T3_MESH: case T3_INSTANCED_MESH: case T3_SKINNED_MESH: {
+  case T3_MESH: case T3_INSTANCED_MESH: case T3_SKINNED_MESH: case T3_BATCHED_MESH: {
     t3_mesh *m = (t3_mesh *)o;
     t3_geometry *g = m->geometry;
     if (!g || !g->attributes[T3_ATTR_POSITION]) break;
@@ -2343,6 +2345,19 @@ static void issue_draw(t3_renderer *r, const render_item *it, t3_object *o, t3_g
   if (end > total) end = total;
   int count = end - start;
   if (count <= 0) return;
+  if (o->type == T3_BATCHED_MESH) {
+    /* the runs of visible instances, each a range of the index buffer (t3__batched_runs) */
+    const int *runs;
+    bool tr = it->material && it->material->transparent && !r->rendering_shadows;
+    int nr = t3__batched_runs((t3_batched_mesh *)o, r->rendering_shadows ? &r->shadow_frustum : &r->frustum,
+                              tr && r->camera ? &r->camera->matrix_world_inverse : NULL, &runs);
+    for (int k = 0; k < nr; k++) {
+      glDrawElements(GL_TRIANGLES, runs[k * 2 + 1], GL_UNSIGNED_INT, (void *)(intptr_t)(runs[k * 2] * 4));
+      r->info.calls++;
+      r->info.triangles += (unsigned)(runs[k * 2 + 1] / 3);
+    }
+    return;
+  }
   bool instanced = o->type == T3_INSTANCED_MESH || it->batch_count;
   int instances = it->batch_count ? it->batch_count : o->type == T3_INSTANCED_MESH ? ((t3_instanced_mesh *)o)->count : 1;
   /* renderBufferDirect: LINES for LineSegments, LINE_LOOP, LINE_STRIP for Line */
@@ -2467,7 +2482,7 @@ static void compile_lights(t3_object *o, void *ctx) {
 static void compile_object(t3_object *o, void *ctx) {
   t3_renderer *r = ctx;
   switch (o->type) {
-  case T3_MESH: case T3_INSTANCED_MESH: case T3_SKINNED_MESH: case T3_LINE: case T3_LINE_SEGMENTS: case T3_LINE_LOOP:
+  case T3_MESH: case T3_INSTANCED_MESH: case T3_SKINNED_MESH: case T3_BATCHED_MESH: case T3_LINE: case T3_LINE_SEGMENTS: case T3_LINE_LOOP:
   case T3_POINTS: case T3_SPRITE: {
     t3_mesh *m = (t3_mesh *)o;
     if (!m->geometry) break;

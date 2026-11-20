@@ -49,7 +49,7 @@ three.c needs neither Node nor three.js.
 
 A backend's shaders differ by a few lines per feature, so a table stores its
 distinct lines once and each shader as the list of its lines, deflated
-together (about 0.2 MB per backend for the full table's 378 states). The
+together (about 0.2 MB per backend for the full table's 396 states). The
 first program built from a table inflates its text (kept for the table's
 other programs) with stb_image's inflater, which three.c already carries for
 PNG. A full-table wasm cart is about 1.25 MB (0.9 MB with the core table).
@@ -269,6 +269,32 @@ that fills it:
 `e2-extension-shadow`, `e3-extension-textures` and
 `e4-extension-many-textures` scenes (under `tools/parity-r187.mjs`, against r187
 running the same TSL) check it.
+
+## BatchedMesh
+
+A BatchedMesh (`t3_batched_mesh_new`, state feature `batch`, caster `depth+batch`) draws with r187's
+BatchedMesh programs: each vertex's instance matrix is read from the matrices texture (four RGBA32F texels an
+instance) through the indirect texture (R32UI), both r187's layouts. What three.c changes is where the program
+gets the id it looks up. r187 feeds it per draw: a uniform (`nodeUniformDrawId`) set before each instance's
+draw on WebGL2 without WEBGL_multi_draw, the instance index on WebGPU (one `drawIndexed` an instance, its
+number as firstInstance). Either way that is a draw call an instance. three.c feeds the id from a vertex attribute,
+`t3_batchId` (`T3_ATTR_BATCH_ID`, GL location 12): tools/program-model.mjs turns the uniform's declaration
+into the attribute's (`#define nodeUniformDrawId uint( t3_batchId )`) and the WGSL builtin parameter into a
+vertex input, and checks a batch program has exactly the one it expects. Each instance therefore owns a copy of
+its geometry's vertices, and the instances that are visible and follow each other in the buffer are one draw: 48
+instances with one hidden and one deleted are three draws, not 46. The indirect texture is the identity (the id
+is the instance's own), so culling uploads nothing.
+
+Per render the instances are tested against the camera's frustum (the light's in a shadow pass) by their
+bounding spheres, and the runs are built from the survivors (`t3_batched_mesh_last_draws` reports them). A
+transparent material's instances are sorted back to front first, so they are separate draws unless neighbours
+stay in order. On WebGPU a batch program binds one vertex buffer an attribute plus the id: seven with normals, uv,
+vertex colours, tangents and a second uv set, inside the eight every device has; a program over the limit is
+refused by name, as for any other.
+
+The parity scene `b1-batched` (four geometries, 48 instances, shadows cast and received) matches r187's own
+BatchedMesh on both backends; test/test_batched.c compares a batch with the same meshes drawn one by one and
+counts the draws, with a control.
 
 ## renderer.info
 

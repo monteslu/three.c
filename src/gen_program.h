@@ -24,7 +24,8 @@ enum {
   A_POSITION = 0, A_NORMAL = 1, A_UV = 2, A_COLOR = 3, A_TANGENT = 4, A_UV1 = 5,
   A_INSTANCE_MATRIX = 7, /* 7..10 */
   A_INSTANCE_COLOR = 11,
-  A_SKIN_INDEX = 6, A_SKIN_WEIGHT = 15
+  A_SKIN_INDEX = 6, A_SKIN_WEIGHT = 15,
+  A_BATCH_ID = 12   /* a BatchedMesh's t3_batchId (never skinned or instanced) */
 };
 
 #ifndef GL_UNIFORM_BUFFER
@@ -110,6 +111,7 @@ enum {
   T3_SRC_ENV, T3_SRC_BG, T3_SRC_PMREM,
   T3_SRC_SHADOW_DIR, T3_SRC_SHADOW_SPOT, T3_SRC_SHADOW_POINT, T3_SRC_SHADOW_NONE,
   T3_SRC_BONES, T3_SRC_MORPH_INFLUENCES,
+  T3_SRC_BATCH_INDIRECT, T3_SRC_BATCH_MATRICES,   /* the drawn BatchedMesh's textures */
   T3_SRC_IES,  /* a spot light's iesMap ("ies:spot[i]"); arg: the light index */
   T3_SRC_EXT   /* an extension's own texture ("ext.<name>"); arg: its slot in t3_gen_gl.ext_tex */
 };

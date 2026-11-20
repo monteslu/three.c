@@ -58,6 +58,10 @@ run test_toon_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./buil
 # t3_ies_texture_parse against three.js's IESLoader, texel for texel (three profiles; the control must differ)
 "$CC" -std=c99 -O2 -I include test/test_ies.c build/native/libthree.a -lz -lm -o build/test/test_ies
 run test_ies node test/test_ies.mjs build/test/test_ies
+# BatchedMesh: the same picture as the meshes drawn one by one, in runs (1 draw, 3 with a hidden and a deleted instance), culled per instance; the control must fail
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_batched.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_batched
+run test_batched env EGL_PLATFORM=surfaceless ./build/test/test_batched
+run test_batched_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_batched >/dev/null 2>&1"
 # extension materials auto-instanced (t3_renderer_set_extension_batching) and a texture sampled 24
 # times: a table of the tests' own (the tint example, plain and instanced; many), captured on the mock GPU
 mkdir -p build/test/exttab
