@@ -172,3 +172,119 @@ fail:
   t3_release(g);
   return NULL;
 }
+
+/* ── IESLoader (three.js examples/jsm/loaders/IESLoader.js): an IES photometric
+ * file (IESNA LM-63) as the texture an IESSpotLight takes. Follows the loader
+ * step for step: every number after the TILT line is read in file order
+ * (commas and any white space separate them), the candela values are scaled
+ * by multiplier x ballast factor x ballast-lamp factor and normalized to the
+ * brightest one, the horizontal angles are shifted to start at 0 (a range
+ * that ends between 180 and 360 gets the 360 entry some files leave out) and
+ * the texture is 180 texels of vertical angle by 1 row (one horizontal angle)
+ * or 360 rows (one a degree, the measured range mirrored around the cycle). */
+#include <math.h>
+
+typedef struct { const char *p, *end; bool err; } ies_in;
+static double ies_num(ies_in *in) {
+  while (in->p < in->end && (*in->p == ' ' || *in->p == '\t' || *in->p == '\r' || *in->p == '\n' || *in->p == ',')) in->p++;
+  if (in->p >= in->end) { in->err = true; return 0; }
+  char buf[48];
+  size_t n = 0;
+  while (in->p < in->end && n < sizeof buf - 1 && !(*in->p == ' ' || *in->p == '\t' || *in->p == '\r' || *in->p == '\n' || *in->p == ',')) buf[n++] = *in->p++;
+  buf[n] = 0;
+  char *e;
+  double v = strtod(buf, &e);
+  if (e == buf) in->err = true;
+  return v;
+}
+static uint16_t ies_half(double d) {
+  /* DataUtils.toHalfFloat: clamped to the half range, the mantissa truncated (its table lookup) */
+  float f = (float)(d > 65504 ? 65504 : d < -65504 ? -65504 : d);
+  uint32_t x;
+  memcpy(&x, &f, 4);
+  uint32_t sign = (x >> 16) & 0x8000u, mant = x & 0x7fffffu;
+  int e = (int)((x >> 23) & 0xff) - 127;
+  if (e < -24) return (uint16_t)sign;
+  if (e < -14) return (uint16_t)(sign | ((mant | 0x800000u) >> (-e - 1)));
+  if (e <= 15) return (uint16_t)(sign | ((uint32_t)(e + 15) << 10) | (mant >> 13));
+  return (uint16_t)(sign | 0x7c00u);
+}
+
+t3_texture *t3_ies_texture_parse(const char *text, size_t len) {
+  if (!text) return NULL;
+  /* the line with TILT: NONE, INCLUDE (tilt data follows) or a file name (not read, as three.js) */
+  const char *end = text + len, *line = text, *tilt = NULL, *eol = NULL;
+  while (line < end && !tilt) {
+    eol = memchr(line, '\n', (size_t)(end - line));
+    if (!eol) eol = end;
+    for (const char *q = line; q + 4 <= eol; q++) if (!memcmp(q, "TILT", 4)) { tilt = q; break; }
+    if (!tilt) line = eol < end ? eol + 1 : end;
+  }
+  if (!tilt) return NULL;
+  bool none = false, include = false;
+  for (const char *q = tilt; q + 4 <= eol; q++) if (!memcmp(q, "NONE", 4)) none = true;
+  for (const char *q = tilt; q + 7 <= eol; q++) if (!memcmp(q, "INCLUDE", 7)) include = true;
+  ies_in in = { eol < end ? eol + 1 : end, end, false };
+  if (!none && include) {
+    ies_num(&in);                         /* lamp to luminaire geometry */
+    int n = (int)ies_num(&in);
+    if (n < 0 || n > 4096) return NULL;
+    for (int i = 0; i < 2 * n; i++) ies_num(&in);   /* angles, multiplying factors: unused by the loader */
+  }
+  double v[13];
+  for (int i = 0; i < 13; i++) v[i] = ies_num(&in);   /* 10 lamp values, 3 factors */
+  int nv = (int)v[3], nh = (int)v[4];
+  if (in.err || nv < 2 || nh < 1 || nv > 4096 || nh > 4096) return NULL;
+  double mul = v[2] * v[10] * v[11];
+  double *ver = malloc(sizeof *ver * (size_t)nv), *hor = malloc(sizeof *hor * (size_t)(nh + 1));
+  double *cd = malloc(sizeof *cd * (size_t)(nh + 1) * (size_t)nv);
+  T3_CHECK_ALLOC(ver); T3_CHECK_ALLOC(hor); T3_CHECK_ALLOC(cd);
+  for (int i = 0; i < nv; i++) ver[i] = ies_num(&in);
+  for (int i = 0; i < nh; i++) hor[i] = ies_num(&in);
+  double max = -1, base;
+  for (int i = 0; i < nh * nv; i++) { cd[i] = ies_num(&in) * mul; if (cd[i] > max) max = cd[i]; }
+  if (in.err) { free(ver); free(hor); free(cd); return NULL; }
+  base = hor[0];
+  for (int i = 0; i < nh; i++) hor[i] -= base;
+  if (hor[nh - 1] > 180 && hor[nh - 1] < 360) {
+    hor[nh] = 360;
+    memcpy(cd + (size_t)nh * nv, cd, sizeof *cd * (size_t)nv);
+    nh++;
+  }
+  if (max > 0) for (int i = 0; i < nh * nv; i++) cd[i] /= max;
+  int width = nh == 1 ? 1 : 360, height = 180;   /* (the loader's names: its texture is `height` wide and `width` rows) */
+  uint16_t *px = malloc(sizeof *px * 4 * (size_t)width * height);
+  T3_CHECK_ALLOC(px);
+  double end_theta = hor[nh - 1];
+  for (int i = 0; i < width * height; i++) {
+    int theta_i = i % width, phi_i = i / width;
+    double theta = theta_i;
+    if (end_theta != 0 && theta > end_theta) {
+      theta = fmod(theta, end_theta * 2);
+      if (theta > end_theta) theta = end_theta * 2 - theta;
+    }
+    double phi = phi_i * 180.0 / (height - 1);
+    /* interpolateCandelaValues( phi, theta ) */
+    int ti = 0, pi = 0;
+    double st = 0, et = 0, sp = 0, ep = 0;
+    for (int k = 0; k < nh - 1; k++) if (theta < hor[k + 1] || k == nh - 2) { ti = k; st = hor[k]; et = hor[k + 1]; break; }
+    for (int k = 0; k < nv - 1; k++) if (phi < ver[k + 1] || k == nv - 2) { pi = k; sp = ver[k]; ep = ver[k + 1]; break; }
+    double dt = et - st, dp = ep - sp, val = 0;
+    if (dp != 0) {
+      double t1 = dt == 0 ? 0 : (theta - st) / dt, t2 = (phi - sp) / dp;
+      int nt = dt == 0 ? ti : ti + 1;
+      double a0 = cd[(size_t)ti * nv + pi], a1 = cd[(size_t)nt * nv + pi], b0 = cd[(size_t)ti * nv + pi + 1], b1 = cd[(size_t)nt * nv + pi + 1];
+      double v1 = a0 + (a1 - a0) * t1, v2 = b0 + (b1 - b0) * t1;
+      val = v1 + (v2 - v1) * t2;
+    }
+    uint16_t *o = px + 4 * ((size_t)theta_i * height + phi_i);   /* texel (phi, theta) */
+    o[0] = o[1] = o[2] = ies_half(val);
+    o[3] = 0x3c00;
+  }
+  /* (three.js makes it RedFormat; three.c's textures are RGBA, the program reads red) */
+  t3_texture *t = t3_data_texture_new_typed(height, width, px, T3_HALF_FLOAT_TYPE);
+  t->min_filter = t->mag_filter = T3_LINEAR;
+  t->wrap_t = T3_REPEAT;
+  free(px); free(ver); free(hor); free(cd);
+  return t;
+}

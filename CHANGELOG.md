@@ -5,6 +5,27 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.11 (2026-11-19)
+
+### Added
+- **IESSpotLight and IESLoader.** `t3_ies_spot_light_new` and `t3_light_set_ies_map` (`light->ies_map`): a spot
+  light whose shape is a photometric profile, drawn with the programs r187 generates for its IESSpotLightNode (the
+  profile replaces the cone: its x is the tilt off the light's axis, its y the twist around it), with or without a
+  shadow. `t3_ies_texture_parse` is IESLoader.parse: the text of an IES file (LM-63) as that texture, 180 texels of
+  tilt by one row (a single horizontal angle) or 360 (mirrored as the file's range asks; a range ending between
+  180 and 360 gets its missing 360 entry), half floats normalized to the brightest direction. `T3_IES` says it
+  exists. test/test_ies.mjs compares three profiles with three.js's IESLoader texel for texel (its control, another
+  profile, differs); the parity scene `l1-ies` (a symmetric profile casting a shadow, a 0 to 180 degree one, a plain
+  spot) matches r187 on WebGPU and GLES.
+- **State token `ies<hex>`**: the spot lights of the vector (by id) that are IESSpotLights with an iesMap, as a bit
+  mask (`standard+l0030+ies3`); `t3_gen_program` gains `ies` as its last field. States without the token are
+  unchanged; a project's table needs regenerating against this version's programs.h, as for any release that changes
+  it. Up to eight spot lights can be IES ones.
+
+### Fixed
+- A capture with spot lights of two classes (a SpotLight after an IESSpotLight) counted shadow casters per class,
+  not per light type (tools/capture-core.mjs); no state of the base tables had both.
+
 ## v0.187.10 (2026-11-19)
 
 ### Changed

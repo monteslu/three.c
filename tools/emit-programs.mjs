@@ -158,7 +158,7 @@ ${guard ? `/* the ${guard === 'ifdef' ? 'core' : 'full'} table: T3_TABLE_CORE pi
   const packed = packText(shaders);
   out += `/* ${shaders.length} distinct shaders, ${(packed.raw / 1024).toFixed(0)} KB packed, deflated (packText) */\nstatic const uint8_t text_z[] = {\n${cbytes(packed.z)}};\nstatic t3_gen_text_cache text_cache;\nstatic const t3_gen_text text = { text_z, ${packed.z.length}, ${packed.raw}, &text_cache };\n\n`;
   out += `static const t3_gen_program programs[] = {\n`;
-  for (const { m, S, bits, v, f } of entries) out += `  { ${cq(m.state)}, T3_GEN_${KINDS[m.kind].toUpperCase()}, ${bits}ull, { ${m.lights.join(', ')} }, ${m.extension ? cq(m.extension) : 'NULL'}, ${BE}, groups_${S}, ${m.groups.length}, p_${S}, ${m.properties.length}, a_${S}, ${m.attributes.length}, ${m.constants.length ? `k_${S}` : 'NULL'}, ${m.constants.length}, { ${m.tpl.join(', ')} }, { ${m.cast.join(', ')} }, NULL, NULL, &text, ${v}, ${f} },\n`;
+  for (const { m, S, bits, v, f } of entries) out += `  { ${cq(m.state)}, T3_GEN_${KINDS[m.kind].toUpperCase()}, ${bits}ull, { ${m.lights.join(', ')} }, ${m.extension ? cq(m.extension) : 'NULL'}, ${BE}, groups_${S}, ${m.groups.length}, p_${S}, ${m.properties.length}, a_${S}, ${m.attributes.length}, ${m.constants.length ? `k_${S}` : 'NULL'}, ${m.constants.length}, { ${m.tpl.join(', ')} }, { ${m.cast.join(', ')} }, NULL, NULL, &text, ${v}, ${f}, ${m.ies} },\n`;
   out += `};
 const t3_gen_table ${tableName} = { programs, ${entries.length} };
 ${guard ? '#endif\n' : ''}`;
@@ -218,6 +218,7 @@ typedef struct {
    * text; t3_gen_source returns it either way */
   const char *vertex, *fragment;
   const struct t3_gen_text *text; uint32_t vtext, ftext;
+  uint8_t ies;                  /* bit k: spot light k is an IESSpotLight with an iesMap (the state's ies<hex>) */
 } t3_gen_program;
 
 /* a table of programs: three.c's own (programs_gl.c, or programs_core_gl.c

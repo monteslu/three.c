@@ -49,7 +49,7 @@ three.c needs neither Node nor three.js.
 
 A backend's shaders differ by a few lines per feature, so a table stores its
 distinct lines once and each shader as the list of its lines, deflated
-together (about 0.2 MB per backend for the full table's 376 states). The
+together (about 0.2 MB per backend for the full table's 378 states). The
 first program built from a table inflates its text (kept for the table's
 other programs) with stb_image's inflater, which three.c already carries for
 PNG. A full-table wasm cart is about 1.25 MB (0.9 MB with the core table).
@@ -75,6 +75,10 @@ with `+`:
 - **`lDPSH`:** the number of directional, point, spot and hemisphere lights.
   Lit kinds default to `l1100` and always have an ambient light.
 - **`sDPS`:** how many directional, point and spot lights cast shadows.
+- **`ies<hex>`:** which spot lights are IESSpotLights with an iesMap, as a bit mask over the vector's
+  spot lights in id order (`standard+l0030+ies3`: the first two of three). Such a light's cone comes from its
+  profile texture, so its program differs; a state without the token has none. A draw takes a program whose mask
+  equals the frame's (a program's extra spot lights, covering a smaller vector, are plain ones).
 - **`x<name>`:** an extension module (`tools/extensions/<name>.mjs`) that
   adds TSL nodes and uniforms of its own before the capture (see
   "Extension programs").

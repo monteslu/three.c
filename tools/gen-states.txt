@@ -118,3 +118,6 @@ standard+map+ao+lmap+c1map+c1ao+c1lmap+l1000
 toon+shadow+l1100+s100
 toon+gmap+shadow+l1100+s100
 toon+map+gmap+shadow+l1100+s100
+# l1-ies: two IESSpotLights (the first casting) and a plain spot light
+standard+l0030+ies3
+standard+shadow+l0030+s001+ies3

@@ -103,6 +103,14 @@ static bool wgpu_bind_groups(t3_renderer *r, t3_gen_gl *gl, const t3_material *m
         if (!views[nt]) return false;
         break;
       }
+      case T3_SRC_IES: {
+        t3_texture *tx = arg < r->ls.num_spot ? r->ls.spot[arg]->ies_map : NULL;
+        if (!tx) return false;
+        views[nt] = t3_wgpu_texture(w, tx);
+        samplers[nt] = t3_wgpu_sampler(w, tx, false);
+        if (!views[nt]) return false;
+        break;
+      }
       case T3_SRC_MAT: {
         const t3_texture *tx = m ? gen_tex(m, arg) : NULL;
         if (!tx) return false;

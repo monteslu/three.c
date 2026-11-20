@@ -148,5 +148,5 @@ export function programModel(state, be, j, vert, frag) {
   const tpl = j.templates ?? {};
   return { state, backend: be, kind, features, lights, extension: j.extension ?? null, groups, properties, constants,
     attributes: attributes.map((a) => ({ name: a.name, type: a.type, location: a.location, instanced: !!a.instanced })),
-    tpl: [tpl.bones ?? 0, tpl.morphs ?? 0, tpl.morphWidth ?? 0], cast: j.cast ?? [0, 0, 0], vertex: vert, fragment: frag, three: j.three };
+    tpl: [tpl.bones ?? 0, tpl.morphs ?? 0, tpl.morphWidth ?? 0], cast: j.cast ?? [0, 0, 0], ies: j.ies ?? 0, vertex: vert, fragment: frag, three: j.three };
 }

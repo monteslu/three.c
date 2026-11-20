@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.10"
+#define T3_VERSION "0.187.11"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -696,6 +696,10 @@ typedef struct t3_light {
   float intensity, distance, decay, angle, penumbra;
   t3_object *target;            /* owned; three.js's light.target */
   t3_light_shadow *shadow;      /* directional / spot / point */
+  /* IESSpotLight.iesMap (a spot light; retained, t3_light_set_ies_map): the light's shape as a photometric
+   * profile. With one, the profile replaces the cone (angle and penumbra): its x is the tilt off the light's
+   * axis, 0 to 180 degrees, its y the twist around it (one row: the same all the way round). NULL: a SpotLight. */
+  t3_texture *ies_map;
 } t3_light;
 
 t3_object *t3_object_new(void);
@@ -780,6 +784,16 @@ t3_light *t3_hemisphere_light_new(uint32_t sky, uint32_t ground, float intensity
 t3_light *t3_directional_light_new(uint32_t color, float intensity);
 t3_light *t3_point_light_new(uint32_t color, float intensity, float distance, float decay);
 t3_light *t3_spot_light_new(uint32_t color, float intensity, float distance, float angle, float penumbra, float decay);
+/* IESSpotLight: a SpotLight that takes an iesMap */
+t3_light *t3_ies_spot_light_new(uint32_t color, float intensity, float distance, float angle, float penumbra, float decay);
+/* light.iesMap = map (NULL: none) */
+void t3_light_set_ies_map(t3_light *l, t3_texture *map);
+/* IESLoader.parse: the text of an IES photometric file (IESNA LM-63) as the texture an IESSpotLight takes: 180
+ * texels of tilt, one row for a profile measured at a single horizontal angle and 360 rows (one a degree of
+ * twist, mirrored as the file's range asks) otherwise, half floats normalized to the brightest direction,
+ * linear, the twist repeating. NULL when the text is not an IES file (no TILT line, counts that do not add up). */
+t3_texture *t3_ies_texture_parse(const char *text, size_t len);
+#define T3_IES 1
 
 void t3_object_add(t3_object *parent, void *child);
 void t3_object_remove(t3_object *parent, void *child);

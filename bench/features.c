@@ -1599,3 +1599,54 @@ static void m1_setup(void) {
   add_light(lamp);
 }
 static void m1_frame(void) { t3_renderer_render(R, S, C); }
+
+/* ── l1-ies: IESSpotLight (a symmetric profile with a shadow, a 2D profile, a plain spot) ── */
+static const char L1_IES_RING[] =
+  "IESNA:LM-63-2002\n[TEST] three.c l1-ies ring\n[MANUFAC] none\nTILT=NONE\n1 1000 1 10 1 1 2 0 0 0\n1 1 100\n"
+  "0 5 10 15 20 25 30 40 60 90\n0\n300 320 500 900 1000 700 260 80 10 0\n";
+static const char L1_IES_LOBES[] =
+  "IESNA:LM-63-2002\n[TEST] three.c l1-ies lobes\nTILT=NONE\n1 1000 2 7 5 1 2 0 0 0\n1 0.5 100\n0 10 20 30 45 60 90\n0 45 90 135 180\n"
+  "1000 950 800 500 200 40 0\n700 700 650 600 420 200 0\n300 320 380 420 380 160 0\n120 110 100 80 40 10 0\n60 50 30 10 0 0 0\n";
+static t3_light *l1_spot(t3_light *l, float x, t3_texture *map) {
+  t3_object_set_position(l, x, 5, 1.5f);
+  t3_object_set_position(l->target, x, 0, -0.5f);
+  if (map) t3_light_set_ies_map(l, map);
+  t3_object_add(&S->base, l);
+  t3_object_add(&S->base, l->target);
+  t3_release(l);
+  return l;
+}
+static void l1_setup(void) {
+  R = make_renderer(0x05060a);
+  t3_renderer_set_shadow_map(R, true, T3_PCF_SHADOW_MAP);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(50, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 5.5f, 11);
+  t3_object_look_at(C, 0, 1.2f, 0);
+  t3_texture *ring = t3_ies_texture_parse(L1_IES_RING, sizeof L1_IES_RING - 1), *lobes = t3_ies_texture_parse(L1_IES_LOBES, sizeof L1_IES_LOBES - 1);
+  t3_material *mat = t3_mesh_standard_material_new(0x9a9690);
+  mat->roughness = 0.85f;
+  t3_geometry *fg = t3_plane_geometry_new(22, 14, 1, 1), *wg = t3_plane_geometry_new(22, 8, 1, 1);
+  t3_mesh *floor = add_mesh(&S->base, fg, mat);
+  t3_object_set_rotation(floor, -3.141592653589793f / 2, 0, 0);
+  floor->base.receive_shadow = true;
+  t3_object_set_position(add_mesh(&S->base, wg, mat), 0, 4, -4);
+  t3_material *bm = t3_mesh_standard_material_new(0xc04030);
+  bm->roughness = 0.6f;
+  t3_geometry *bg = t3_box_geometry_new(1, 1, 1, 1, 1, 1);
+  t3_mesh *box = add_mesh(&S->base, bg, bm);
+  t3_object_set_position(box, -5.4f, 0.5f, 0.6f);
+  box->base.cast_shadow = true;
+  t3_release(mat); t3_release(bm); t3_release(fg); t3_release(wg); t3_release(bg);
+  add_light(t3_ambient_light_new(0x202430, 1));
+  t3_light *a = l1_spot(t3_ies_spot_light_new(0xfff0d8, 260, 0, 1.0f, 0.2f, 2), -6, ring);
+  a->base.cast_shadow = true;
+  a->shadow->map_width = a->shadow->map_height = 1024;
+  a->shadow->camera->near = 0.5f; a->shadow->camera->far = 20;
+  t3_camera_update_projection_matrix(a->shadow->camera);
+  a->shadow->bias = -0.0005f;
+  l1_spot(t3_ies_spot_light_new(0xd8e8ff, 260, 0, 1.0f, 0.2f, 2), 0, lobes);
+  l1_spot(t3_spot_light_new(0xffe0c0, 160, 0, 0.5f, 0.3f, 2), 6, NULL);
+  t3_release(ring); t3_release(lobes);
+}
+static void l1_frame(void) { t3_renderer_render(R, S, C); }

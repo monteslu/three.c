@@ -55,6 +55,9 @@ run test_extension_names_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surface
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_toon.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_toon
 run test_toon env EGL_PLATFORM=surfaceless ./build/test/test_toon
 run test_toon_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_toon >/dev/null 2>&1"
+# t3_ies_texture_parse against three.js's IESLoader, texel for texel (three profiles; the control must differ)
+"$CC" -std=c99 -O2 -I include test/test_ies.c build/native/libthree.a -lz -lm -o build/test/test_ies
+run test_ies node test/test_ies.mjs build/test/test_ies
 # extension materials auto-instanced (t3_renderer_set_extension_batching) and a texture sampled 24
 # times: a table of the tests' own (the tint example, plain and instanced; many), captured on the mock GPU
 mkdir -p build/test/exttab

@@ -110,6 +110,7 @@ enum {
   T3_SRC_ENV, T3_SRC_BG, T3_SRC_PMREM,
   T3_SRC_SHADOW_DIR, T3_SRC_SHADOW_SPOT, T3_SRC_SHADOW_POINT, T3_SRC_SHADOW_NONE,
   T3_SRC_BONES, T3_SRC_MORPH_INFLUENCES,
+  T3_SRC_IES,  /* a spot light's iesMap ("ies:spot[i]"); arg: the light index */
   T3_SRC_EXT   /* an extension's own texture ("ext.<name>"); arg: its slot in t3_gen_gl.ext_tex */
 };
 uint8_t t3_gen_source_kind(const char *source, uint8_t *arg);

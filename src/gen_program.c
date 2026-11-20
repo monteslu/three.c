@@ -652,6 +652,7 @@ uint8_t t3_gen_source_kind(const char *s, uint8_t *arg) {
   if (!strcmp(s, "envMap") || !strcmp(s, "environment")) return T3_SRC_ENV;
   if (!strcmp(s, "background")) return T3_SRC_BG;
   if (!strcmp(s, "pmrem.source")) return T3_SRC_PMREM;
+  if (!strncmp(s, "ies:spot[", 9)) { int idx = atoi(s + 9); *arg = (uint8_t)(idx < 0 || idx > 255 ? 255 : idx); return T3_SRC_IES; }
   if (!strcmp(s, "boneMatrices")) return T3_SRC_BONES;
   if (!strcmp(s, "morphInfluences")) return T3_SRC_MORPH_INFLUENCES;
   if (!strncmp(s, "shadow:", 7)) {

@@ -1627,6 +1627,16 @@ static void setup_lights(t3_renderer *r, const t3_camera *cam) {
     ls->hemi_direction[i] = t3_vec3_transform_direction(t3_mat4_get_position(&ls->hemi[i]->base.matrix_world), view);
 }
 
+static void shadow_update_matrices(t3_renderer *r, t3_light *l);
+/* an IESSpotLight reads its profile around the light's axis through the shadow matrix (r187 lightProjectionUV); one
+ * that casts no shadow in this render has no shadow pass to make it (r187 lightShadowMatrix updates it itself then) */
+static void ies_update_matrices(t3_renderer *r) {
+  for (int i = 0; i < r->ls.num_spot; i++) {
+    t3_light *l = r->ls.spot[i];
+    if (l->ies_map && l->shadow && !(r->shadow_map_enabled && l->base.cast_shadow)) shadow_update_matrices(r, l);
+  }
+}
+
 /* Texture.updateMatrix: setUvTransform(offset, repeat, rotation, center) */
 static void uv_transform(const t3_texture *t, float mt[9]) {
   float c = cosf(t->rotation), s = sinf(t->rotation), sx = t->repeat.x, sy = t->repeat.y;
@@ -2473,7 +2483,7 @@ void t3_renderer_compile(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   r->light_count = r->caster_count = 0;
   r->fog = scene->fog.type != T3_FOG_NONE ? &scene->fog : NULL;
   t3_object_traverse(scene, compile_lights, r);
-  setup_lights(r, cam);
+  setup_lights(r, cam); ies_update_matrices(r);
   t3_object_traverse(scene, compile_object, r);
 }
 
@@ -2515,6 +2525,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   batch_table_reset(r, r->m_n);
   project_scene(r, &scene->base, cam->base.layers);
   setup_lights(r, cam);
+  ies_update_matrices(r);
 
   finish_batches(r);
   sort_items(&r->opaque, &r->scratch, painter_sort);

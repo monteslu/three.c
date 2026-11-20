@@ -42,7 +42,7 @@ static void gen_reversed_projection(const t3_camera *cam, float *p) {
 /* the kinds with a lighting model: their states carry a light vector and may receive shadows */
 static bool gen_lit(t3_gen_kind kind) { return (kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL) || kind == T3_GEN_TOON; }
 /* a state's name in the generator's syntax (kind+features+lDPSH+sDPS) */
-static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast, uint16_t ext) {
+static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast, uint8_t ies, uint16_t ext) {
   static const char *const kinds[T3_GEN_TOON + 1] = { "basic", "lambert", "phong", "standard", "physical", "depth", "points", "psprite", "line", "sprite", "normal",
                                                       [T3_GEN_TOON] = "toon" };
   static const char *const feats[] = T3_GEN_FEATURE_NAMES;
@@ -53,6 +53,7 @@ static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f,
     n += snprintf(name + n, cap - (size_t)n, "+l%d%d%d%d", want[0], want[1], want[2], want[3]);
   if (cast && (cast[0] != want[0] || cast[1] != want[1] || cast[2] != want[2]))
     n += snprintf(name + n, cap - (size_t)n, "+s%d%d%d", cast[0], cast[1], cast[2]);
+  if (ies && n < (int)cap - 8) n += snprintf(name + n, cap - (size_t)n, "+ies%x", ies);
   if (ext && n < (int)cap) snprintf(name + n, cap - (size_t)n, "+x%s", t3__extension_name(ext));
 }
 static bool gen_missing_has(const t3_renderer *r, const char *name) {
@@ -85,7 +86,7 @@ static void gen_record_missing_name(const t3_renderer *rc, const char *name) {
 }
 static void gen_record_missing(const t3_renderer *r, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast) {
   char name[256];
-  gen_state_name(name, sizeof name, kind, f, want, cast, 0);
+  gen_state_name(name, sizeof name, kind, f, want, cast, 0, 0);
   gen_record_missing_name(r, name);
 }
 
@@ -120,6 +121,7 @@ static bool tex_nearest(const t3_texture *t) { return t->mag_filter == T3_NEARES
 typedef struct {
   uint64_t f;
   uint8_t kind, shadow, enc, cast[3], want[4];
+  uint8_t ies;    /* bit k: spot light k has an iesMap */
   uint16_t bones, morphs, morph_width;
   uint16_t ext;   /* the material's extension (t3__extension_id), 0 = none */
 } gen_key;
@@ -275,12 +277,17 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   if (gen_lit(kind)) {
     want[0] = (uint8_t)r->ls.num_dir; want[1] = (uint8_t)r->ls.num_point; want[2] = (uint8_t)r->ls.num_spot; want[3] = (uint8_t)r->ls.num_hemi;
   }
+  /* IESSpotLight: the spot lights (by id) that carry an iesMap, the first eight of them */
+  uint8_t ies = 0;
+  if (gen_lit(kind))
+    for (int i = 0; i < r->ls.num_spot && i < 8; i++) if (r->ls.spot[i]->ies_map) ies |= (uint8_t)(1u << i);
   memset(key, 0, sizeof *key);
   key->f = f;
   key->kind = (uint8_t)kind;
   key->shadow = shadow;
   if (shadow) memcpy(key->cast, cast, 3);
   memcpy(key->want, want, 4);
+  key->ies = ies;
   key->enc = r->gen_direct;
   key->ext = m->extension;
   if (o->type == T3_SKINNED_MESH) key->bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
@@ -309,6 +316,7 @@ static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key 
       if (p->kind != kind || p->features != f) continue;
       if (key->ext ? !p->extension || strcmp(p->extension, ext) : p->extension != NULL) continue;
       if (shadow && memcmp(p->cast, cast, 3)) continue;
+      if (p->ies != key->ies) continue;   /* (a program's extra spot lights are plain ones: inert) */
       bool covers = true;
       int cost = 0;
       for (int k = 0; k < 4; k++) { if (p->lights[k] < want[k]) covers = false; cost += p->lights[k]; }
@@ -317,7 +325,7 @@ static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key 
   if (!best) {
     *why = "no table state for this feature / light combination";
     char name[256];
-    gen_state_name(name, sizeof name, kind, f, want, shadow ? cast : NULL, key->ext);
+    gen_state_name(name, sizeof name, kind, f, want, shadow ? cast : NULL, key->ies, key->ext);
 #ifdef T3_BUILDER
     /* build it now (once: a state that failed stays on the missing list) */
     if (!gen_missing_has(r, name)) {
@@ -1152,6 +1160,7 @@ static void gen_bind_textures_g(t3_renderer *r, t3_gen_gl *gl, const t3_material
       break;
     }
     case T3_SRC_SHADOW_DIR: case T3_SRC_SHADOW_SPOT: case T3_SRC_SHADOW_POINT: gen_bind_shadow(r, gl->tex[i].kind, arg, i); break;
+    case T3_SRC_IES: if (arg < r->ls.num_spot && r->ls.spot[arg]->ies_map) bind_texture(r->ls.spot[arg]->ies_map, i); break;
     case T3_SRC_EXT: {   /* (gen_fill_ext has checked it is set) */
       t3_texture *tx = gl->ext_tex[arg].tex;
       if (tx->is_cube) bind_cube_texture(tx, i); else bind_texture(tx, i);

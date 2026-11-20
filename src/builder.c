@@ -188,6 +188,7 @@ static t3_gen_program *bconvert(JSContext *c, JSValueConst m, t3_gen_backend be)
     }
     JS_FreeValue(c, a);
   }
+  p->ies = (uint8_t)I(c, m, "ies");
   /* groups */
   a = P(c, m, "groups");
   p->n_groups = (uint8_t)LEN(c, a);

@@ -206,13 +206,18 @@ function parseState(stateName) {
   // sDPS: how many of each type's lights cast (the first ones in creation order:
   // r187 orders a program's lights by object id); absent = all of them
   const castTok = tokens.find((t) => /^s\d{3}$/.test(t));
-  const features = tokens.filter((t) => t !== lightsTok && t !== extTok && t !== castTok);
+  // ies<hex mask>: bit k set = spot light k of the vector is an IESSpotLight with an iesMap (its cone comes from the
+  // profile texture, a program of its own); absent = no such light
+  const iesTok = tokens.find((t) => /^ies[0-9a-f]+$/.test(t));
+  const features = tokens.filter((t) => t !== lightsTok && t !== extTok && t !== castTok && t !== iesTok);
   for (const f of features) if (!(f in FEATURES)) throw new Error(`${stateName}: unknown feature ${f}`);
   const lights = lightsTok ? lightsTok.slice(1).split('').map(Number) : LIT.has(kind) ? [1, 1, 0, 0] : kind === 'depth' ? [1, 0, 0, 0] : [0, 0, 0, 0];
   if (kind === 'depth' && lightsTok) throw new Error(`${stateName}: the depth kind takes no light vector`);
   const cast = castTok ? castTok.slice(1).split('').map(Number) : null;
   if (cast && !features.includes('shadow')) throw new Error(`${stateName}: sDPS needs +shadow`);
-  return { kind, features, lights, cast, extension: extTok ? extTok.slice(1) : null };
+  const ies = iesTok ? parseInt(iesTok.slice(3), 16) : 0;
+  if (ies && (!LIT.has(kind) || ies >= 1 << lights[2])) throw new Error(`${stateName}: ies names a spot light the vector lacks`);
+  return { kind, features, lights, cast, ies, extension: extTok ? extTok.slice(1) : null };
 }
 // ── texture binding layout, as r187's WebGPU backend classifies it ────
 // (WebGPUBindingUtils.createBindingsLayout): the manifest needs the sample
@@ -269,7 +274,7 @@ const fround = (x) => Math.fround(x);
 // ── one state on one backend ─────────────────────────────────────────
 async function capture(stateName, backend) {
   sentinelSeed = WORLD.seed;
-  const { kind, features, lights, cast, extension } = parseState(stateName);
+  const { kind, features, lights, cast, ies, extension } = parseState(stateName);
   // the device comes from the host: a real one (webgpu-node / webgl-node) or a
   // mock (tools/mock-gpu.mjs); for 'cm' a compatibility-mode WebGPU device
   const { canvas, gl, device } = await HOST.makeDevice(backend, features, WORLD);
@@ -382,7 +387,15 @@ async function capture(stateName, backend) {
     const pdc = 1 + sentinel(); pl.decay = pdc; props[`point[${i}].decay`] = { kind: 'f32', value: [pdc] };
   }
   for (let i = 0; i < nSpot; i++) {
-    const sl = new THREE.SpotLight(); scene.add(sl); scene.add(sl.target);
+    const sl = ies >> i & 1 ? new THREE.IESSpotLight() : new THREE.SpotLight(); scene.add(sl); scene.add(sl.target);
+    if (ies >> i & 1) {
+      // an IES profile as IESLoader makes it: 180 texels of tilt, linear, the twist repeating (one row here: a symmetric profile;
+      // the program reads the size, so a 360 row one draws with the same program)
+      const t = new THREE.DataTexture(new Uint16Array(180).fill(THREE.DataUtils.toHalfFloat(0.5)), 180, 1, THREE.RedFormat, THREE.HalfFloatType);
+      t.minFilter = t.magFilter = THREE.LinearFilter; t.wrapT = THREE.RepeatWrapping; t.needsUpdate = true;
+      t.name = `ies:spot[${i}]`;
+      sl.iesMap = t;
+    }
     const sr = sentinel(), sg = sentinel(), sb = sentinel(); sl.color.setRGB(sr, sg, sb, THREE.LinearSRGBColorSpace); sl.intensity = 1; props[`spot[${i}].color`] = { kind: 'vec3', value: [sr, sg, sb] };
     const sx = sentinel(), sy = sentinel(), sz = sentinel(); sl.position.set(sx, sy, sz); viewPos.push([`spot[${i}].position`, sl.position]);
     props[`spot[${i}].worldPosition`] = { kind: 'vec3', value: [sx, sy, sz] };
@@ -390,8 +403,9 @@ async function capture(stateName, backend) {
     const sd = 3 + sentinel(); sl.distance = sd; props[`spot[${i}].distance`] = { kind: 'f32', value: [sd] };
     const sdc = 1 + sentinel(); sl.decay = sdc; props[`spot[${i}].decay`] = { kind: 'f32', value: [sdc] };
     const ang = 0.3 + sentinel(), pen = 0.1 + sentinel(); sl.angle = ang; sl.penumbra = pen;
-    props[`spot[${i}].coneCos`] = { kind: 'f32', value: [Math.cos(ang)] };
-    props[`spot[${i}].penumbraCos`] = { kind: 'f32', value: [Math.cos(ang * (1 - pen))] };
+    // (an IESSpotLight's cone is its profile: the program has neither uniform)
+    props[`spot[${i}].coneCos`] = { kind: 'f32', value: [Math.cos(ang)], optional: !!(ies >> i & 1) };
+    props[`spot[${i}].penumbraCos`] = { kind: 'f32', value: [Math.cos(ang * (1 - pen))], optional: !!(ies >> i & 1) };
   }
   for (let i = 0; i < nHemi; i++) {
     const hl = new THREE.HemisphereLight(); scene.add(hl);
@@ -402,7 +416,8 @@ async function capture(stateName, backend) {
   if (wantShadow) {
     renderer.shadowMap.enabled = true;
     const all = scene.children.filter((o) => o.isDirectionalLight || o.isSpotLight || o.isPointLight);
-    const nth = (l) => all.filter((o) => o.constructor === l.constructor).indexOf(l);
+    const sameType = (a, b) => (a.isDirectionalLight && b.isDirectionalLight) || (a.isSpotLight && b.isSpotLight) || (a.isPointLight && b.isPointLight);   // (an IESSpotLight is a spot light)
+    const nth = (l) => all.filter((o) => sameType(o, l)).indexOf(l);
     const limit = (l) => !cast ? Infinity : l.isDirectionalLight ? cast[0] : l.isPointLight ? cast[1] : cast[2];
     const casting = all.filter((l) => nth(l) < limit(l));
     if (!casting.length) throw new Error(`${stateName}: +shadow needs a directional, spot or point light in the vector`);
@@ -598,6 +613,8 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
         props[`${type}[${counters[type]++}].shadow.matrix`] = { kind: 'mat4', value: Array.from(l.shadow.matrix.elements) };
       }
     }
+    // an IESSpotLight reads its profile around the light's axis through the same matrix (lightProjectionUV), shadow or not
+    { let k = 0; for (const l of scene.children) if (l.isSpotLight) { if (l.iesMap) props[`spot[${k}].shadow.matrix`] = { kind: 'mat4', value: Array.from(l.shadow.matrix.elements) }; k++; } }
   }
 
   return { scene, mat, mesh, ro, props };
@@ -692,9 +709,10 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
     if (t.isDataArrayTexture && features.includes('morph')) return 'morphTexture';
     for (const l of scene.children) if (l.shadow && (t === l.shadow.map?.depthTexture || t === l.shadow.map?.texture)) {
       const type = l.isDirectionalLight ? 'directional' : l.isSpotLight ? 'spot' : 'point';
-      return `shadow:${type}[${scene.children.filter((o) => o.constructor === l.constructor && o.castShadow).indexOf(l)}]`;
+      return `shadow:${type}[${scene.children.filter((o) => o.castShadow && ((o.isDirectionalLight && l.isDirectionalLight) || (o.isSpotLight && l.isSpotLight) || (o.isPointLight && l.isPointLight))).indexOf(l)}]`;
     }
     for (const k of ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'specularMap', 'envMap', 'lightMap', 'bumpMap', 'displacementMap', 'clearcoatNormalMap', 'gradientMap']) if (mat[k] === t) return k;
+    if (typeof t.name === 'string' && t.name.startsWith('ies:')) return t.name;   // an IESSpotLight's profile
     if (scene.environment && t === scene.environment) return 'environment';   /* (the material's own is 'envMap') */
     if (t.name === 'DFG_LUT') return 'dfg_lut';
     if (extension && typeof t.name === 'string' && t.name.startsWith('ext.')) return t.name;   // an extension's own texture, filled at run time by that name
@@ -849,7 +867,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
   if (features.includes('morph')) { templates.morphs = TPL.morphs; templates.morphWidth = TPL.morphWidth * (features.includes('morphn') ? 2 : 1); }
   // casting counts per type (directional, point, spot) for a shadow state
   const castOut = features.includes('shadow') ? (cast ?? [lights[0], lights[1], lights[2]]) : [0, 0, 0];
-  const out = { three: THREE_VERSION, backend, state: stateName, kind, features, lights, cast: castOut, extension, templates, uncovered, stages: Object.keys(stages), groups, attributes, properties: map };
+  const out = { three: THREE_VERSION, backend, state: stateName, kind, features, lights, cast: castOut, ies, extension, templates, uncovered, stages: Object.keys(stages), groups, attributes, properties: map };
   const missing = Object.entries(map).filter(([k, v]) => !v && !props[k]?.optional).map(([k]) => k);
   for (const k of Object.keys(map)) if (!map[k] && props[k]?.optional) delete map[k];
   renderer.dispose?.();

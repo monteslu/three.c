@@ -112,6 +112,7 @@ typedef struct {
    * text; t3_gen_source returns it either way */
   const char *vertex, *fragment;
   const struct t3_gen_text *text; uint32_t vtext, ftext;
+  uint8_t ies;                  /* bit k: spot light k is an IESSpotLight with an iesMap (the state's ies<hex>) */
 } t3_gen_program;
 
 /* a table of programs: three.c's own (programs_gl.c, or programs_core_gl.c

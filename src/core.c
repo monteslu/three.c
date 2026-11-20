@@ -940,6 +940,15 @@ t3_light *t3_point_light_new(uint32_t color, float intensity, float distance, fl
   return l;
 }
 
+t3_light *t3_ies_spot_light_new(uint32_t color, float intensity, float distance, float angle, float penumbra, float decay) {
+  return t3_spot_light_new(color, intensity, distance, angle, penumbra, decay);
+}
+void t3_light_set_ies_map(t3_light *l, t3_texture *map) {
+  t3_retain(map);
+  t3_release(l->ies_map);
+  l->ies_map = map;
+}
+
 t3_light *t3_spot_light_new(uint32_t color, float intensity, float distance, float angle, float penumbra, float decay) {
   t3_light *l = light_new(T3_SPOT_LIGHT, color, intensity);
   l->distance = distance;
@@ -982,6 +991,7 @@ static void object_free(t3_object *o) {
   case T3_POINT_LIGHT: case T3_SPOT_LIGHT: {
     t3_light *l = (t3_light *)o;
     t3_release(l->target);
+    t3_release(l->ies_map);
     if (l->shadow) {
       if (t3__gl_release && l->shadow->_gl) t3__gl_release(0, l->shadow);
       t3_release(l->shadow->camera);

@@ -154,6 +154,7 @@ THREE.WebGLRenderer = class WebGLRenderer extends THREE.WebGPURenderer {
   }
 };
 THREE.GLTFLoader = GLTFLoader;
+THREE.IESLoader = (await import(pathToFileURL(join(PKG, 'examples', 'jsm', 'loaders', 'IESLoader.js')).href)).IESLoader;
 globalThis.THREE = THREE;
 globalThis.__canvas = canvas;
 globalThis.__gl = gl;
