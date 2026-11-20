@@ -124,3 +124,6 @@ standard+shadow+l0030+s001+ies3
 # b1-batched: a textured BatchedMesh under a shadowed sun, casting
 standard+map+batch+shadow+l1000
 standard+shadow+l1000
+# c1-array-camera: a shadowed sun and a point light, plain and auto-instanced
+standard+shadow+l1100+s100
+standard+instbig+shadow+l1100+s100

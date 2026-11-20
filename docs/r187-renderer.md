@@ -49,7 +49,7 @@ three.c needs neither Node nor three.js.
 
 A backend's shaders differ by a few lines per feature, so a table stores its
 distinct lines once and each shader as the list of its lines, deflated
-together (about 0.2 MB per backend for the full table's 396 states). The
+together (about 0.2 MB per backend for the full table's 398 states). The
 first program built from a table inflates its text (kept for the table's
 other programs) with stb_image's inflater, which three.c already carries for
 PNG. A full-table wasm cart is about 1.25 MB (0.9 MB with the core table).
@@ -269,6 +269,23 @@ that fills it:
 `e2-extension-shadow`, `e3-extension-textures` and
 `e4-extension-many-textures` scenes (under `tools/parity-r187.mjs`, against r187
 running the same TSL) check it.
+
+## ArrayCamera
+
+`t3_array_camera_new` and `t3_array_camera_add(array, camera, x, y, w, h)`: several cameras, each with a
+viewport, drawn by one `t3_renderer_render(r, scene, &array->base)`. Done once for all the views: the scene's
+matrix update, the light list, the shadow maps, the target's bind and clear, the upload of the instance stream
+and of the per-draw uniform blocks, on WebGPU the render pass and on GLES the output pass. Each view has its own
+lists, culled against its own frustum and sorted by its own depth (they follow each other in the renderer's
+lists), its lights in its own view space, and its viewport and scissor; the programs' per-frame values are
+refilled as each view starts.
+
+r187 draws an ArrayCamera with programs of its own (the camera matrices in uniform arrays, indexed by a camera
+index set per draw) and loops over the cameras inside each object's draw. three.c draws view after view with the
+ordinary programs: the same picture (the parity scene `c1-array-camera` matches r187's on both backends) and
+no extra program states. Not made under an ArrayCamera: transmission's framebuffer copy and the back-face pass
+of double-sided transmission. test/test_array_camera.c compares two and four views with the same views rendered
+one by one, checks that a view which looks away adds no draws, and prints the time of both ways.
 
 ## BatchedMesh
 

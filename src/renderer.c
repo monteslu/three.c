@@ -143,6 +143,10 @@ struct t3_renderer {
   const t3_texture *environment; /* the scene being rendered's environment */
   bool rendering_shadows;
   const t3_object *gen_draw_obj;   /* the object whose textures a GLES draw binds (a BatchedMesh's) */
+  /* an ArrayCamera render: each view's part of the lists and what its draws read of its camera */
+  struct mv_view { const t3_camera *cam; int o0, o1, t0, t1; int vp[4]; t3_frustum frustum; t3_mat4 proj_screen; t3_mat3 view_normal; } mv[T3_ARRAY_CAMERA_MAX];
+  int mv_n;        /* 0: an ordinary render */
+  bool inst_keep;  /* finish_batches appends to the instance stream (the views share one upload) */
   /* GPU timing: a ring of GL_TIME_ELAPSED_EXT queries in flight */
   bool gpu_timing, gq_active;
   GLuint gq[4];
@@ -390,6 +394,10 @@ static void gl_release(uint32_t kind, void *thing) {
 t3_renderer *t3_renderer_new(int width, int height) {
   t3_renderer *r = calloc(1, sizeof *r);
   T3_CHECK_ALLOC(r);
+  /* what the texture units hold is tracked per process: a renderer before this one may have deleted textures whose
+   * names the driver hands out again (its shadow maps, its DFG table), and a unit believed to hold such a name
+   * was then never bound again: a second renderer in one process drew its lit materials white */
+  tu_forget_all();
   static uint32_t serials;
   r->serial = ++serials;
   r->clear_alpha = 1;
@@ -414,6 +422,7 @@ t3_renderer *t3_renderer_new(int width, int height) {
 
 void t3_renderer_destroy(t3_renderer *r) {
   if (!r) return;
+  tu_forget_all();
   if (r->info.gpu_timer_supported == 1) glDeleteQueries(4, r->gq);
   t3_release(r->bg_sphere);
   for (int i = 0; i < 2; i++) t3_release(r->vp_rt[i]);
@@ -2199,7 +2208,7 @@ static void upload_if_changed(GLuint *vbo, const float *data, int n_floats, floa
 }
 
 static void finish_batches(t3_renderer *r) {
-  r->inst_n = 0;
+  if (!r->inst_keep) r->inst_n = 0;
   for (int bi = 0; bi < r->batch_n; bi++) {
     struct batch_entry *e = &r->batches[bi];
     t3_object *first = r->mobj[e->head];
@@ -2223,7 +2232,7 @@ static void finish_batches(t3_renderer *r) {
     r->inst_n += e->count;
     list_push(&r->opaque, it);
   }
-  if (r->inst_n)
+  if (r->inst_n && !r->inst_keep)
     if (!r->wgpu) upload_if_changed(&r->inst_vbo, r->inst, r->inst_n * INST_FLOATS, &r->prev_inst, &r->prev_inst_n, &r->prev_cap);
 }
 
@@ -2376,6 +2385,7 @@ static void issue_draw(t3_renderer *r, const render_item *it, t3_object *o, t3_g
   if (mode == GL_TRIANGLES) r->info.triangles += (unsigned)(count / 3 * instances);
 }
 
+static const t3_camera *mv_enter(t3_renderer *r, int k);
 #include "renderer_gen.inc"
 static void count_output_pass(t3_renderer *r);
 #include "renderer_wgpu.inc"
@@ -2516,24 +2526,20 @@ void t3_renderer_render_opaque(t3_renderer *r, t3_scene *scene, t3_camera *cam) 
   r->opaque_only = previous;
 }
 
-void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
-  draw_epoch++;
-  r->stamp++;
-  r->info.frame++;
-  r->info.calls = r->info.triangles = r->info.skipped = 0;
-
+/* a view's camera as the draws read it: its matrices, its frustum, the lights in its view space */
+static void view_camera(t3_renderer *r, t3_camera *cam) {
   r->camera = cam;
-  r->environment = scene->environment;
-  if (r->gpu_timing) gpu_timer_begin(r);
-  if (scene->auto_update) t3_object_update_matrix_world(scene, false);
   if (!cam->base.parent) t3_object_update_matrix_world(cam, false);
-
   t3_mat4_multiply(&r->proj_screen, &cam->projection_matrix, &cam->matrix_world_inverse);
   t3_mat3_normal_matrix(&r->view_normal, &cam->matrix_world_inverse);
   t3_frustum_from_matrix(&r->frustum, &r->proj_screen);
   r->last_proj = cam->projection_matrix;
-
-  r->opaque.n = r->transparent.n = 0;
+}
+/* the lists of what a camera sees, from index o0 / t0 of the opaque / transparent lists on (0, 0: an ordinary
+ * render; an ArrayCamera's views follow each other in the lists), each sorted for that camera */
+static void view_lists(t3_renderer *r, t3_scene *scene, t3_camera *cam, int o0, int t0) {
+  view_camera(r, cam);
+  r->opaque.n = o0, r->transparent.n = t0;
   r->light_count = 0;
   r->caster_count = 0;
   r->fog = scene->fog.type != T3_FOG_NONE ? &scene->fog : NULL;
@@ -2543,15 +2549,71 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   ies_update_matrices(r);
 
   finish_batches(r);
-  sort_items(&r->opaque, &r->scratch, painter_sort);
-  if (r->opaque_only) r->transparent.n = 0;
-  sort_items(&r->transparent, &r->scratch, reverse_painter_sort);
+  render_list seg = { r->opaque.items + o0, r->opaque.n - o0, 0 };
+  sort_items(&seg, &r->scratch, painter_sort);
+  if (r->opaque_only) r->transparent.n = t0;
+  seg = (render_list){ r->transparent.items + t0, r->transparent.n - t0, 0 };
+  sort_items(&seg, &r->scratch, reverse_painter_sort);
+}
+/* an ArrayCamera render, view k: the camera state its draws read, and its viewport and scissor on GLES */
+static const t3_camera *mv_enter(t3_renderer *r, int k) {
+  struct mv_view *v = &r->mv[k];
+  r->camera = v->cam;
+  r->frustum = v->frustum;
+  r->proj_screen = v->proj_screen;
+  r->view_normal = v->view_normal;
+  r->last_proj = v->cam->projection_matrix;
+  setup_lights(r, v->cam);
+  ies_update_matrices(r);
+  r->stamp++;   /* the programs' per-frame values are this camera's */
+  if (!r->wgpu) {
+    int th = r->target ? r->target->height >> r->target->active_mip : 0;
+    int y = r->target ? th - v->vp[1] - v->vp[3] : view_gl_y(r, v->vp[1], v->vp[3]);
+    gl_viewport(r, v->vp[0], y, v->vp[2], v->vp[3]);
+    gl_scissor_box(r, true, v->vp[0], y, v->vp[2], v->vp[3]);
+  }
+  return v->cam;
+}
+
+void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
+  draw_epoch++;
+  r->stamp++;
+  r->info.frame++;
+  r->info.calls = r->info.triangles = r->info.skipped = 0;
+
+  r->environment = scene->environment;
+  if (r->gpu_timing) gpu_timer_begin(r);
+  if (scene->auto_update) t3_object_update_matrix_world(scene, false);
+  r->mv_n = 0;
+  if (cam->base.type == T3_ARRAY_CAMERA) {
+    /* every view's lists first, one after another: the uploads that follow (instances, per-draw values) are the
+     * frame's, not a view's */
+    t3_array_camera *ac = (t3_array_camera *)cam;
+    if (ac->count < 1) { if (r->gpu_timing) gpu_timer_end(r); return; }
+    r->inst_n = 0;
+    r->inst_keep = true;
+    for (int k = 0; k < ac->count; k++) {
+      struct mv_view *v = &r->mv[k];
+      v->cam = ac->cameras[k];
+      v->o0 = k ? r->mv[k - 1].o1 : 0, v->t0 = k ? r->mv[k - 1].t1 : 0;
+      view_lists(r, scene, ac->cameras[k], v->o0, v->t0);
+      v->o1 = r->opaque.n, v->t1 = r->transparent.n;
+      memcpy(v->vp, ac->viewports[k], sizeof v->vp);
+      v->frustum = r->frustum, v->proj_screen = r->proj_screen, v->view_normal = r->view_normal;
+    }
+    r->inst_keep = false;
+    r->mv_n = ac->count;
+    if (r->inst_n && !r->wgpu) upload_if_changed(&r->inst_vbo, r->inst, r->inst_n * INST_FLOATS, &r->prev_inst, &r->prev_inst_n, &r->prev_cap);
+    cam = ac->cameras[0];
+  } else {
+    view_lists(r, scene, cam, 0, 0);
+  }
   /* r187 _renderTransparents: double-sided transmissive objects draw their back
    * faces first (material.side set to BackSide, then FrontSide for the
    * transparent list, then back to DoubleSide) */
   r->backpass.n = 0;
   r->vp_done[0] = r->vp_done[1] = false;
-  for (int i = 0; i < r->transparent.n; i++) {
+  for (int i = 0; i < r->transparent.n && !r->mv_n; i++) {
     const t3_material *m = r->transparent.items[i].material;
     if (m->type == T3_MESH_PHYSICAL_MATERIAL && m->transmission > 0 && m->side == T3_DOUBLE_SIDE) list_push(&r->backpass, r->transparent.items[i]);
   }
@@ -2605,6 +2667,16 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   }
   backpass_side(r, T3_FRONT_SIDE);   /* (after the shadow maps, which see DoubleSide as r187's do) */
   gen_prepare(r, cam);
+  if (r->mv_n) {
+    /* an ArrayCamera: each view's part of the lists into its viewport */
+    for (int k = 0; k < r->mv_n; k++) {
+      const t3_camera *vc = mv_enter(r, k);
+      if (!r->depth_prepass) gen_background(r, scene, vc);
+      for (int i = r->mv[k].o0; i < r->mv[k].o1; i++) draw_item(r, &r->opaque.items[i], vc);
+      for (int i = r->mv[k].t0; i < r->mv[k].t1; i++) draw_item(r, &r->transparent.items[i], vc);
+    }
+    bind_target(r);   /* the renderer's own viewport and scissor again */
+  } else {
   if (!r->depth_prepass) gen_background(r, scene, cam);
 
   for (int i = 0; i < r->opaque.n; i++) draw_item(r, &r->opaque.items[i], cam);
@@ -2614,6 +2686,7 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
     backpass_side(r, T3_FRONT_SIDE);
   }
   for (int i = 0; i < r->transparent.n; i++) draw_item(r, &r->transparent.items[i], cam);
+  }
   backpass_side(r, T3_DOUBLE_SIDE);
 
   if (!r->depth_prepass && !r->target) count_output_pass(r);

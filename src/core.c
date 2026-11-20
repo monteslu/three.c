@@ -867,6 +867,22 @@ t3_camera *t3_perspective_camera_new(float fov, float aspect, float near, float 
   return c;
 }
 
+t3_array_camera *t3_array_camera_new(void) {
+  t3_array_camera *a = object_alloc(sizeof *a, T3_ARRAY_CAMERA);
+  a->base.fov = 50; a->base.aspect = 1; a->base.near = 0.1f; a->base.far = 2000; a->base.zoom = 1;
+  t3_mat4_identity(&a->base.matrix_world_inverse);
+  t3_mat4_identity(&a->base.projection_matrix);
+  t3_mat4_identity(&a->base.projection_matrix_inverse);
+  return a;
+}
+bool t3_array_camera_add(t3_array_camera *a, t3_camera *camera, int x, int y, int w, int h) {
+  if (!camera || a->count >= T3_ARRAY_CAMERA_MAX) return false;
+  a->cameras[a->count] = t3_retain(camera);
+  a->viewports[a->count][0] = x; a->viewports[a->count][1] = y; a->viewports[a->count][2] = w; a->viewports[a->count][3] = h;
+  a->count++;
+  return true;
+}
+
 t3_camera *t3_orthographic_camera_new(float left, float right, float top, float bottom, float near, float far) {
   t3_camera *c = object_alloc(sizeof *c, T3_ORTHOGRAPHIC_CAMERA);
   c->left = left; c->right = right; c->top = top; c->bottom = bottom;
@@ -1001,6 +1017,9 @@ static void object_free(t3_object *o) {
     }
     break;
   }
+  case T3_ARRAY_CAMERA:
+    for (int i = 0; i < ((t3_array_camera *)o)->count; i++) t3_release(((t3_array_camera *)o)->cameras[i]);
+    break;
   case T3_SCENE:
     t3_release(((t3_scene *)o)->background_texture);
     t3_release(((t3_scene *)o)->environment);

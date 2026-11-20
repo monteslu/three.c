@@ -1110,6 +1110,7 @@ const bench_scene bench_scenes[] = {
   { "m1-toon", m1_setup, m1_frame },
   { "l1-ies", l1_setup, l1_frame },
   { "b1-batched", b1_setup, b1_frame },
+  { "c1-array-camera", c1a_setup, c1a_frame },
   { "u1-uv-channel", u1_setup, u1_frame },
   { "z1-reversed-depth", z1_setup, z1_frame },
   { "z2-reversed-far", z2_setup, z2_frame },

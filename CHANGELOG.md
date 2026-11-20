@@ -5,6 +5,30 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.16 (2026-11-19)
+
+### Added
+- **ArrayCamera** (`t3_array_camera_new`, `t3_array_camera_add`): several cameras, each with a viewport, drawn
+  by one `t3_renderer_render` call (split screen, a map beside the main view). The views share the scene's matrix
+  update, the light list, the shadow maps, the target's bind and clear, the instance and per-draw uniform uploads,
+  the WebGPU render pass and the GLES output pass; each view has its own lists, culled against its own frustum
+  and sorted by its own depth. It draws with the ordinary programs (r187 has array-indexed camera programs for
+  this; three.c refills the per-frame values per view), so no table changes. The parity scene `c1-array-camera`
+  (four views: wide, close, from above, a narrow one; shadows, a transparent sphere, auto-instanced spheres)
+  matches r187's ArrayCamera on WebGPU and GLES. test/test_array_camera.c: two and four views equal the same views
+  rendered one by one, a view that looks away adds no draws, and its control (one camera moved) fails.
+  Measured on a Radeon 890M (GLES, 512 x 320, 400 meshes with a material each, a shadowed sun, two interleaved rounds of 200 frames, CPU and GPU together): two views 0.81 / 0.75 ms as two renders against 0.69 / 0.67 ms as one ArrayCamera render; four views 1.06 / 1.01 ms against 0.89 / 0.84 ms (the renders one by one draw the shadow map once each). Transmission's framebuffer copy and back-face pass are not made under an ArrayCamera.
+  `T3_ARRAY_CAMERA` is appended to the object types.
+
+### Fixed
+- tools/emit-programs.mjs writes the `buffer` member of `t3_gen_property` that 0.187.14 added to src/gen/programs.h
+  by hand: regenerating three.c's own tables dropped it and the library no longer compiled.
+- **A second renderer in one process drew its lit materials white.** What each texture unit holds is tracked per
+  process; a renderer that was destroyed had deleted textures (its shadow maps, the DFG table) whose names the driver
+  hands out again, and a unit believed to hold such a name was never bound again for the next renderer.
+  `t3_renderer_new` and `t3_renderer_destroy` now forget the units. Found by test/test_array_camera.c, which makes
+  several renderers and checks that the picture is not saturated.
+
 ## v0.187.15 (2026-11-19)
 
 ### Fixed

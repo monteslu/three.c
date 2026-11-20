@@ -465,6 +465,19 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
   r->wg_cur_src_format = r->wg_pass_format;
   r->wg_cur_w = rt ? rt->width : r->width;
   r->wg_cur_h = rt ? rt->height : r->height;
+  if (r->mv_n) {
+    /* an ArrayCamera: each view's part of the lists into its viewport, inside this one pass */
+    WGPURenderPassEncoder pe = t3_wgpu_pass_encoder(w);
+    for (int k = 0; k < r->mv_n; k++) {
+      const t3_camera *vc = mv_enter(r, k);
+      const int *vp = r->mv[k].vp;
+      wgpuRenderPassEncoderSetViewport(pe, (float)vp[0], (float)vp[1], (float)vp[2], (float)vp[3], P.dmax > 0 ? P.dmin : 0, P.dmax > 0 ? P.dmax : 1);
+      wgpuRenderPassEncoderSetScissorRect(pe, (uint32_t)vp[0], (uint32_t)vp[1], (uint32_t)vp[2], (uint32_t)vp[3]);
+      if (!r->depth_prepass) gen_background(r, scene, vc);
+      for (int i = r->mv[k].o0; i < r->mv[k].o1; i++) wgpu_draw_item(r, &r->opaque.items[i], vc);
+      for (int i = r->mv[k].t0; i < r->mv[k].t1; i++) wgpu_draw_item(r, &r->transparent.items[i], vc);
+    }
+  } else {
   if (!r->depth_prepass) gen_background(r, scene, cam);
   for (int i = 0; i < r->opaque.n; i++) wgpu_draw_item(r, &r->opaque.items[i], cam);
   if (r->backpass.n) {
@@ -473,6 +486,7 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
     backpass_side(r, T3_FRONT_SIDE);
   }
   for (int i = 0; i < r->transparent.n; i++) wgpu_draw_item(r, &r->transparent.items[i], cam);
+  }
   backpass_side(r, T3_DOUBLE_SIDE);
   t3_wgpu_end_pass(w);
   if (!D.direct && !r->depth_prepass) wgpu_output_pass(r, D.color, D.out);

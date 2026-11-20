@@ -1713,3 +1713,69 @@ static void b1_setup(void) {
   add_light(sun);
 }
 static void b1_frame(void) { t3_renderer_render(R, S, C); }
+
+/* ── c1-array-camera: ArrayCamera (four views in one render call) ── */
+static t3_array_camera *c1_array;
+static t3_camera *c1_cam(float fov, float px, float py, float pz, float tx, float ty, float tz) {
+  t3_camera *c = t3_perspective_camera_new(fov, 640.0f / 360, 0.1f, 100);
+  t3_object_set_position(c, px, py, pz);
+  t3_object_look_at(c, tx, ty, tz);
+  return c;
+}
+static void c1a_setup(void) {
+  R = make_renderer(0x202830);
+  t3_renderer_set_shadow_map(R, true, T3_PCF_SHADOW_MAP);
+  S = t3_scene_new();
+  t3_geometry *pg = t3_plane_geometry_new(20, 20, 1, 1);
+  t3_material *gm = t3_mesh_standard_material_new(0x607060);
+  gm->roughness = 0.9f;
+  t3_mesh *ground = add_mesh(&S->base, pg, gm);
+  t3_object_set_rotation(ground, -3.141592653589793f / 2, 0, 0);
+  ground->base.receive_shadow = true;
+  t3_release(pg); t3_release(gm);
+  t3_geometry *sg = t3_sphere_geometry_new(0.6f, 24, 12);
+  t3_material *sm = t3_mesh_standard_material_new(0xd06030);
+  sm->roughness = 0.5f;
+  for (int i = 0; i < 6; i++) {
+    t3_mesh *s = add_mesh(&S->base, sg, sm);
+    t3_object_set_position(s, (float)((i - 2.5) * 1.6), 0.6f, (float)(-1 + (i % 2) * 2));
+    s->base.cast_shadow = s->base.receive_shadow = true;
+  }
+  t3_release(sg); t3_release(sm);
+  t3_geometry *bg = t3_box_geometry_new(1, 1, 1, 1, 1, 1);
+  static const float bp[3][3] = { { -4, 0.5f, 3 }, { 4, 0.5f, -3 }, { 0, 0.5f, 4 } };
+  static const uint32_t bc[3] = { 0x4080d0, 0xd0c040, 0x60c080 };
+  for (int i = 0; i < 3; i++) {
+    t3_material *m = t3_mesh_standard_material_new(bc[i]);
+    m->roughness = 0.6f;
+    t3_mesh *b = add_mesh(&S->base, bg, m);
+    t3_object_set_position(b, bp[i][0], bp[i][1], bp[i][2]);
+    b->base.cast_shadow = true;
+    t3_release(m);
+  }
+  t3_release(bg);
+  t3_geometry *gg = t3_sphere_geometry_new(0.9f, 24, 12);
+  t3_material *glm = t3_mesh_standard_material_new(0x80c0ff);
+  glm->transparent = true; glm->opacity = 0.5f;
+  t3_object_set_position(add_mesh(&S->base, gg, glm), 0, 1.4f, 1);
+  t3_release(gg); t3_release(glm);
+  add_light(t3_ambient_light_new(0x303840, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 2.5f);
+  t3_object_set_position(sun, 5, 9, 4);
+  sun->base.cast_shadow = true;
+  sun->shadow->map_width = sun->shadow->map_height = 1024;
+  t3_camera *sh = sun->shadow->camera;
+  sh->left = -10; sh->right = 10; sh->top = 10; sh->bottom = -10; sh->near = 1; sh->far = 30;
+  t3_camera_update_projection_matrix(sh);
+  sun->shadow->bias = -0.0005f;
+  add_light(sun);
+  t3_light *lamp = t3_point_light_new(0xff8040, 30, 0, 2);
+  t3_object_set_position(lamp, -3, 2, 2);
+  add_light(lamp);
+  c1_array = t3_array_camera_new();
+  t3_camera *cs[4] = { c1_cam(50, 0, 5, 11, 0, 0.5f, 0), c1_cam(40, -6, 2, -6, 0, 0.6f, 0), c1_cam(60, 0.01f, 14, 0, 0, 0, 0), c1_cam(20, 9, 3, 9, -4, 0.5f, 3) };
+  static const int vp[4][2] = { { 0, 0 }, { 640, 0 }, { 0, 360 }, { 640, 360 } };
+  for (int i = 0; i < 4; i++) { t3_array_camera_add(c1_array, cs[i], vp[i][0], vp[i][1], 640, 360); t3_release(cs[i]); }
+  C = &c1_array->base;
+}
+static void c1a_frame(void) { t3_renderer_render(R, S, C); }

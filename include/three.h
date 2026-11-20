@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.15"
+#define T3_VERSION "0.187.16"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -543,7 +543,7 @@ typedef enum {
   T3_AMBIENT_LIGHT, T3_HEMISPHERE_LIGHT, T3_DIRECTIONAL_LIGHT, T3_POINT_LIGHT, T3_SPOT_LIGHT,
   T3_LINE, T3_LINE_SEGMENTS, T3_LINE_LOOP,
   T3_SPRITE, T3_POINTS, T3_LOD,
-  T3_BATCHED_MESH
+  T3_BATCHED_MESH, T3_ARRAY_CAMERA
 } t3_object_type;
 
 typedef struct t3_object t3_object;
@@ -682,6 +682,32 @@ typedef struct t3_camera {
   float fov, aspect, near, far, zoom;          /* perspective */
   float left, right, top, bottom;              /* orthographic */
 } t3_camera;
+
+/* ArrayCamera: several cameras, each with a viewport, rendered by ONE t3_renderer_render call (split screen, a
+ * map beside the main view, the two eyes of a headset). Pass it where a camera goes
+ * (t3_renderer_render(r, scene, &array->base)). What the views share, done once: the scene's matrix update, the
+ * light list, the shadow maps, the target's bind and clear, the per-draw uniform upload, and (WebGPU) the render
+ * pass and (GLES) the output pass. What each view has of its own: its lists, culled against ITS frustum and
+ * sorted by ITS depth, its lights in its view space, its viewport and scissor (x, y from the top left, in the
+ * renderer's pixels, as t3_renderer_set_viewport). The renderer's own viewport and scissor are not used for the
+ * views and are back in force after the render.
+ *
+ * r187 draws an ArrayCamera with programs of its own (camera matrices in arrays, indexed per draw) and loops
+ * the cameras inside each object's draw; three.c draws each view's list in turn with the ordinary programs, which
+ * gives the same picture and needs no extra program states. Up to T3_ARRAY_CAMERA_MAX views. Transmission's
+ * framebuffer copy and the double-sided transmission back pass are not made under an ArrayCamera. The array
+ * camera's own transform and projection are not used. */
+enum { T3_ARRAY_CAMERA_MAX = 8 };
+typedef struct t3_array_camera {
+  t3_camera base;
+  t3_camera *cameras[T3_ARRAY_CAMERA_MAX];   /* retained */
+  int viewports[T3_ARRAY_CAMERA_MAX][4];     /* x, y, width, height */
+  int count;
+} t3_array_camera;
+t3_array_camera *t3_array_camera_new(void);
+/* cameras.push(camera) with camera.viewport = (x, y, w, h); false past T3_ARRAY_CAMERA_MAX */
+bool t3_array_camera_add(t3_array_camera *a, t3_camera *camera, int x, int y, int w, int h);
+#define T3_ARRAY_CAMERA_API 1
 
 typedef struct t3_light_shadow {
   t3_camera *camera;            /* owned */

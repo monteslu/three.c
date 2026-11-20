@@ -62,6 +62,10 @@ run test_ies node test/test_ies.mjs build/test/test_ies
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_batched.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_batched
 run test_batched env EGL_PLATFORM=surfaceless ./build/test/test_batched
 run test_batched_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_batched >/dev/null 2>&1"
+# ArrayCamera: two and four views in one render equal the views rendered one by one; a view that looks away adds no draws; the control must fail
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_array_camera.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_array_camera
+run test_array_camera env EGL_PLATFORM=surfaceless T3_TEST_NO_TIMING=1 ./build/test/test_array_camera
+run test_array_camera_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_array_camera >/dev/null 2>&1"
 # an extension reading an r187 uniformArray (test/extensions/arr.mjs: a buffer binding of its own in the object group)
 # draws with the values its hook sets; the control leaves one element at zero and must come out black. One whose
 # elements no property names (arrbare.mjs: a buffer nothing fills) is refused by the generator, naming the binding;
