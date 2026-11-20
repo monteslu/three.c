@@ -1534,3 +1534,68 @@ static void r11_frame(void) {
   for (int i = 0; i < 5; i++) t3_material_set_texture(r11_spheres[i]->materials[0], T3_ENV_MAP, r11_probe->texture);
   t3_renderer_render(R, S, C);
 }
+
+/* ── m1-toon: MeshToonMaterial (two tones, gradient maps, a map, emissive) ── */
+static t3_texture *m1_ramp(int n) {
+  uint8_t d[16 * 4];
+  for (int i = 0; i < n; i++) { uint8_t v = (uint8_t)((i + 1) * 255.0 / n + 0.5); d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255; }
+  return t3_data_texture_new(n, 1, d);
+}
+static void m1_setup(void) {
+  R = make_renderer(0x20242c);
+  t3_renderer_set_shadow_map(R, true, T3_PCF_SHADOW_MAP);
+  S = t3_scene_new();
+  C = t3_perspective_camera_new(45, 1280.0f / 720, 0.1f, 100);
+  t3_object_set_position(C, 0, 4, 12);
+  t3_object_look_at(C, 0, 0.6f, 0);
+  t3_texture *three = m1_ramp(3), *five = m1_ramp(5);
+  enum { N = 32 };
+  static uint8_t data[N * N * 4];
+  for (int y = 0; y < N; y++)
+    for (int x = 0; x < N; x++) {
+      uint8_t *p = data + (y * N + x) * 4;
+      int on = ((x >> 3) + (y >> 3)) & 1;
+      p[0] = on ? 230 : 60; p[1] = on ? 200 : 120; p[2] = on ? 90 : 200; p[3] = 255;
+    }
+  t3_texture *map = t3_data_texture_new(N, N, data);
+  map->mag_filter = map->min_filter = T3_LINEAR;
+  map->color_space = T3_SRGB_COLOR_SPACE;
+  t3_geometry *pg = t3_plane_geometry_new(18, 12, 1, 1);
+  t3_material *gm = t3_mesh_toon_material_new(0x6f8f5f);
+  t3_material_set_texture(gm, T3_GRADIENT_MAP, three);
+  t3_mesh *ground = add_mesh(&S->base, pg, gm);
+  t3_object_set_rotation(ground, -3.141592653589793f / 2, 0, 0);
+  ground->base.receive_shadow = true;
+  t3_release(pg); t3_release(gm);
+  t3_geometry *geo = t3_sphere_geometry_new(0.9f, 48, 24);
+  t3_material *mats[5] = { t3_mesh_toon_material_new(0xe05040), t3_mesh_toon_material_new(0x40a0e0), t3_mesh_toon_material_new(0xe0c040),
+                           t3_mesh_toon_material_new(0xffffff), t3_mesh_toon_material_new(0x303030) };
+  t3_material_set_texture(mats[1], T3_GRADIENT_MAP, three);
+  t3_material_set_texture(mats[2], T3_GRADIENT_MAP, five);
+  t3_material_set_texture(mats[3], T3_MAP, map);
+  t3_material_set_texture(mats[3], T3_GRADIENT_MAP, three);
+  t3_material_set_texture(mats[4], T3_GRADIENT_MAP, five);
+  mats[4]->emissive = t3_color_hex(0xff6020);
+  mats[4]->emissive_intensity = 0.6f;
+  for (int i = 0; i < 5; i++) {
+    t3_mesh *s = add_mesh(&S->base, geo, mats[i]);
+    t3_object_set_position(s, (float)((i - 2) * 2.3), 0.9f, 0);
+    s->base.cast_shadow = s->base.receive_shadow = true;
+    t3_release(mats[i]);
+  }
+  t3_release(geo); t3_release(three); t3_release(five); t3_release(map);
+  add_light(t3_ambient_light_new(0x404858, 1));
+  t3_light *sun = t3_directional_light_new(0xffffff, 2.5f);
+  t3_object_set_position(sun, 5, 8, 4);
+  sun->base.cast_shadow = true;
+  sun->shadow->map_width = sun->shadow->map_height = 1024;
+  t3_camera *sh = sun->shadow->camera;
+  sh->left = -9; sh->right = 9; sh->top = 9; sh->bottom = -9; sh->near = 1; sh->far = 30;
+  t3_camera_update_projection_matrix(sh);
+  sun->shadow->bias = -0.0005f;
+  add_light(sun);
+  t3_light *lamp = t3_point_light_new(0x60a0ff, 30, 0, 2);
+  t3_object_set_position(lamp, -4, 2.5f, 3);
+  add_light(lamp);
+}
+static void m1_frame(void) { t3_renderer_render(R, S, C); }

@@ -114,3 +114,7 @@ physical+shadow+rdepth+l1100
 standard+map+shadow+rdepth+l1000
 standard+map+shadow+rdepth+l1100
 standard+map+ao+lmap+c1map+c1ao+c1lmap+l1000
+# m1-toon: a shadowed sun and a point light on toon materials
+toon+shadow+l1100+s100
+toon+gmap+shadow+l1100+s100
+toon+map+gmap+shadow+l1100+s100

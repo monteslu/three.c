@@ -80,7 +80,7 @@ typedef enum {
 
 /* the textures a material binds, by the names the manifest uses */
 enum { T3_GEN_TEX_MAP, T3_GEN_TEX_NORMAL, T3_GEN_TEX_AO, T3_GEN_TEX_EMISSIVE, T3_GEN_TEX_ROUGHNESS, T3_GEN_TEX_METALNESS,
-       T3_GEN_TEX_ALPHA, T3_GEN_TEX_BUMP, T3_GEN_TEX_SPECULAR, T3_GEN_TEX_LIGHT, T3_GEN_TEX_CLEARCOAT_NORMAL, T3_GEN_TEX_COUNT };
+       T3_GEN_TEX_ALPHA, T3_GEN_TEX_BUMP, T3_GEN_TEX_SPECULAR, T3_GEN_TEX_LIGHT, T3_GEN_TEX_CLEARCOAT_NORMAL, T3_GEN_TEX_GRADIENT, T3_GEN_TEX_COUNT };
 extern const char *const t3_gen_tex_names[T3_GEN_TEX_COUNT];
 /* the program tables to search for a backend, project tables first (gen_program.c) */
 int t3_gen_tables(t3_gen_backend backend, const t3_gen_table *const **out);

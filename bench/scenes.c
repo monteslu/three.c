@@ -1107,6 +1107,7 @@ const bench_scene bench_scenes[] = {
   { "t5-transparent-basic", t5_setup, t5_frame },
   { "p1-physical", p1_setup, p1_frame },
   { "p3-eon", eon_setup, eon_frame },
+  { "m1-toon", m1_setup, m1_frame },
   { "u1-uv-channel", u1_setup, u1_frame },
   { "z1-reversed-depth", z1_setup, z1_frame },
   { "z2-reversed-far", z2_setup, z2_frame },

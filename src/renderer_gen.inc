@@ -39,14 +39,17 @@ static void gen_reversed_projection(const t3_camera *cam, float *p) {
   }
   p[10] = (float)(1 / (f - n)); p[14] = (float)(f / (f - n));
 }
+/* the kinds with a lighting model: their states carry a light vector and may receive shadows */
+static bool gen_lit(t3_gen_kind kind) { return (kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL) || kind == T3_GEN_TOON; }
 /* a state's name in the generator's syntax (kind+features+lDPSH+sDPS) */
 static void gen_state_name(char *name, size_t cap, t3_gen_kind kind, uint64_t f, const uint8_t want[4], const uint8_t *cast, uint16_t ext) {
-  static const char *const kinds[] = { "basic", "lambert", "phong", "standard", "physical", "depth", "points", "psprite", "line", "sprite", "normal" };
+  static const char *const kinds[T3_GEN_TOON + 1] = { "basic", "lambert", "phong", "standard", "physical", "depth", "points", "psprite", "line", "sprite", "normal",
+                                                      [T3_GEN_TOON] = "toon" };
   static const char *const feats[] = T3_GEN_FEATURE_NAMES;
-  int n = snprintf(name, cap, "%s", kind < (int)(sizeof kinds / sizeof kinds[0]) ? kinds[kind] : "?");
+  int n = snprintf(name, cap, "%s", kind < (int)(sizeof kinds / sizeof kinds[0]) && kinds[kind] ? kinds[kind] : "?");
   for (int b = 0; b < (int)(sizeof feats / sizeof feats[0]) && n < (int)cap - 16; b++)
     if (f & (1ull << b)) n += snprintf(name + n, cap - (size_t)n, "+%s", feats[b]);
-  if (kind != T3_GEN_BASIC && kind != T3_GEN_NORMAL && kind <= T3_GEN_PHYSICAL)
+  if (gen_lit(kind))
     n += snprintf(name + n, cap - (size_t)n, "+l%d%d%d%d", want[0], want[1], want[2], want[3]);
   if (cast && (cast[0] != want[0] || cast[1] != want[1] || cast[2] != want[2]))
     n += snprintf(name + n, cap - (size_t)n, "+s%d%d%d", cast[0], cast[1], cast[2]);
@@ -132,6 +135,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   case T3_MESH_PHONG_MATERIAL: kind = T3_GEN_PHONG; break;
   case T3_MESH_STANDARD_MATERIAL: kind = T3_GEN_STANDARD; break;
   case T3_MESH_PHYSICAL_MATERIAL: kind = T3_GEN_PHYSICAL; break;
+  case T3_MESH_TOON_MATERIAL: kind = T3_GEN_TOON; break;
   case T3_MESH_NORMAL_MATERIAL: kind = T3_GEN_NORMAL; break;
   case T3_POINTS_MATERIAL: kind = T3_GEN_POINTS; break;      /* r187 draws a Points object as 1-pixel GL points */
   case T3_LINE_BASIC_MATERIAL: kind = T3_GEN_LINE; break;
@@ -178,6 +182,12 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   if (m->metalness_map) f |= T3_GEN_MMAP;
   if (m->alpha_map) f |= T3_GEN_AMAP;
   if (m->light_map) f |= T3_GEN_LMAP;
+  if (kind == T3_GEN_TOON && m->gradient_map) {
+    /* three.js: a gradientMap takes NearestFilter for both filters (the program reads it that way) */
+    if (!tex_nearest(m->gradient_map)) { *why = "a gradientMap that is not NearestFilter (min and mag)"; return false; }
+    if (m->gradient_map->wrap_s != T3_CLAMP_TO_EDGE || m->gradient_map->wrap_t != T3_CLAMP_TO_EDGE) { *why = "gradientMap wrapping"; return false; }
+    f |= T3_GEN_GMAP;
+  }
   /* texture.channel (r187 RenderObject keys its programs on it) */
   if (m->map && m->map->channel) f |= T3_GEN_C1MAP;
   if (m->normal_map && m->normal_map->channel) f |= T3_GEN_C1NMAP;
@@ -234,13 +244,13 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   }
   if (m->alpha_test > 0) f |= T3_GEN_ATEST;
   if ((kind == T3_GEN_SPRITE) && !m->size_attenuation) f |= T3_GEN_NOATTEN;
-  if (m->flat_shading && (kind == T3_GEN_NORMAL || (kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL))) f |= T3_GEN_FLAT;
+  if (m->flat_shading && (kind == T3_GEN_NORMAL || gen_lit(kind))) f |= T3_GEN_FLAT;
   if (m->wireframe || m->premultiplied_alpha || m->dithering) { *why = "wireframe / premultiplied / dithering"; return false; }
   /* shadows: r187 keys the program on receiveShadow when a light casts; the
    * table's +shadow states have every light of the vector casting */
   bool shadow = false;
   uint8_t cast[3] = { 0, 0, 0 };
-  if (r->shadow_map_enabled && o->receive_shadow && kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL &&
+  if (r->shadow_map_enabled && o->receive_shadow && gen_lit(kind) &&
       (r->ls.num_dir_shadows || r->ls.num_spot_shadows || r->ls.num_point_shadows)) {
     /* per type, the casters must be the first lights by id (the table's sDPS) */
     t3_light *const *arr[3] = { r->ls.dir, r->ls.point, r->ls.spot };
@@ -262,7 +272,7 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
    * casters must match exactly (they come first in each type); extra
    * unshadowed lights are covered the same way. */
   uint8_t want[4] = { 0, 0, 0, 0 };
-  if (kind >= T3_GEN_LAMBERT && kind <= T3_GEN_PHYSICAL) {
+  if (gen_lit(kind)) {
     want[0] = (uint8_t)r->ls.num_dir; want[1] = (uint8_t)r->ls.num_point; want[2] = (uint8_t)r->ls.num_spot; want[3] = (uint8_t)r->ls.num_hemi;
   }
   memset(key, 0, sizeof *key);
@@ -486,6 +496,7 @@ static const t3_texture *gen_tex(const t3_material *m, int which) {
   case T3_GEN_TEX_ALPHA: return m->alpha_map;
   case T3_GEN_TEX_LIGHT: return m->light_map;
   case T3_GEN_TEX_CLEARCOAT_NORMAL: return m->clearcoat_normal_map;
+  case T3_GEN_TEX_GRADIENT: return m->gradient_map;
   default: return NULL;
   }
 }

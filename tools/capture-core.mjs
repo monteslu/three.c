@@ -27,6 +27,7 @@ const KINDS = {
   basic: () => new THREE.MeshBasicMaterial(), lambert: () => new THREE.MeshLambertMaterial(),
   phong: () => new THREE.MeshPhongMaterial(), standard: () => new THREE.MeshStandardMaterial(),
   physical: () => new THREE.MeshPhysicalMaterial(),
+  toon: () => new THREE.MeshToonMaterial(),
   // the shadow pass: the caster program r187 draws depth with (its
   // scene.overrideMaterial); captured from the mesh's shadow-pass draw with
   // one directional shadow. The material here is only the main pass's.
@@ -114,6 +115,8 @@ const FEATURES = {
   env: () => {},      // material.envMap = a PMREM of a small scene (a cube with a mip chain); envMapIntensity, envMapRotation
   senv: () => {},     // scene.environment instead: scene.environmentIntensity / environmentRotation feed the same uniforms
   lmap: (m) => { needs(m, 'lightMap'); m.lightMap = dataTexture(); },
+  // MeshToonMaterial.gradientMap: a DataTexture as three.js asks for it (NearestFilter for both filters, no mipmaps)
+  gmap: (m) => { needs(m, 'gradientMap'); const t = new THREE.DataTexture(new Uint8Array([80, 80, 80, 255, 160, 160, 160, 255, 255, 255, 255, 255]), 3, 1); t.needsUpdate = true; m.gradientMap = t; },
   skin: () => {},     // a SkinnedMesh with a two-bone skeleton (bone texture, bind matrices)
   morph: () => {},    // two position morph targets (morph texture array, influences)
   noatten: (m) => { needs(m, 'sizeAttenuation'); m.sizeAttenuation = false; },   // points: a program key
@@ -127,7 +130,7 @@ const FEATURES = {
   dmap: (m) => { const t = new THREE.RenderTarget(4, 4); t.depthTexture = new THREE.DepthTexture(4, 4); m.map = t.depthTexture; },
 };
 const needs = (m, key) => { if (!(key in m)) throw new Error(`${m.type} has no ${key}`); };
-const LIT = new Set(['lambert', 'phong', 'standard', 'physical']);
+const LIT = new Set(['lambert', 'phong', 'standard', 'physical', 'toon']);
 function allStates() {
   const out = [];
   out.push('output');
@@ -152,10 +155,13 @@ function allStates() {
     if (LIT.has(kind)) out.push(`${kind}+l0000`, `${kind}+l1000`, `${kind}+l1111`, `${kind}+l2200`, `${kind}+l4410`);
     // the other maps
     const maps = { basic: ['amap', 'ao'], lambert: ['nmap', 'emap', 'ao', 'amap'], phong: ['nmap', 'emap', 'bump', 'spec', 'amap'],
-                   standard: ['nmap', 'ao', 'emap', 'rmap', 'mmap', 'amap'], physical: ['nmap', 'ao', 'emap', 'rmap', 'mmap', 'amap'] }[kind];
+                   standard: ['nmap', 'ao', 'emap', 'rmap', 'mmap', 'amap'], physical: ['nmap', 'ao', 'emap', 'rmap', 'mmap', 'amap'],
+                   toon: ['nmap', 'emap', 'ao', 'amap', 'gmap', 'lmap'] }[kind];
     for (const f of maps) out.push(`${kind}+${f}`);
     if (kind === 'standard' || kind === 'physical') out.push(`${kind}+map+nmap+ao+emap+rmap+mmap`);   // the glTF PBR set
   }
+  // MeshToonMaterial with a gradient map: with a colour map, shadowed, double sided, instanced, skinned
+  out.push('toon+map+gmap', 'toon+gmap+shadow', 'toon+map+gmap+shadow', 'toon+gmap+ds', 'toon+gmap+instbig', 'toon+instbig+icol', 'toon+skin', 'toon+gmap+skin', 'toon+ds', 'toon+map+ds');
   out.push('standard+map+xtint');   // the extension hook, exercised by the example extension
   out.push('standard+xswell', 'depth+xswell');   // an extension that moves vertices, and its shadow caster
   out.push('standard+xlayers');   // an extension with an array texture and an integer texture
@@ -337,7 +343,7 @@ async function capture(stateName, backend) {
     }
   }
   // every texture's uv transform is a uniform of its own (texture.matrix): sentinel offset / repeat on each
-  const TEX_KEYS = ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'bumpMap', 'specularMap', 'lightMap', 'clearcoatNormalMap'];
+  const TEX_KEYS = ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'bumpMap', 'specularMap', 'lightMap', 'clearcoatNormalMap', 'gradientMap'];
   for (const key of TEX_KEYS) if (mat[key]) { mat[key].offset.set(sentinel(), sentinel()); mat[key].repeat.set(1 + sentinel(), 1 + sentinel()); }
   if (mat.normalMap) { const nx = sentinel(), ny = sentinel(); mat.normalScale.set(nx, ny); props['material.normalScale'] = { kind: 'vec2', value: [nx, ny] }; }
   if (mat.aoMap) setNum(mat, 'aoMapIntensity', 'material.aoMapIntensity');
@@ -688,7 +694,7 @@ if (features.includes('morph') && geo.attributes.position.count !== TPL.morphWid
       const type = l.isDirectionalLight ? 'directional' : l.isSpotLight ? 'spot' : 'point';
       return `shadow:${type}[${scene.children.filter((o) => o.constructor === l.constructor && o.castShadow).indexOf(l)}]`;
     }
-    for (const k of ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'specularMap', 'envMap', 'lightMap', 'bumpMap', 'displacementMap', 'clearcoatNormalMap']) if (mat[k] === t) return k;
+    for (const k of ['map', 'normalMap', 'aoMap', 'emissiveMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'specularMap', 'envMap', 'lightMap', 'bumpMap', 'displacementMap', 'clearcoatNormalMap', 'gradientMap']) if (mat[k] === t) return k;
     if (scene.environment && t === scene.environment) return 'environment';   /* (the material's own is 'envMap') */
     if (t.name === 'DFG_LUT') return 'dfg_lut';
     if (extension && typeof t.name === 'string' && t.name.startsWith('ext.')) return t.name;   // an extension's own texture, filled at run time by that name

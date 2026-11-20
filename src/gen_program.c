@@ -83,7 +83,7 @@ static GLuint compile(GLenum type, const char *src, char *err, size_t errcap) {
 }
 
 const char *const t3_gen_tex_names[T3_GEN_TEX_COUNT] = { "map", "normalMap", "aoMap", "emissiveMap", "roughnessMap", "metalnessMap",
-                                                         "alphaMap", "bumpMap", "specularMap", "lightMap", "clearcoatNormalMap" };
+                                                         "alphaMap", "bumpMap", "specularMap", "lightMap", "clearcoatNormalMap", "gradientMap" };
 
 static const struct { const char *tail; uint8_t op; } OPS[] = {
   { "camera.projectionMatrix", GOP_CAM_PROJ }, { "camera.matrixWorldInverse", GOP_CAM_VIEW },

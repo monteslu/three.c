@@ -51,8 +51,8 @@ top of `include/three.h`.
 
 Object3D / Group / Scene, perspective and orthographic cameras, ambient /
 hemisphere / directional / point / spot lights with shadows (PCF, 2D and
-cube), Fog and FogExp2, Basic / Lambert / Phong / Standard / Physical /
-Normal materials (Physical with clearcoat and its normal map, sheen,
+cube), Fog and FogExp2, Basic / Lambert / Phong / Toon (with a gradientMap) /
+Standard / Physical / Normal materials (Physical with clearcoat and its normal map, sheen,
 iridescence, anisotropy, transmission with thickness and attenuation, ior
 and specular intensity / colour) with map, normalMap (tangent space, vertex
 tangents), aoMap, emissiveMap, roughnessMap, metalnessMap, alphaMap and
@@ -122,7 +122,7 @@ has on first use, the same program the tables would hold.
 
 ## Same pixels as three.js r187
 
-`tools/parity-r187.mjs` renders 44 scenes (three.lua's compare scenes and
+`tools/parity-r187.mjs` renders 45 scenes (three.lua's compare scenes and
 three.c's feature scenes in `test/scenes`) with three.c and with unmodified
 three.js r187 on the same backend, and compares frame 100 (frame 3 for the
 compare scenes). A scene matches when at most 8 pixels differ by more than 2
@@ -131,8 +131,8 @@ paths produces.
 
 | Backend | three.js reference | Match | Differ |
 | --- | --- | --- | --- |
-| WebGPU | r187 WebGPURenderer on webgpu-node | 44 | 0 |
-| GLES / WebGL2 | r187 WebGPURenderer (forceWebGL) on webgl-node | 36 | 6: 1 r187 defect and 5 notes below |
+| WebGPU | r187 WebGPURenderer on webgpu-node | 45 | 0 |
+| GLES / WebGL2 | r187 WebGPURenderer (forceWebGL) on webgl-node | 37 | 6: 1 r187 defect and 5 notes below |
 
 The one defect is three.js's, on WebGL: a DepthTexture map and a colour map
 share one program, so the first built wins (`tools/r187-defects/` reproduces it

@@ -5,6 +5,19 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.9 (2026-11-19)
+
+### Added
+- **MeshToonMaterial** (`t3_mesh_toon_material_new`, `T3_MESH_TOON_MATERIAL`): r187's ToonLightingModel, drawn with
+  the programs r187 generates for it. Colour and map, `gradient_map` (`t3_material_set_texture( T3_GRADIENT_MAP )`:
+  the light ramp, one tone a texel; without one r187's two tones), emissive with its map and intensity, normal map,
+  ambient occlusion, light map, alpha map, vertex and instance colours, fog, skinning, every light type and shadows.
+  As three.js asks, a gradientMap is NearestFilter for both filters and clamped: the program reads it that way, and
+  one that is not is refused with the reason in the renderer's error. New state kind `toon` and feature `gmap`
+  (36 states in the base tables, 376 in all). The parity scene `m1-toon` matches r187 on WebGPU and GLES;
+  test/test_toon.c counts the tones a sphere shows (2, 3 and 5 for no map, three and five texels), and its control
+  (the same spheres as Lambert) fails.
+
 ## v0.187.8 (2026-11-18)
 
 ### Fixed

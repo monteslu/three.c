@@ -46,6 +46,10 @@ for t in test_backend_seam test_shared_geometry test_instance_color test_gl_tran
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done
+# MeshToonMaterial: as many tones as the gradientMap has texels, emissive, a linear gradientMap refused; the control (Lambert) must fail
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_toon.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_toon
+run test_toon env EGL_PLATFORM=surfaceless ./build/test/test_toon
+run test_toon_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_toon >/dev/null 2>&1"
 # extension materials auto-instanced (t3_renderer_set_extension_batching) and a texture sampled 24
 # times: a table of the tests' own (the tint example, plain and instanced; many), captured on the mock GPU
 mkdir -p build/test/exttab

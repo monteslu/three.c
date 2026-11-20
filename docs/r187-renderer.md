@@ -49,7 +49,7 @@ three.c needs neither Node nor three.js.
 
 A backend's shaders differ by a few lines per feature, so a table stores its
 distinct lines once and each shader as the list of its lines, deflated
-together (about 0.2 MB per backend for the full table's 325 states). The
+together (about 0.2 MB per backend for the full table's 376 states). The
 first program built from a table inflates its text (kept for the table's
 other programs) with stb_image's inflater, which three.c already carries for
 PNG. A full-table wasm cart is about 1.25 MB (0.9 MB with the core table).
@@ -61,13 +61,14 @@ with `+`:
 
     standard+map+nmap+shadow+l1101+s100
 
-- **Kind:** `basic`, `lambert`, `phong`, `standard`, `physical`, `normal`,
+- **Kind:** `basic`, `lambert`, `phong`, `toon`, `standard`, `physical`, `normal`,
   `points`, `psprite`, `line`, `sprite`; `depth` (the shadow caster);
   `output` (the output pass); `bg*` (scene backgrounds); `pmrem*` (the PMREM
   generator's passes).
 - **Features:** the material, object and scene properties that change the
   program text. Examples: `map`, `nmap`, `vcol`, `fog`, `fog2`, `trans`,
   `atest`, `inst`, `instbig`, `icol` (instance colours), `skin`, `morph`,
+  `gmap` (a Toon material's gradientMap, NearestFilter and clamped as three.js asks),
   `shadow`, `env`, `senv`, `cenv`, `ds` (double sided), `bs` (back side),
   `tm*` (tone mappings), `lin` (linear output). The full list is `FEATURES` in
   `tools/gen-programs.mjs`.

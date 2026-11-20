@@ -11,7 +11,7 @@
 #include "../backend.h"
 
 typedef enum { T3_GEN_GL = 0, T3_GEN_WGPU = 1 } t3_gen_backend;
-typedef enum { T3_GEN_BASIC, T3_GEN_LAMBERT, T3_GEN_PHONG, T3_GEN_STANDARD, T3_GEN_PHYSICAL, T3_GEN_DEPTH, T3_GEN_POINTS, T3_GEN_PSPRITE, T3_GEN_LINE, T3_GEN_SPRITE, T3_GEN_NORMAL, T3_GEN_OUTPUT, T3_GEN_BGCUBE, T3_GEN_BGPMREM, T3_GEN_BG2D, T3_GEN_PMREMCUBE, T3_GEN_PMREMEQUI, T3_GEN_PMREMGGX, T3_GEN_PMREMINTEGRATION, T3_GEN_PMREMBLUR } t3_gen_kind;
+typedef enum { T3_GEN_BASIC, T3_GEN_LAMBERT, T3_GEN_PHONG, T3_GEN_STANDARD, T3_GEN_PHYSICAL, T3_GEN_DEPTH, T3_GEN_POINTS, T3_GEN_PSPRITE, T3_GEN_LINE, T3_GEN_SPRITE, T3_GEN_NORMAL, T3_GEN_OUTPUT, T3_GEN_BGCUBE, T3_GEN_BGPMREM, T3_GEN_BG2D, T3_GEN_PMREMCUBE, T3_GEN_PMREMEQUI, T3_GEN_PMREMGGX, T3_GEN_PMREMINTEGRATION, T3_GEN_PMREMBLUR, T3_GEN_TOON } t3_gen_kind;
 /* feature bits of a state (the support table in tools/gen-programs.mjs) */
 #define T3_GEN_MAP 1ull
 #define T3_GEN_VCOL 2ull
@@ -75,8 +75,9 @@ typedef enum { T3_GEN_BASIC, T3_GEN_LAMBERT, T3_GEN_PHONG, T3_GEN_STANDARD, T3_G
 #define T3_GEN_C1AMAP 576460752303423488ull
 #define T3_GEN_C1LMAP 1152921504606846976ull
 #define T3_GEN_RDEPTH 2305843009213693952ull
+#define T3_GEN_GMAP 4611686018427387904ull
 /* the feature names by bit, as in state names */
-#define T3_GEN_FEATURE_NAMES { "map", "vcol", "fog", "inst", "trans", "flat", "rep", "nearest", "instbig", "nmap", "ao", "emap", "rmap", "mmap", "amap", "bump", "spec", "shadow", "skin", "morph", "env", "senv", "lmap", "noatten", "tmlinear", "tmreinhard", "tmcineon", "tmaces", "tmagx", "tmneutral", "lin", "fog2", "clip", "clipi", "atest", "tan", "morphn", "dmap", "cenv", "refr", "mix", "add", "ds", "bs", "cm", "icol", "cc", "ccn", "sheen", "irid", "aniso", "transm", "eon", "c1map", "c1nmap", "c1ao", "c1emap", "c1rmap", "c1mmap", "c1amap", "c1lmap", "rdepth" }
+#define T3_GEN_FEATURE_NAMES { "map", "vcol", "fog", "inst", "trans", "flat", "rep", "nearest", "instbig", "nmap", "ao", "emap", "rmap", "mmap", "amap", "bump", "spec", "shadow", "skin", "morph", "env", "senv", "lmap", "noatten", "tmlinear", "tmreinhard", "tmcineon", "tmaces", "tmagx", "tmneutral", "lin", "fog2", "clip", "clipi", "atest", "tan", "morphn", "dmap", "cenv", "refr", "mix", "add", "ds", "bs", "cm", "icol", "cc", "ccn", "sheen", "irid", "aniso", "transm", "eon", "c1map", "c1nmap", "c1ao", "c1emap", "c1rmap", "c1mmap", "c1amap", "c1lmap", "rdepth", "gmap" }
 
 /* where a renderer-side property lives in the program's uniform data:
  * "material.color" -> group (index into groups), byte offset and length;

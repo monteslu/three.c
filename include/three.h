@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.8"
+#define T3_VERSION "0.187.9"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -412,7 +412,8 @@ t3_geometry *t3_ring_geometry_new(float inner, float outer, int theta_segments, 
 typedef enum {
   T3_MESH_BASIC_MATERIAL, T3_MESH_LAMBERT_MATERIAL, T3_MESH_PHONG_MATERIAL,
   T3_MESH_STANDARD_MATERIAL, T3_MESH_NORMAL_MATERIAL,
-  T3_LINE_BASIC_MATERIAL, T3_SPRITE_MATERIAL, T3_POINTS_MATERIAL, T3_MESH_PHYSICAL_MATERIAL
+  T3_LINE_BASIC_MATERIAL, T3_SPRITE_MATERIAL, T3_POINTS_MATERIAL, T3_MESH_PHYSICAL_MATERIAL,
+  T3_MESH_TOON_MATERIAL
 } t3_material_type;
 typedef enum { T3_FRONT_SIDE = 0, T3_BACK_SIDE = 1, T3_DOUBLE_SIDE = 2 } t3_side;
 /* three.js's constants for material.blending, blendEquation, blendSrc /
@@ -483,6 +484,11 @@ typedef struct t3_material {
    * lightMapIntensity (1): irradiance added to the indirect diffuse light */
   t3_texture *light_map;
   float light_map_intensity;
+  /* MeshToonMaterial.gradientMap (retained; t3_material_set_texture( T3_GRADIENT_MAP )): the
+   * light ramp, read along x by the cosine between the normal and the light (its left end
+   * faces away from the light) in its red channel. As three.js asks, it must be NearestFilter
+   * for both filters. NULL: r187's two tones (0.7 and 1, split at a cosine of 0.4). */
+  t3_texture *gradient_map;
   /* MeshPhysicalMaterial (T3_MESH_PHYSICAL_MATERIAL; the Standard fields
    * apply too). As in r187, clearcoat, sheen, diffuse_roughness, iridescence,
    * anisotropy and transmission each turn on when their strength is above 0. */
@@ -516,11 +522,14 @@ t3_material *t3_mesh_lambert_material_new(uint32_t color);
 t3_material *t3_mesh_phong_material_new(uint32_t color);
 t3_material *t3_mesh_standard_material_new(uint32_t color);
 t3_material *t3_mesh_physical_material_new(uint32_t color);
+/* MeshToonMaterial: color, map, gradient_map, emissive (and its map and intensity), normal_map,
+ * ao_map, light_map, alpha_map; lit by every light type, receives shadows */
+t3_material *t3_mesh_toon_material_new(uint32_t color);
 t3_material *t3_mesh_normal_material_new(void);
 void t3_material_set_map(t3_material *m, t3_texture *map);
 typedef enum {
   T3_MAP, T3_NORMAL_MAP, T3_AO_MAP, T3_EMISSIVE_MAP, T3_ROUGHNESS_MAP, T3_METALNESS_MAP, T3_ALPHA_MAP,
-  T3_ENV_MAP, T3_LIGHT_MAP, T3_CLEARCOAT_NORMAL_MAP
+  T3_ENV_MAP, T3_LIGHT_MAP, T3_CLEARCOAT_NORMAL_MAP, T3_GRADIENT_MAP
 } t3_map_slot;
 void t3_material_set_texture(t3_material *m, t3_map_slot slot, t3_texture *t);
 /* Material.clone: a new material with the same values, maps retained */

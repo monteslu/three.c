@@ -9,12 +9,12 @@
 // nodeAttribute0..3, which is checked.
 
 export const KINDS = ['basic', 'lambert', 'phong', 'standard', 'physical', 'depth', 'points', 'psprite', 'line', 'sprite', 'normal', 'output',
-  'bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremintegration', 'pmremblur'];
+  'bgcube', 'bgpmrem', 'bg2d', 'pmremcube', 'pmremequi', 'pmremggx', 'pmremintegration', 'pmremblur', 'toon'];
 // feature bits (64): the order is the C ABI of the table, append only
 export const FEATURE_NAMES = ['map', 'vcol', 'fog', 'inst', 'trans', 'flat', 'rep', 'nearest', 'instbig', 'nmap', 'ao', 'emap', 'rmap', 'mmap',
   'amap', 'bump', 'spec', 'shadow', 'skin', 'morph', 'env', 'senv', 'lmap', 'noatten', 'tmlinear', 'tmreinhard', 'tmcineon', 'tmaces',
   'tmagx', 'tmneutral', 'lin', 'fog2', 'clip', 'clipi', 'atest', 'tan', 'morphn', 'dmap', 'cenv', 'refr', 'mix', 'add', 'ds', 'bs', 'cm', 'icol', 'cc', 'ccn', 'sheen', 'irid', 'aniso', 'transm', 'eon',
-  'c1map', 'c1nmap', 'c1ao', 'c1emap', 'c1rmap', 'c1mmap', 'c1amap', 'c1lmap', 'rdepth'];
+  'c1map', 'c1nmap', 'c1ao', 'c1emap', 'c1rmap', 'c1mmap', 'c1amap', 'c1lmap', 'rdepth', 'gmap'];
 // backend.h's t3_bk_sample_type / t3_bk_tex_dim, by index
 export const SAMPLES = ['float', 'unfilterable-float', 'depth', 'sint', 'uint'];
 export const DIMS = ['2d', '2d-array', 'cube', '3d'];
