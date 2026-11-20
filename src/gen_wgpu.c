@@ -403,6 +403,9 @@ t3_gen_gl *t3_gen_wgpu_build(t3_wgpu *w, const t3_gen_program *src, t3_gen_param
       int bi = g->n_buffers++;
       g->buf[bi].bytes = bytes;
       g->buf[bi].source = B->source;
+      g->buf[bi].name = B->name;
+      g->buf[bi].group = (uint8_t)i;
+      g->buf[bi].index = (uint8_t)k;
       g->buf[bi].point = (GLuint)i;          /* (WebGPU: the group it belongs to) */
       g->buf[bi].ubo = B->binding;           /* (WebGPU: its binding number) */
       e[n].binding = B->binding;

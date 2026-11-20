@@ -5,6 +5,18 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.13 (2026-11-19)
+
+### Fixed
+- **A program with a buffer binding three.c does not fill is refused, loudly.** An extension reading an r187
+  `uniformArray` gets a buffer binding of its own in the object group (`NodeBuffer_object_1` on GLES), which three.c
+  never filled; its values were written over the start of the object block instead, and the mesh silently did not
+  draw in the colour pass. The generator (tools/program-model.mjs) now stops with the state, the binding and its
+  group, and a program from an older table is incomplete at build with the same words in
+  `t3_renderer_last_error` (its draws are skipped and counted). Bone matrices and morph influences, the buffers
+  three.c fills, are unchanged. test/run.sh `test_uniform_array_refused` (test/extensions/arr.mjs); the generator
+  without the check is the control and fails it.
+
 ## v0.187.12 (2026-11-19)
 
 ### Added

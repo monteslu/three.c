@@ -130,7 +130,7 @@ typedef struct t3_gen_gl {
   bool dirty[T3_GEN_MAX_GROUPS];
   struct t3_gen_op *ops;         /* frame ops first, then draw ops */
   int n_frame_ops, n_ops;
-  char unsupported[64];          /* the first property path with no op, or "" */
+  char unsupported[128];         /* the first property path with no op (or binding nothing fills), or "" */
   bool complete;
   bool encode;
   /* the one group every per-draw op writes (and no frame op does), streamed
@@ -139,7 +139,7 @@ typedef struct t3_gen_gl {
   /* the groups' extra buffers (bone matrices, morph influences): their own
    * blocks at binding points T3_GEN_MAX_GROUPS + i, uploaded per draw */
   int n_buffers;
-  struct { GLuint ubo; uint32_t bytes; const char *source; GLuint point; uint8_t kind; } buf[T3_GEN_MAX_BUFFERS];
+  struct { GLuint ubo; uint32_t bytes; const char *source, *name; GLuint point; uint8_t kind, group, index; } buf[T3_GEN_MAX_BUFFERS];   /* (group, index: where the layout lists it) */
   /* sampler uniforms by manifest texture, set to units 0.. at build */
   int n_textures;
   struct { GLint loc; const t3_bk_texture_layout *layout; uint8_t kind, arg; } tex[T3_GEN_MAX_TEXTURES];

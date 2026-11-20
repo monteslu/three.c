@@ -62,6 +62,12 @@ run test_ies node test/test_ies.mjs build/test/test_ies
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_batched.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_batched
 run test_batched env EGL_PLATFORM=surfaceless ./build/test/test_batched
 run test_batched_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_batched >/dev/null 2>&1"
+# an extension reading an r187 uniformArray (test/extensions/arr.mjs: a buffer binding three.c does not fill) is
+# refused by the generator, which names the binding; the tint example in the table below is the control that passes
+mkdir -p build/test/arrtab
+printf 'standard+xarr\n' > build/test/arrtab/states.txt
+run test_uniform_array_refused sh -c 'out=$(node tools/gen-project-table.mjs --name arrtab --out build/test/arrtab --states build/test/arrtab/states.txt \
+  --cache build/test/arrtab/cache --extend test/extensions/arr.mjs 2>&1) && exit 1; echo "$out" | grep -q "buffer binding NodeBuffer_object_1 of group object"'
 # extension materials auto-instanced (t3_renderer_set_extension_batching) and a texture sampled 24
 # times: a table of the tests' own (the tint example, plain and instanced; many), captured on the mock GPU
 mkdir -p build/test/exttab

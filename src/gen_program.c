@@ -464,6 +464,9 @@ t3_gen_gl *t3_gen_gl_build(const t3_gen_program *src, bool encode, t3_gen_params
       g->buf[bi].point = (GLuint)(T3_GEN_MAX_GROUPS + bi);
       g->buf[bi].bytes = bytes;
       g->buf[bi].source = B->source;
+      g->buf[bi].name = B->name;
+      g->buf[bi].group = (uint8_t)i;
+      g->buf[bi].index = (uint8_t)k;
       glUniformBlockBinding(prog, idx, g->buf[bi].point);
       glGenBuffers(1, &g->buf[bi].ubo);
       glBindBuffer(GL_UNIFORM_BUFFER, g->buf[bi].ubo);
@@ -567,7 +570,18 @@ void t3_gen_common(t3_gen_gl *g) {
     else g->draw_groups |= (uint8_t)(1u << g->ops[k].group);
   }
   /* the sources bound per draw, by kind */
-  for (int i = 0; i < g->n_buffers; i++) { uint8_t a; g->buf[i].kind = t3_gen_source_kind(g->buf[i].source, &a); }
+  for (int i = 0; i < g->n_buffers; i++) {
+    uint8_t a;
+    g->buf[i].kind = t3_gen_source_kind(g->buf[i].source, &a);
+    /* a buffer nothing fills (an r187 uniformArray from a table made before the
+     * generator refused one) would be bound empty and the draw come out wrong
+     * or not at all: the program is incomplete, and says which binding */
+    if (g->buf[i].kind != T3_SRC_BONES && g->buf[i].kind != T3_SRC_MORPH_INFLUENCES) {
+      g->complete = false;
+      snprintf(g->unsupported, sizeof g->unsupported, "buffer binding %s of group %s (source %s) is one three.c does not fill (an r187 uniformArray is one)",
+               g->buf[i].name ? g->buf[i].name : "?", g->src->groups[g->buf[i].group]->name, g->buf[i].source ? g->buf[i].source : "none");
+    }
+  }
   for (int i = 0; i < src->n_groups && i < T3_GEN_MAX_GROUPS; i++) {
     const t3_bk_group_layout *L = src->groups[i];
     for (uint32_t t = 0; t < L->n_textures && t < T3_GEN_MAX_TEXTURES; t++) g->wtex_kind[i][t] = source_kind(g, L->textures[t].source, &g->wtex_arg[i][t]);

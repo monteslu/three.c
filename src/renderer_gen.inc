@@ -409,8 +409,9 @@ static t3_gen_gl *gen_program_p(t3_renderer *r, const t3_gen_program *src, bool 
     snprintf(buf, sizeof buf, "program %s: %.2000s", src->state, err);
     gen_note(r, buf);
   } else if (!gl->complete) {
-    char buf[200];
-    snprintf(buf, sizeof buf, "program %s: no op for property %s", src->state, gl->unsupported);
+    char buf[400];
+    if (!strncmp(gl->unsupported, "buffer ", 7)) snprintf(buf, sizeof buf, "program %s: %s", src->state, gl->unsupported);
+    else snprintf(buf, sizeof buf, "program %s: no op for property %s", src->state, gl->unsupported);
     gen_note(r, buf);
   }
   if (r->gen_n == r->gen_cap) {

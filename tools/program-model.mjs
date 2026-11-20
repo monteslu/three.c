@@ -149,6 +149,14 @@ export function programModel(state, be, j, vert, frag) {
       }),
     };
   });
+  // a buffer three.c fills (bone matrices, morph influences) is named by its source; any other buffer (an
+  // extension's uniformArray, say) would be bound with nothing in it: refuse the program, naming the binding
+  {
+    const kinds = new Set(['boneMatrices', 'morphInfluences']);
+    for (const g of j.groups) for (const b of g.bindings)
+      if (b.kind === 'buffer' && !kinds.has(b.source))
+        throw new Error(`${state}.${be}: buffer binding ${b.shaderName ?? b.name} of group ${g.name} (source ${b.source ?? 'none'}) is one three.c does not fill (an r187 uniformArray is one): its values would never reach the program`);
+  }
   const missing = Object.entries(j.properties).filter(([, v]) => !v).map(([k]) => k);
   if (missing.length) throw new Error(`${state}.${be}: properties without a slot: ${missing.join(' ')}`);
   const properties = Object.entries(j.properties).map(([path, v]) => {
