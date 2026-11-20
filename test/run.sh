@@ -46,6 +46,11 @@ for t in test_backend_seam test_shared_geometry test_instance_color test_gl_tran
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done
+# extension names and hooks have room for hundreds of composed names of up to 63 characters; the control asks for the
+# old limits (64 names of 31 characters) to hold and must fail
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_extension_names.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_names
+run test_extension_names env EGL_PLATFORM=surfaceless ./build/test/test_extension_names
+run test_extension_names_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_extension_names >/dev/null 2>&1"
 # MeshToonMaterial: as many tones as the gradientMap has texels, emissive, a linear gradientMap refused; the control (Lambert) must fail
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_toon.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_toon
 run test_toon env EGL_PLATFORM=surfaceless ./build/test/test_toon

@@ -382,18 +382,28 @@ t3_material *t3_mesh_normal_material_new(void) { return t3_material_new(T3_MESH_
 /* extension names, interned for the life of the process: a material keys
  * its program on the id (here, not with the programs: a tool that links
  * three.c without GL still sets a material's extension) */
-#define T3_MAX_EXTENSIONS 64
-static char ext_names[T3_MAX_EXTENSIONS][32];
-static int n_ext_names;
+#define T3_MAX_EXTENSIONS 4096   /* names; the list grows as they are first used */
+#define T3_EXTENSION_NAME_MAX 63
+static char **ext_names;           /* each name its own allocation: a returned name stays put */
+static int n_ext_names, cap_ext_names;
 uint16_t t3__extension_id(const char *name) {
   if (!name) return 0;
   size_t n = strlen(name);
-  if (!n || n > 31) return 0;
+  if (!n || n > T3_EXTENSION_NAME_MAX) return 0;
   for (size_t i = 0; i < n; i++)
     if (!((name[i] >= 'a' && name[i] <= 'z') || (name[i] >= '0' && name[i] <= '9') || name[i] == '_')) return 0;
   for (int i = 0; i < n_ext_names; i++) if (!strcmp(ext_names[i], name)) return (uint16_t)(i + 1);
   if (n_ext_names == T3_MAX_EXTENSIONS) return 0;
-  memcpy(ext_names[n_ext_names], name, n + 1);
+  if (n_ext_names == cap_ext_names) {
+    int cap = cap_ext_names ? cap_ext_names * 2 : 64;
+    char **grown = realloc(ext_names, (size_t)cap * sizeof *grown);
+    if (!grown) return 0;
+    ext_names = grown, cap_ext_names = cap;
+  }
+  char *copy = malloc(n + 1);
+  if (!copy) return 0;
+  memcpy(copy, name, n + 1);
+  ext_names[n_ext_names] = copy;
   return (uint16_t)++n_ext_names;
 }
 const char *t3__extension_name(uint16_t id) { return id >= 1 && id <= n_ext_names ? ext_names[id - 1] : NULL; }

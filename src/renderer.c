@@ -311,11 +311,9 @@ struct t3_renderer {
    * cleared when the program tables change (t3_gen_tables_serial) */
   struct gen_slot *gen_slots; size_t gen_slot_cap, gen_slot_n; unsigned gen_slot_serial;
   /* the hooks that fill extension programs (t3_renderer_set_extension), by extension id */
-  struct { uint16_t id; t3_extension_fill fill; void *user; } ext_hooks[64];
-  int ext_hook_n;
-  /* extensions whose meshes may be auto-instanced (t3_renderer_set_extension_batching) */
-  uint16_t ext_batch[64];
-  int ext_batch_n;
+  /* (and whether its meshes may be auto-instanced, t3_renderer_set_extension_batching); the list grows with the ids */
+  struct ext_hook { t3_extension_fill fill; void *user; bool batch; } *ext_hooks;
+  int ext_hook_cap;
   /* r187 renders the scene into a linear (half float) target and a final pass
    * applies the output colour space (and tone mapping); on when the output
    * encoding is sRGB or a tone mapping is set, for the screen target only */
@@ -420,6 +418,7 @@ void t3_renderer_destroy(t3_renderer *r) {
   for (int i = 0; i < 2; i++) t3_release(r->vp_rt[i]);
   t3_release(r->vp_sampler);
   free(r->backpass.items);
+  free(r->ext_hooks);
   pm187_free(r);
 #ifdef T3_WGPU
   for (int i = 0; i < r->gen_n; i++) if (r->wgpu) t3_gen_wgpu_free(r->gen[i].gl); else t3_gen_gl_free(r->gen[i].gl);
@@ -1796,11 +1795,7 @@ static float item_z(const t3_renderer *r, t3_object *o, t3_geometry *g, bool opa
   return t3_vec3_apply_mat4(t3_v3(e[12], e[13], e[14]), &r->proj_screen).z;
 }
 
-static bool ext_batches(const t3_renderer *r, uint16_t id) {
-  for (int i = 0; i < r->ext_batch_n; i++)
-    if (r->ext_batch[i] == id) return true;
-  return false;
-}
+static bool ext_batches(const t3_renderer *r, uint16_t id) { return id < r->ext_hook_cap && r->ext_hooks[id].batch; }
 
 /* Opaque items get their z later (build_batches): a batched mesh never needs
  * one, and that was a perspective divide per mesh per frame. */

@@ -777,51 +777,47 @@ bool t3_extension_set_texture(t3_extension_ctx *c, const char *name, t3_texture 
     }
   return false;
 }
+/* the renderer's entry for extension id (made on demand); NULL when out of memory */
+static struct ext_hook *ext_hook_of(t3_renderer *r, uint16_t id) {
+  if (id >= r->ext_hook_cap) {
+    int cap = r->ext_hook_cap ? r->ext_hook_cap : 64;
+    while (cap <= id) cap *= 2;
+    struct ext_hook *grown = realloc(r->ext_hooks, (size_t)cap * sizeof *grown);
+    if (!grown) return NULL;
+    memset(grown + r->ext_hook_cap, 0, (size_t)(cap - r->ext_hook_cap) * sizeof *grown);
+    r->ext_hooks = grown, r->ext_hook_cap = cap;
+  }
+  return &r->ext_hooks[id];
+}
 void t3_renderer_set_extension(t3_renderer *r, const char *name, t3_extension_fill fill, void *user) {
   uint16_t id = t3__extension_id(name);
   if (!id) return;
-  int h = 0;
-  while (h < r->ext_hook_n && r->ext_hooks[h].id != id) h++;
-  if (!fill) {
-    if (h < r->ext_hook_n) r->ext_hooks[h] = r->ext_hooks[--r->ext_hook_n];
-    return;
-  }
-  if (h == r->ext_hook_n) {
-    if (h == (int)(sizeof r->ext_hooks / sizeof r->ext_hooks[0])) { gen_note(r, "t3_renderer_set_extension: more extensions than the renderer has room for"); return; }
-    r->ext_hook_n++;
-  }
-  r->ext_hooks[h].id = id;
-  r->ext_hooks[h].fill = fill;
-  r->ext_hooks[h].user = user;
+  struct ext_hook *h = ext_hook_of(r, id);
+  if (!h) { gen_note(r, "t3_renderer_set_extension: out of memory"); return; }
+  h->fill = fill;
+  h->user = fill ? user : NULL;
 }
 void t3_renderer_set_extension_batching(t3_renderer *r, const char *name, bool on) {
   uint16_t id = t3__extension_id(name);
   if (!id) return;
-  int i = 0;
-  while (i < r->ext_batch_n && r->ext_batch[i] != id) i++;
-  if (!on) {
-    if (i < r->ext_batch_n) r->ext_batch[i] = r->ext_batch[--r->ext_batch_n];
-    return;
-  }
-  if (i < r->ext_batch_n) return;
-  if (r->ext_batch_n == (int)(sizeof r->ext_batch / sizeof r->ext_batch[0])) { gen_note(r, "t3_renderer_set_extension_batching: too many extensions"); return; }
-  r->ext_batch[r->ext_batch_n++] = id;
+  struct ext_hook *h = ext_hook_of(r, id);
+  if (!h) { gen_note(r, "t3_renderer_set_extension_batching: out of memory"); return; }
+  h->batch = on;
 }
 /* run the hook for a draw of an extension program: false (noted) when the
  * extension has no hook or the hook left a texture unset, and the draw is
  * skipped */
 static bool gen_fill_ext(t3_renderer *r, t3_gen_gl *gl, const t3_material *m, const t3_object *o) {
   if (!gl->src->extension) return true;
-  int h = 0;
-  while (h < r->ext_hook_n && r->ext_hooks[h].id != gl->ext_id) h++;
+  const struct ext_hook *h = gl->ext_id < r->ext_hook_cap ? &r->ext_hooks[gl->ext_id] : NULL;
   char buf[200];
-  if (h == r->ext_hook_n) {
+  if (!h || !h->fill) {
     snprintf(buf, sizeof buf, "program %s: no hook for extension %s (t3_renderer_set_extension)", gl->src->state, gl->src->extension);
     return gen_note(r, buf);
   }
   for (int t = 0; t < gl->n_ext_tex; t++) gl->ext_tex[t].tex = NULL;
   struct t3_extension_ctx c = { r, gl, m, o };
-  r->ext_hooks[h].fill(&c, r->ext_hooks[h].user);
+  h->fill(&c, h->user);
   for (int t = 0; t < gl->n_ext_tex; t++) {
     const t3_texture *tx = gl->ext_tex[t].tex;
     if (!tx) {

@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.9"
+#define T3_VERSION "0.187.10"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1190,7 +1190,8 @@ const char *t3_renderer_generated_missing(const t3_renderer *r);
  * a shadow caster draws with the material's extension too (state
  * depth+x<name>), and the same hook fills it. */
 /* the extension a material's program carries: name as in the state's x<name>
- * ([a-z0-9_], up to 31 characters), or NULL for none; false for a bad name */
+ * ([a-z0-9_], up to 63 characters), or NULL for none; false for a bad name.
+ * Names are kept for the life of the process (up to 4096 of them). */
 bool t3_material_set_extension(t3_material *m, const char *name);
 const char *t3_material_get_extension(const t3_material *m);
 typedef struct t3_extension_ctx t3_extension_ctx;

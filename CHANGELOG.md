@@ -5,6 +5,16 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.10 (2026-11-19)
+
+### Changed
+- **Extension names and hooks grow on demand.** A material's extension name may be up to 63 characters (was 31), a
+  process may name up to 4096 extensions (was 64), and a renderer holds a hook and a batching flag for every one of
+  them (was 64 hooks; the hook of a draw is now found by the extension's id, not by a search). An application that
+  joins several extensions into one name per combination ran out of all three. Signatures are unchanged.
+  `test/test_extension_names.c` names 300 extensions, one of 63 characters, with hooks on one renderer; its control
+  asks for the old limits to hold and fails.
+
 ## v0.187.9 (2026-11-19)
 
 ### Added
