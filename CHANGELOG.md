@@ -5,6 +5,23 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.15 (2026-11-19)
+
+### Fixed
+- `T3_VERSION` says 0.187.15: the v0.187.14 tag's checkout still said 0.187.13, and this file had no section for it
+  (the one below). Nothing else changed.
+
+## v0.187.14 (2026-11-19)
+
+### Added
+- **Extensions can read an r187 `uniformArray`.** Its buffer binding (one of its own in the object group) is filled
+  by the extension hook, element by element, with `t3_extension_set_uniform` under the names the extension registered
+  (`ext.arr0` .. `ext.arrN`), and uploaded for each draw that changed it, on GLES and WebGPU. `t3_gen_property`
+  gains `buffer` as its last field (0: the group's uniform struct, k + 1: the group's buffer k); tables made before
+  stay valid as they are. A buffer no property fills is still refused, by the generator and at build, naming the
+  binding. test/test_uniform_array.c draws a plane in the colour two elements make, on GLES and WebGPU; its control
+  leaves an element at zero and must fail; test/extensions/arrbare.mjs (elements no property names) is refused.
+
 ## v0.187.13 (2026-11-19)
 
 ### Fixed
