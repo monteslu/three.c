@@ -5,6 +5,16 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.19 (2026-11-21)
+
+### Added
+- **`t3_renderer_set_extension_miss_hook`**: the renderer tells an embedder when an extension hook sets a uniform
+  or texture the draw's program does not have (`t3_extension_set_uniform` or `t3_extension_set_texture` about to
+  return false for want of the name), with the program's state and the name. A program table generated before an
+  extension gained a value lacks it, and the value was dropped without a word. `T3_EXTENSION_MISS_HOOK` says it
+  exists. test/test_extension.c checks no call while every name exists and one per missing uniform and texture
+  (GLES, WebGPU, compatibility mode); its control registers no hook and fails.
+
 ## v0.187.18 (2026-11-19)
 
 ### Added

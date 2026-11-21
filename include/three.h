@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.18"
+#define T3_VERSION "0.187.19"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1321,6 +1321,13 @@ bool t3_extension_set_uniform(t3_extension_ctx *c, const char *name, const float
  * linear unless the texture is nearest filtered; on GLES the GL texture's own
  * compare mode applies); false when the program has no such texture */
 bool t3_extension_set_texture(t3_extension_ctx *c, const char *name, t3_texture *t);
+/* Called when a hook sets a uniform or texture the draw's program does not have (t3_extension_set_uniform or
+ * t3_extension_set_texture about to return false for want of the name): state is the program's state, name the
+ * uniform's or texture's name, texture which of the two. A program table generated before an extension gained a
+ * value lacks it, and the value is otherwise dropped without a word. Called on every such call; NULL removes it. */
+typedef void (*t3_extension_miss_hook)(void *user, const char *state, const char *name, bool texture);
+void t3_renderer_set_extension_miss_hook(t3_renderer *r, t3_extension_miss_hook fn, void *user);
+#define T3_EXTENSION_MISS_HOOK 1
 /* Render with WebGPU instead of GLES (three.c built with T3_WGPU): device and
  * queue are a WGPUDevice and its WGPUQueue (core webgpu.h), out_format the
  * WGPUTextureFormat of the output texture. */

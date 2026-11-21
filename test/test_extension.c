@@ -138,6 +138,15 @@ static int fills;
 /* t3_extension_camera: the camera each draw is drawn from (counted against the render's) */
 static const t3_camera *expect_cam;
 static int cam_seen, cam_wrong;
+/* t3_renderer_set_extension_miss_hook: the hook also sets a uniform and a texture the program lacks */
+static bool set_missing;
+static int misses, miss_tex, miss_wrong;
+static void on_miss(void *user, const char *state, const char *name, bool texture) {
+  (void)user;
+  misses++;
+  miss_tex += texture;
+  miss_wrong += strcmp(state, "standard+map+xtint") != 0 || strcmp(name, texture ? "tintNoSuchMap" : "tintNoSuch") != 0;
+}
 static void fill(t3_extension_ctx *c, void *user) {
   (void)user;
   fills++;
@@ -146,6 +155,11 @@ static void fill(t3_extension_ctx *c, void *user) {
   t3_extension_set_uniform(c, "tint", tint, 3);
   t3_extension_set_uniform(c, "tintScale", &s, 1);
   if (set_texture) t3_extension_set_texture(c, "tintMap", tint_map);
+  if (set_missing) {
+    static const float one = 1;
+    t3_extension_set_uniform(c, "tintNoSuch", &one, 1);
+    t3_extension_set_texture(c, "tintNoSuchMap", tint_map);
+  }
 }
 
 static float swell;
@@ -511,6 +525,18 @@ int main(int argc, char **argv) {
     cam = cam2;
     render(rc, px);
     if (getenv("T3_TEST_CONTROL")) { expect_cam = keep; t3_renderer_render(rc, scene, cam2); }
+    /* the miss hook: none while the hook sets only the program's names, then each name it lacks (T3_TEST_CONTROL_MISS:
+     * no hook registered, which must fail) */
+    if (!getenv("T3_TEST_CONTROL_MISS")) t3_renderer_set_extension_miss_hook(rc, on_miss, NULL);
+    misses = miss_tex = miss_wrong = 0;
+    render(rc, px);
+    CHECK(misses == 0, "miss hook: %d calls while every name exists", misses);
+    set_missing = true;
+    render(rc, px);
+    set_missing = false;
+    CHECK(misses >= 2 && miss_tex > 0 && miss_tex < misses && miss_wrong == 0,
+          "miss hook: %d calls (%d textures, %d with another state or name) for a missing uniform and texture", misses, miss_tex, miss_wrong);
+    t3_renderer_set_extension_miss_hook(rc, NULL, NULL);
     cam = keep;
     scene = keep_scene;
     t3_release(cam2);

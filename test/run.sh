@@ -48,6 +48,7 @@ for t in test_backend_seam test_shared_geometry test_instance_color test_gl_tran
 done
 # t3_extension_camera: the control expects the first camera for a render with another and must fail
 run test_extension_camera_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_extension >/dev/null 2>&1"
+run test_extension_miss_control sh -c "! T3_TEST_CONTROL_MISS=1 EGL_PLATFORM=surfaceless ./build/test/test_extension >/dev/null 2>&1"
 # extension names and hooks have room for hundreds of composed names of up to 63 characters; the control asks for the
 # old limits (64 names of 31 characters) to hold and must fail
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_extension_names.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_names

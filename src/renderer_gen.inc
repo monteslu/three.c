@@ -779,6 +779,7 @@ bool t3_extension_set_uniform(t3_extension_ctx *c, const char *name, const float
   }
   gl->ext_ck[s].name = name;
   gl->ext_ck[s].idx = (int16_t)(found == 1 ? first : -1);
+  if (!found && c->r->ext_miss_hook) c->r->ext_miss_hook(c->r->ext_miss_user, gl->src->state, name, false);
   return found > 0;
 }
 bool t3_extension_set_texture(t3_extension_ctx *c, const char *name, t3_texture *t) {
@@ -793,6 +794,7 @@ bool t3_extension_set_texture(t3_extension_ctx *c, const char *name, t3_texture 
       gl->ext_tck[s].idx = (int16_t)i;
       return true;
     }
+  if (c->r->ext_miss_hook) c->r->ext_miss_hook(c->r->ext_miss_user, gl->src->state, name, true);
   return false;
 }
 /* the renderer's entry for extension id (made on demand); NULL when out of memory */
