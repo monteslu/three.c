@@ -201,6 +201,7 @@ static void wgpu_draw_prog(t3_renderer *r, const render_item *it, const t3_camer
   st.color = (WGPUTextureFormat)r->wg_pass_format;
   st.depth = (WGPUTextureFormat)r->wg_depth_format;
   st.samples = (uint8_t)r->wg_samples;
+  st.a2c = state->alpha_to_coverage && st.samples > 1;   /* (r187 WebGPUPipelineUtils: alphaToCoverage && sampleCount > 1) */
   if (!st.depth) st.depth_test = st.depth_write = 0;
   /* vertex buffers in the manifest's attribute order */
   WGPUBuffer vbs[16]; uint64_t voffs[16];

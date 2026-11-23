@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.20"
+#define T3_VERSION "0.187.21"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -452,9 +452,16 @@ typedef struct t3_material {
   bool transparent, depth_test, depth_write, vertex_colors, flat_shading, wireframe, visible, fog;
   float alpha_test;
   /* material.alphaToCoverage: on a multisampled target the fragment's alpha
-   * becomes its sample coverage (soft alpha-tested edges: foliage cards). GL
-   * only; WebGPU draws it as plain alpha test. */
+   * becomes its sample coverage (soft alpha-tested edges: foliage cards), on
+   * GLES and WebGPU (the pipeline's alphaToCoverageEnabled when the pass is
+   * multisampled, as r187's WebGPUPipelineUtils). The program must write the
+   * alpha it computes: r187's alphaToCoverage program (its alpha test as
+   * smoothstep(alphaTest, alphaTest + fwidth(a), a), the alpha kept) is not a
+   * table state of three.c's own; an extension sets it on its capture
+   * material (test/extensions/a2c.mjs). With the plain alpha-test program the
+   * alpha is 1 and every sample is covered. */
   bool alpha_to_coverage;
+#define T3_ALPHA_TO_COVERAGE_WGPU 1 /* alpha_to_coverage reaches WebGPU pipelines (0.187.21) */
   /* material.blending (NoBlending 0, NormalBlending 1, AdditiveBlending 2,
    * SubtractiveBlending 3, MultiplyBlending 4, CustomBlending 5),
    * premultipliedAlpha, the CustomBlending factors and equations (the alpha

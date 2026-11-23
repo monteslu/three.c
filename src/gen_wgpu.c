@@ -648,7 +648,7 @@ WGPURenderPipeline t3_wgpu_pipeline(t3_wgpu *w, t3_gen_gl *g, const t3_wgpu_stat
     .primitive = { .topology = topo[st->topology & 3], .frontFace = st->flip_y ? WGPUFrontFace_CW : WGPUFrontFace_CCW,
                    .cullMode = st->cull == 1 ? WGPUCullMode_Back : st->cull == 2 ? WGPUCullMode_Front : WGPUCullMode_None },
     .depthStencil = st->depth ? &ds : NULL,
-    .multisample = { .count = st->samples > 1 ? st->samples : 1, .mask = 0xFFFFFFFF },
+    .multisample = { .count = st->samples > 1 ? st->samples : 1, .mask = 0xFFFFFFFF, .alphaToCoverageEnabled = st->a2c && st->samples > 1 },
     .fragment = &fs,
   };
   WGPURenderPipeline p = wgpuDeviceCreateRenderPipeline(w->dev, &d);

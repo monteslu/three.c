@@ -5,6 +5,19 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.21 (2026-11-23)
+
+### Fixed
+- WebGPU: `material.alpha_to_coverage` turns the pipeline's `alphaToCoverageEnabled` on when the pass is
+  multisampled (a 4x render target or external target), as r187's WebGPUPipelineUtils does; the WebGPU backend left
+  it off, so alpha-tested foliage cards drew with hard, flickering edges there under MSAA while GLES smoothed them.
+  The pipeline cache keys on it. `T3_ALPHA_TO_COVERAGE_WGPU` says it exists. three.js's alphaToCoverage program
+  (its alpha test as `smoothstep(alphaTest, alphaTest + fwidth(a), a)`, the alpha kept) is not a state of three.c's
+  own tables: an extension sets `alphaToCoverage` on its capture material (test/extensions/a2c.mjs), as the
+  material's header comment now says. test/test_alpha_coverage.c draws an alpha-ramped plane multisampled on GLES
+  and WebGPU and checks the cut-out edge differs with alpha to coverage on from off; its control draws both off and
+  fails (the WebGPU run fails without the fix).
+
 ## v0.187.20 (2026-11-23)
 
 ### Added

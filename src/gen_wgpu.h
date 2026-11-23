@@ -38,6 +38,7 @@ typedef struct {
   uint8_t samples;        /* 0 or 1: single sampled, else the MSAA count */
   uint8_t flip_y;         /* clip y negated, front face CW: a target stored bottom-up (t3_external_target.flip_y) */
   uint8_t reversed;       /* reversedDepthBuffer: the depth compare mirrored */
+  uint8_t a2c;            /* material.alphaToCoverage on a multisampled pass: the fragment alpha is the sample coverage */
   WGPUTextureFormat color, depth;
 } t3_wgpu_state;
 

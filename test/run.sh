@@ -110,6 +110,20 @@ if node tools/gen-project-table.mjs --name exttab --out build/test/exttab --stat
 else
   echo "FAIL  test_extension_batch (gen-project-table)"; fail=1
 fi
+# material.alpha_to_coverage on a multisampled draw (r187's alphaToCoverage program from an extension: table a2ctab):
+# the cut-out edge differs from the same draw with it off; the control draws both with it off and must fail (GLES here,
+# WebGPU below)
+mkdir -p build/test/a2ctab
+printf 'basic+atest+xa2c\n' > build/test/a2ctab/states.txt
+if node tools/gen-project-table.mjs --name a2ctab --out build/test/a2ctab --states build/test/a2ctab/states.txt \
+     --cache build/test/a2ctab/cache --extend test/extensions/a2c.mjs >/dev/null 2>&1; then
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_alpha_coverage.c build/test/a2ctab/a2ctab_gl.c \
+    build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_alpha_coverage
+  run test_alpha_coverage env EGL_PLATFORM=surfaceless ./build/test/test_alpha_coverage
+  run test_alpha_coverage_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_alpha_coverage >/dev/null 2>&1"
+else
+  echo "FAIL  test_alpha_coverage (gen-project-table)"; fail=1
+fi
 # every optional vertex attribute at once on an InstancedMesh (uv1, vertex and instance colours, tangents,
 # five maps): the WebGPU vertex buffers three.c binds stay inside the 8 every device has. A table of the
 # test's own state; GLES here, WebGPU (against this frame) below. The control (white instances) must fail.
@@ -218,6 +232,17 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
   set +e; T3_TEST_CONTROL=1 ./build/test/test_render_transparent_wgpu > /dev/null 2>&1; st=$?; set -e
   if [ $st = 1 ]; then echo "ok    test_render_transparent_wgpu_control"; elif [ $st = 77 ]; then echo "skip  test_render_transparent_wgpu_control (no WebGPU adapter)"
   else echo "FAIL  test_render_transparent_wgpu_control (the control passed)"; fail=1; fi
+  # material.alpha_to_coverage on WebGPU (the pipeline's alphaToCoverageEnabled); the control must fail
+  if [ -f build/test/a2ctab/a2ctab_wgpu.c ]; then
+    "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_alpha_coverage.c build/test/a2ctab/a2ctab_wgpu.c \
+      build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_alpha_coverage_wgpu
+    set +e; ./build/test/test_alpha_coverage_wgpu > build/test/test_alpha_coverage_wgpu.log 2>&1; st=$?; set -e
+    if [ $st = 0 ]; then echo "ok    test_alpha_coverage_wgpu"; elif [ $st = 77 ]; then echo "skip  test_alpha_coverage_wgpu (no WebGPU adapter)"
+    else echo "FAIL  test_alpha_coverage_wgpu"; grep -v "^Warning" build/test/test_alpha_coverage_wgpu.log; fail=1; fi
+    set +e; T3_TEST_CONTROL=1 ./build/test/test_alpha_coverage_wgpu > /dev/null 2>&1; st=$?; set -e
+    if [ $st = 1 ]; then echo "ok    test_alpha_coverage_wgpu_control"; elif [ $st = 77 ]; then echo "skip  test_alpha_coverage_wgpu_control (no WebGPU adapter)"
+    else echo "FAIL  test_alpha_coverage_wgpu_control (the control passed)"; fail=1; fi
+  fi
   # an extension program filled at run time, on WebGPU (the GLES run is in the loop above)
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_extension.c \
     build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_wgpu
