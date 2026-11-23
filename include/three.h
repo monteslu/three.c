@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.19"
+#define T3_VERSION "0.187.20"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1195,6 +1195,16 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *camera);
  * are preserved. Useful for an embedder's prepass; ordinary render calls
  * afterward include transparents again. Does not change material properties. */
 void t3_renderer_render_opaque(t3_renderer *r, t3_scene *scene, t3_camera *camera);
+/* Render the transparent queue only: the transparent and transmissive draws t3_renderer_render_opaque leaves
+ * out (double-sided transmissive back faces first), sorted as a whole render sorts them, over what the target
+ * holds. Nothing is cleared (no autoClear, no background colour, an external target's colour and depth are
+ * loaded), no background is drawn, and the shadow maps the frame's opaque render drew are used as they stand
+ * (as t3_renderer_set_shadow_hold). With nothing transparent in view it draws and binds nothing. Opaque then
+ * transparent gives the picture one t3_renderer_render gives, with room for the embedder's own passes over the
+ * opaque picture in between (fog applied from the opaque depth before the transparent surfaces blend over it). */
+void t3_renderer_render_transparent(t3_renderer *r, t3_scene *scene, t3_camera *camera);
+/* t3_renderer_render_transparent exists (an embedder can test for it) */
+#define T3_RENDER_TRANSPARENT 1
 /* A depth prepass for an embedder's scene target. Opaque material shaders
  * preserve alpha discard/displacement, but write no colour. Skips sky/output
  * conversion; normal clearing/target rules apply. Restores colour writes on

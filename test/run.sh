@@ -42,10 +42,12 @@ run test_gltf_materials_control sh -c "! T3_TEST_CONTROL=1 ./build/test/test_glt
   src/{math,core,geometry,curves,animation,raycaster,loaders,gltf,renderer,backend_gles,gen_program}.c \
   src/gen/programs_gl.c src/gen/programs_dfg.c -w -lGLESv2 -lm -o build/test/test_free
 run test_free ./build/test/test_free
-for t in test_backend_seam test_shared_geometry test_instance_color test_gl_transmission_fbo test_extension test_vertex_color_rgba test_blend_modes; do
+for t in test_backend_seam test_shared_geometry test_instance_color test_gl_transmission_fbo test_extension test_vertex_color_rgba test_blend_modes test_render_transparent; do
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src "test/$t.c" build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o "build/test/$t"
   run "$t" env EGL_PLATFORM=surfaceless "./build/test/$t"
 done
+# t3_renderer_render_transparent: the control draws the second half with t3_renderer_render and must fail
+run test_render_transparent_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_render_transparent >/dev/null 2>&1"
 # t3_extension_camera: the control expects the first camera for a render with another and must fail
 run test_extension_camera_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_extension >/dev/null 2>&1"
 run test_extension_miss_control sh -c "! T3_TEST_CONTROL_MISS=1 EGL_PLATFORM=surfaceless ./build/test/test_extension >/dev/null 2>&1"
@@ -207,6 +209,15 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
   set +e; ./build/test/test_blend_modes_wgpu > build/test/test_blend_modes_wgpu.log 2>&1; st=$?; set -e
   if [ $st = 0 ]; then echo "ok    test_blend_modes_wgpu"; elif [ $st = 77 ]; then echo "skip  test_blend_modes_wgpu (no WebGPU adapter)"
   else echo "FAIL  test_blend_modes_wgpu"; grep -v "^Warning" build/test/test_blend_modes_wgpu.log; fail=1; fi
+  # t3_renderer_render_transparent on WebGPU (the GLES run is in the loop above); the control must fail
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_render_transparent.c \
+    build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_render_transparent_wgpu
+  set +e; ./build/test/test_render_transparent_wgpu > build/test/test_render_transparent_wgpu.log 2>&1; st=$?; set -e
+  if [ $st = 0 ]; then echo "ok    test_render_transparent_wgpu"; elif [ $st = 77 ]; then echo "skip  test_render_transparent_wgpu (no WebGPU adapter)"
+  else echo "FAIL  test_render_transparent_wgpu"; grep -v "^Warning" build/test/test_render_transparent_wgpu.log; fail=1; fi
+  set +e; T3_TEST_CONTROL=1 ./build/test/test_render_transparent_wgpu > /dev/null 2>&1; st=$?; set -e
+  if [ $st = 1 ]; then echo "ok    test_render_transparent_wgpu_control"; elif [ $st = 77 ]; then echo "skip  test_render_transparent_wgpu_control (no WebGPU adapter)"
+  else echo "FAIL  test_render_transparent_wgpu_control (the control passed)"; fail=1; fi
   # an extension program filled at run time, on WebGPU (the GLES run is in the loop above)
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_extension.c \
     build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_extension_wgpu

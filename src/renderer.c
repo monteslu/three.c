@@ -157,6 +157,7 @@ struct t3_renderer {
   t3_scene *env_scene;    /* the scene being rendered (its environment intensity / rotation) */
 
   bool opaque_only; /* scoped by t3_renderer_render_opaque */
+  bool transparent_only; /* scoped by t3_renderer_render_transparent */
   bool depth_prepass; /* suppress colour output and background for GLES prepass */
   render_list opaque, transparent, scratch;
   /* transmission (r187): double-sided transmissive items, drawn back faces
@@ -2546,6 +2547,15 @@ void t3_renderer_render_opaque(t3_renderer *r, t3_scene *scene, t3_camera *cam) 
   r->opaque_only = previous;
 }
 
+void t3_renderer_render_transparent(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
+  bool previous = r->transparent_only, hold = r->shadow_hold;
+  r->transparent_only = true;
+  r->shadow_hold = true;   /* (the shadow maps the opaque render drew this frame) */
+  t3_renderer_render(r, scene, cam);
+  r->transparent_only = previous;
+  r->shadow_hold = hold;
+}
+
 /* a view's camera as the draws read it: its matrices, its frustum, the lights in its view space */
 static void view_camera(t3_renderer *r, t3_camera *cam) {
   r->camera = cam;
@@ -2572,6 +2582,7 @@ static void view_lists(t3_renderer *r, t3_scene *scene, t3_camera *cam, int o0, 
   render_list seg = { r->opaque.items + o0, r->opaque.n - o0, 0 };
   sort_items(&seg, &r->scratch, painter_sort);
   if (r->opaque_only) r->transparent.n = t0;
+  if (r->transparent_only) r->opaque.n = o0;
   seg = (render_list){ r->transparent.items + t0, r->transparent.n - t0, 0 };
   sort_items(&seg, &r->scratch, reverse_painter_sort);
 }
@@ -2638,6 +2649,11 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
     if (m->type == T3_MESH_PHYSICAL_MATERIAL && m->transmission > 0 && m->side == T3_DOUBLE_SIDE) list_push(&r->backpass, r->transparent.items[i]);
   }
 
+  /* t3_renderer_render_transparent with nothing transparent in view: nothing to draw, no pass to begin */
+  if (r->transparent_only && r->transparent.n == 0) {
+    if (r->gpu_timing) gpu_timer_end(r);
+    return;
+  }
   r->info.programs = (unsigned)r->gen_n;
   gen_env_prepare(r, scene);
 #ifdef T3_WGPU
@@ -2653,7 +2669,8 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
    * blended and no tone mapping the result is the same with the encode done in
    * each program, straight into the screen, without the extra target and pass */
   r->gen_direct = !r->exact_output && !r->target && r->output_color_space == T3_SRGB_COLOR_SPACE && !r->tone_mapping &&
-                  r->transparent.n == 0 && !scene->background_texture;
+                  r->transparent.n == 0 && !scene->background_texture &&
+                  !r->opaque_only && !r->transparent_only;   /* (a split render's two halves meet in the linear target) */
 
   /* GL state persists across frames, as in three.js's WebGLState: a call
    * that would set what is already set is skipped. Code that touches GL
@@ -2662,7 +2679,9 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
   /* a scene background colour clears to it, else autoClear clears
    * to the clear color */
   bool bg_color = scene->has_background && !scene->background_texture;
-  if (r->has_ext_target && !r->target) {
+  if (r->transparent_only) {
+    /* over what the opaque render (and the embedder) drew: nothing is cleared */
+  } else if (r->has_ext_target && !r->target) {
     /* an embedder's target: clear only what it does not LOAD, to its values
      * (a scene background colour still wins for the colour) */
     const t3_external_target *et = &r->ext_target;
@@ -2691,13 +2710,13 @@ void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {
     /* an ArrayCamera: each view's part of the lists into its viewport */
     for (int k = 0; k < r->mv_n; k++) {
       const t3_camera *vc = mv_enter(r, k);
-      if (!r->depth_prepass) gen_background(r, scene, vc);
+      if (!r->depth_prepass && !r->transparent_only) gen_background(r, scene, vc);
       for (int i = r->mv[k].o0; i < r->mv[k].o1; i++) draw_item(r, &r->opaque.items[i], vc);
       for (int i = r->mv[k].t0; i < r->mv[k].t1; i++) draw_item(r, &r->transparent.items[i], vc);
     }
     bind_target(r);   /* the renderer's own viewport and scissor again */
   } else {
-  if (!r->depth_prepass) gen_background(r, scene, cam);
+  if (!r->depth_prepass && !r->transparent_only) gen_background(r, scene, cam);
 
   for (int i = 0; i < r->opaque.n; i++) draw_item(r, &r->opaque.items[i], cam);
   if (r->backpass.n) {

@@ -5,6 +5,24 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.20 (2026-11-23)
+
+### Added
+- **`t3_renderer_render_transparent`**: the transparent queue alone (transparent and transmissive draws, the back
+  faces of double-sided transmissive ones first), the half `t3_renderer_render_opaque` leaves out. It clears
+  nothing (an external target's colour and depth are loaded, a background colour does not clear), draws no
+  background, reuses the shadow maps the opaque render drew, and with nothing transparent in view draws and binds
+  nothing. Opaque then transparent is the picture one `t3_renderer_render` draws, to the byte, with room for an
+  embedder's passes over the opaque picture between them (fog from the opaque depth, before transparent surfaces
+  blend over it). `T3_RENDER_TRANSPARENT` says it exists. test/test_render_transparent.c checks the byte match,
+  an embedder's pass kept under and between the transparent draws, and no draw for a scene with nothing
+  transparent (GLES, WebGPU); its control draws the second half with `t3_renderer_render` and fails.
+
+### Fixed
+- GLES: a `t3_renderer_render_opaque` to the screen no longer takes the direct path (sRGB encoded in each program,
+  straight to the screen) when the scene has transparent draws it left out: the two halves of a split render meet
+  in the linear target.
+
 ## v0.187.19 (2026-11-21)
 
 ### Added

@@ -446,6 +446,8 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
     P.stencil = depth_has_stencil(et->depth_format); P.clear_stencil = (uint32_t)et->clear_stencil;
     P.dmin = et->depth_min; P.dmax = et->depth_max;
   }
+  /* t3_renderer_render_transparent: over what the opaque render (and the embedder) drew, nothing cleared */
+  if (r->transparent_only) P.load_color = P.load_depth = true;
   const t3_render_target *rt = r->target;
   if (rt) {
     /* the target's own viewport and scissor (top-left origin, as r187) */
@@ -474,12 +476,12 @@ static void wgpu_render(t3_renderer *r, t3_scene *scene, const t3_camera *cam) {
       const int *vp = r->mv[k].vp;
       wgpuRenderPassEncoderSetViewport(pe, (float)vp[0], (float)vp[1], (float)vp[2], (float)vp[3], P.dmax > 0 ? P.dmin : 0, P.dmax > 0 ? P.dmax : 1);
       wgpuRenderPassEncoderSetScissorRect(pe, (uint32_t)vp[0], (uint32_t)vp[1], (uint32_t)vp[2], (uint32_t)vp[3]);
-      if (!r->depth_prepass) gen_background(r, scene, vc);
+      if (!r->depth_prepass && !r->transparent_only) gen_background(r, scene, vc);
       for (int i = r->mv[k].o0; i < r->mv[k].o1; i++) wgpu_draw_item(r, &r->opaque.items[i], vc);
       for (int i = r->mv[k].t0; i < r->mv[k].t1; i++) wgpu_draw_item(r, &r->transparent.items[i], vc);
     }
   } else {
-  if (!r->depth_prepass) gen_background(r, scene, cam);
+  if (!r->depth_prepass && !r->transparent_only) gen_background(r, scene, cam);
   for (int i = 0; i < r->opaque.n; i++) wgpu_draw_item(r, &r->opaque.items[i], cam);
   if (r->backpass.n) {
     backpass_side(r, T3_BACK_SIDE);
