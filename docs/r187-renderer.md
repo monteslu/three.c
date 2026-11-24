@@ -135,6 +135,35 @@ An embedder that compiles every file in `src/` and `src/gen/` itself (rather
 than through `build.sh`) gets the full table; `-DT3_TABLE_CORE` picks the core
 one instead. `src/builder.c` compiles to nothing without `-DT3_BUILDER`.
 
+## Covering a state no table has
+
+A table is only as complete as the runs that listed its states. With
+`t3_renderer_set_cover(r, true, ext, hook, user)`, a draw whose state no table
+has (after the light vectors that cover it, and the runtime builder in a
+`T3_BUILDER` build) draws with the nearest program of the same material kind
+that covers it instead of being skipped:
+
+| The program differs by | Cover |
+| --- | --- |
+| more lights of each kind | exact (as for any draw: the extra lights are inert) |
+| fog the draw has none of | exact: a range fog from 1e30 to 2e30 or a density of 0, a factor of exactly 0 |
+| no fog, no received shadow (nor reversed depth), no scene environment | approximate: drawn without it |
+| another extension | as `ext(user, want, have, caster)` says: 0 exact, more a cost, less than 0 never |
+| anything else (maps, deformations, alpha test, side, blending, instancing...) | never: the program would read what the draw does not bind |
+
+Exact covers win, then the fewest approximations, then the fewest lights. A
+shadow caster whose `depth+x<name>` no table has takes the depth program of the
+same deformations that `ext` accepts at the lowest cost (none: the plain caster,
+if it accepts dropping the extension). Each covered state is listed once in
+`t3_renderer_generated_covered` (`<state> <program state>` a line), passed to
+`hook` with the draw's object and material and whether the cover is exact, and
+written to `T3_MISSING_LOG`, since it still belongs in the table; it is not in
+`t3_renderer_generated_missing`. A program with an extension other than the
+material's runs that extension's fill hook, so an embedder that accepts one
+installs its hook (`t3_renderer_set_extension`) from `hook`, which runs before
+the draw. Off by default: three.js r187 builds every program and has no such
+lookup. `test/test_cover.c` checks each row on GLES and WebGPU, with a control.
+
 ## Building states at run time
 
 Built with `T3_BUILDER=1` (`./build.sh` or `wasm/build.sh`), three.c carries

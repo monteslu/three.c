@@ -98,7 +98,9 @@ enum { T3_GEN_SH_BIAS, T3_GEN_SH_NORMAL_BIAS, T3_GEN_SH_RADIUS, T3_GEN_SH_INTENS
 struct t3_gen_op { uint8_t op, idx, sub; int8_t group; uint16_t off, len; };
 
 /* an object's values for the program's template parameters (src->tpl) */
-typedef struct { uint16_t bones, morphs, morph_width; } t3_gen_params;
+typedef struct { uint16_t bones, morphs, morph_width, inert; } t3_gen_params;
+/* t3_gen_params.inert: values the program has and the draw must not see (a covering program, t3_renderer_set_cover) */
+enum { T3_GEN_INERT_FOG = 1 };
 
 #define T3_GEN_MAX_BUFFERS 4
 

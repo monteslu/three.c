@@ -300,8 +300,84 @@ static bool gen_state_key(const t3_renderer *r, const t3_material *m, const t3_o
   return true;
 }
 
-/* the table state for a key, or NULL (with *why set) */
-static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key *key, const char **why) {
+/* ── covering a state no table has (t3_renderer_set_cover) ──────────────
+ * The nearest program of the same kind that can draw the item:
+ *   exact (the same pixels): more lights of each kind (as for any draw), and
+ *     fog the draw has none of, with inert values (a range fog from 1e30 to
+ *     2e30, a density of 0: the factor is exactly 0);
+ *   approximate (drawn without it): fog, the shadows received (and reversed
+ *     depth with them) and the scene's environment map that the program lacks,
+ *     and extension differences the embedder's cover_ext accepts.
+ * Every other feature must match: a program with a map, skinning, alpha test or
+ * a side the draw does not have would read what the draw does not bind. Exact
+ * covers win, then the fewest approximations, then the fewest lights. */
+static const uint64_t GEN_COVER_DROP = T3_GEN_FOG | T3_GEN_FOG2 | T3_GEN_SHADOW | T3_GEN_RDEPTH | T3_GEN_SENV;
+static void gen_record_covered(const t3_renderer *rc, const char *want, const char *used, bool exact) {
+  t3_renderer *r = (t3_renderer *)rc;
+  char line[400];
+  snprintf(line, sizeof line, "%s %s", want, used);
+  size_t len = strlen(line);
+  for (const char *p = r->gen_covered; p && (p = strstr(p, line)); p += len)
+    if ((p == r->gen_covered || p[-1] == '\n') && (p[len] == '\n' || !p[len])) return;
+  size_t old = r->gen_covered ? strlen(r->gen_covered) : 0;
+  r->gen_covered = realloc(r->gen_covered, old + len + 2);
+  T3_CHECK_ALLOC(r->gen_covered);
+  memcpy(r->gen_covered + old, line, len);
+  r->gen_covered[old + len] = '\n';
+  r->gen_covered[old + len + 1] = 0;
+  if (r->cover_hook) r->cover_hook(r->cover_user, want, used, exact, r->gen_cur_obj, r->gen_cur_mat);
+#ifndef T3_WASMCART
+  /* the state still belongs in the table: T3_MISSING_LOG lists it as a skipped one would be */
+  const char *log = getenv("T3_MISSING_LOG");
+  FILE *lf = log && *log ? fopen(log, "a") : NULL;
+  if (lf) { fprintf(lf, "%s\n", want); fclose(lf); }
+#endif
+}
+/* the extension's cover cost: 0 the same, > 0 approximate, < 0 cannot */
+static int gen_cover_ext(const t3_renderer *r, uint16_t want, const char *have, bool caster) {
+  const char *w = want ? t3__extension_name(want) : NULL;
+  if (w ? have && !strcmp(w, have) : !have) return 0;
+  if (!r->cover_ext) return -1;
+  return r->cover_ext(r->cover_user, w ? w : "", have ? have : "", caster);
+}
+static const t3_gen_program *gen_cover_find(const t3_renderer *r, const gen_key *key, uint16_t *inert, bool *exact) {
+  const uint64_t f = key->f;
+  const t3_gen_program *best = NULL;
+  long best_cost = -1;
+  const t3_gen_table *const *tables;
+  int nt = gen_tbls(r, &tables);
+  for (int t = 0; t < nt; t++)
+    for (unsigned i = 0; i < tables[t]->count; i++) {
+      const t3_gen_program *p = &tables[t]->programs[i];
+      if (p->kind != key->kind || p->ies != key->ies) continue;
+      uint64_t lack = f & ~p->features, extra = p->features & ~f;
+      if (lack & ~GEN_COVER_DROP) continue;
+      if ((lack & T3_GEN_SHADOW) && (p->features & T3_GEN_RDEPTH)) continue;
+      uint16_t in = 0;
+      if (extra) {
+        /* only fog the draw has none of: it is made inert */
+        if ((extra != T3_GEN_FOG && extra != T3_GEN_FOG2) || (f & (T3_GEN_FOG | T3_GEN_FOG2))) continue;
+        in = T3_GEN_INERT_FOG;
+      }
+      if (key->shadow && (p->features & T3_GEN_SHADOW) && memcmp(p->cast, key->cast, 3)) continue;
+      int lights = 0;
+      bool covers = true;
+      for (int k = 0; k < 4; k++) { if (p->lights[k] < key->want[k]) covers = false; lights += p->lights[k]; }
+      if (!covers) continue;
+      int ec = gen_cover_ext(r, key->ext, p->extension, false);
+      if (ec < 0) continue;
+      /* (exact covers first, then the fewest approximations: a dropped feature counts as much as an extension's unit) */
+      long approx = (long)__builtin_popcountll(lack & ~T3_GEN_RDEPTH) + ec;
+      long cost = approx * 4096 + lights;
+      if (!best || cost < best_cost) { best = p; best_cost = cost; *inert = in; *exact = approx == 0; }
+    }
+  return best;
+}
+
+/* the table state for a key, or NULL (with *why set). *inert: values the
+ * program it returns must leave out (a covering program, t3_gen_params.inert) */
+static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key *key, const char **why, uint16_t *inert) {
+  *inert = 0;
   t3_gen_kind kind = (t3_gen_kind)key->kind;
   uint64_t f = key->f;
   bool shadow = key->shadow;
@@ -339,6 +415,12 @@ static const t3_gen_program *gen_state_find(const t3_renderer *r, const gen_key 
       if (!best) { snprintf(msg, sizeof msg, "%s: the runtime builder failed: %s", name, err); gen_note((t3_renderer *)r, msg); }
     }
 #endif
+    bool exact = false;
+    const t3_gen_program *cover = best || !r->cover_on ? NULL : gen_cover_find(r, key, inert, &exact);
+    if (cover) {
+      gen_record_covered(r, name, cover->state, exact);
+      return cover;
+    }
     gen_record_missing_name(r, name);
   }
   return best;
@@ -463,10 +545,11 @@ static t3_gen_gl *gen_pick(t3_renderer *r, const t3_material *m, const t3_object
   if (slot->used) gl = slot->gl;
   else {
     r->gen_cur_obj = o, r->gen_cur_mat = m; /* who asked, for the missing hook */
-    const t3_gen_program *src = gen_state_find(r, &key, &why);
+    uint16_t inert = 0;
+    const t3_gen_program *src = gen_state_find(r, &key, &why, &inert);
     r->gen_cur_obj = NULL, r->gen_cur_mat = NULL;
     if (!src) { gen_note(r, why); r->info.skipped++; return NULL; }
-    t3_gen_params prm = { 0, 0, 0 };
+    t3_gen_params prm = { 0, 0, 0, inert };
     if (src->tpl[0] && o->type == T3_SKINNED_MESH) prm.bones = (uint16_t)((const t3_skinned_mesh *)o)->skeleton->bone_count;
     gen_morph_params(src, g, &prm);
     gl = gen_program_p(r, src, r->gen_direct, prm);
@@ -600,10 +683,11 @@ static void gen_fill_frame(t3_renderer *r, t3_gen_gl *gl, const t3_camera *cam) 
       }
       break;
     }
-    case GOP_FOG_COLOR: if (r->fog) put3(b, &r->fog->color, 1); break;
-    case GOP_FOG_NEAR: if (r->fog) putf(b, r->fog->near); break;
-    case GOP_FOG_FAR: if (r->fog) putf(b, r->fog->far); break;
-    case GOP_FOG_DENSITY: if (r->fog) putf(b, r->fog->density); break;
+    /* a covering program's fog for a draw with none: a factor of exactly 0 (t3_renderer_set_cover) */
+    case GOP_FOG_COLOR: if (gl->params.inert & T3_GEN_INERT_FOG) put3(b, &(t3_color){ 0, 0, 0 }, 0); else if (r->fog) put3(b, &r->fog->color, 1); break;
+    case GOP_FOG_NEAR: if (gl->params.inert & T3_GEN_INERT_FOG) putf(b, 1e30f); else if (r->fog) putf(b, r->fog->near); break;
+    case GOP_FOG_FAR: if (gl->params.inert & T3_GEN_INERT_FOG) putf(b, 2e30f); else if (r->fog) putf(b, r->fog->far); break;
+    case GOP_FOG_DENSITY: if (gl->params.inert & T3_GEN_INERT_FOG) putf(b, 0); else if (r->fog) putf(b, r->fog->density); break;
     default: break;
     }
   }
@@ -952,6 +1036,43 @@ static void gen_bind_shadow(t3_renderer *r, uint8_t kind, int idx, int unit) {
  * override NodeMaterial: kind depth, plus the object's deformations) */
 static t3_gen_gl *gen_caster_program_b(t3_renderer *r, const t3_object *o, const t3_geometry *g, const t3_material *m, bool batched);
 /* (batched: an auto-instanced group of meshes, drawn with the InstancedMesh caster) */
+/* a caster state with an extension no table has (t3_renderer_set_cover): the depth program of the same deformations
+ * whose extension cover_ext accepts at the lowest cost (none: the plain caster, if it accepts that), remembered by name */
+static const t3_gen_program *gen_cover_caster(t3_renderer *r, const char *name, const char *base, uint16_t ext) {
+  for (int i = 0; i < r->cover_memo_n; i++)
+    if (!strcmp(r->cover_memo[i].name, name)) return (const t3_gen_program *)r->cover_memo[i].src;
+  const t3_gen_program *best = NULL;
+  int best_cost = 1 << 30;
+  size_t bl = strlen(base);
+  const t3_gen_table *const *tables;
+  int nt = gen_tbls(r, &tables);
+  for (int t = 0; t < nt; t++)
+    for (unsigned i = 0; i < tables[t]->count; i++) {
+      const t3_gen_program *p = &tables[t]->programs[i];
+      /* the same deformations: the base name, alone or with an extension */
+      if (p->kind != T3_GEN_DEPTH || strncmp(p->state, base, bl) || (p->state[bl] && strncmp(p->state + bl, "+x", 2))) continue;
+      int c = gen_cover_ext(r, ext, p->extension, true);
+      if (c >= 0 && c < best_cost) { best = p; best_cost = c; }
+    }
+  if (best) gen_record_covered(r, name, best->state, best_cost == 0);
+  if (r->cover_memo_n == r->cover_memo_cap) {
+    r->cover_memo_cap = r->cover_memo_cap ? r->cover_memo_cap * 2 : 16;
+    r->cover_memo = realloc(r->cover_memo, (size_t)r->cover_memo_cap * sizeof *r->cover_memo);
+    T3_CHECK_ALLOC(r->cover_memo);
+  }
+  snprintf(r->cover_memo[r->cover_memo_n].name, sizeof r->cover_memo[0].name, "%s", name);
+  r->cover_memo[r->cover_memo_n++].src = best;
+  return best;
+}
+void t3_renderer_set_cover(t3_renderer *r, bool on, t3_cover_extension_fn ext, t3_cover_hook hook, void *user) {
+  if (r->cover_on == on && r->cover_ext == ext && r->cover_hook == hook && r->cover_user == user) return;   /* (an embedder may set it every frame) */
+  r->cover_on = on; r->cover_ext = ext; r->cover_hook = hook; r->cover_user = user;
+  r->cover_memo_n = 0;
+  /* (the lookups made so far keep no answer the setting changes) */
+  free(r->gen_slots);
+  r->gen_slots = NULL;
+  r->gen_slot_cap = r->gen_slot_n = 0;
+}
 static t3_gen_gl *gen_caster_program_b(t3_renderer *r, const t3_object *o, const t3_geometry *g, const t3_material *m, bool batched) {
   if (g->morph_count && (g->morph_normal || o->type != T3_MESH)) return NULL;
   uint64_t f = 0;
@@ -970,6 +1091,7 @@ static t3_gen_gl *gen_caster_program_b(t3_renderer *r, const t3_object *o, const
     char name[96];
     snprintf(name, sizeof name, "%s+x%s", base, t3__extension_name(m->extension));
     src = gen_by_name(r, name);
+    if (!src && r->cover_on) src = gen_cover_caster(r, name, base, m->extension);
     if (!src) gen_record_missing_name(r, name);
   }
   if (!src) src = gen_by_name(r, base);

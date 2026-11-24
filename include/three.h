@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.21"
+#define T3_VERSION "0.187.22"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1443,6 +1443,34 @@ void t3_renderer_set_encoder_hook(t3_renderer *r, t3_encoder_hook fn, void *user
 typedef void (*t3_missing_hook)(void *user, const char *state, const t3_object *object, const t3_material *material);
 void t3_renderer_set_missing_hook(t3_renderer *r, t3_missing_hook fn, void *user);
 #define T3_MISSING_HOOK 1
+/* Covering a state no table has. With on, a draw whose program state is in
+ * none of the tables (after the light vectors that cover it, and the runtime
+ * builder in a T3_BUILDER build) draws with the nearest program of the same
+ * material kind that covers it instead of being skipped:
+ *   - exact, the same pixels: more lights of each kind, and fog the draw has
+ *     none of (filled with values that make its factor exactly 0);
+ *   - approximate: fog, received shadows (with reversed depth) and the scene's
+ *     environment map that the program lacks are drawn without; and an
+ *     extension other than the material's when ext(user, want, have, caster)
+ *     returns 0 (the same pixels) or more (a cost; less than 0: it cannot).
+ *     want and have are extension names, "" for none; caster is true for a
+ *     shadow caster's depth program (which keeps only what shapes the
+ *     geometry). NULL ext: the extension must be the material's.
+ * Every other feature must be the draw's own. The exact covers win, then the
+ * fewest approximations, then the fewest lights. Each covered state is listed
+ * once in t3_renderer_generated_covered ("<state> <program state>" a line),
+ * written to T3_MISSING_LOG like a skipped state (it still belongs in the
+ * table), and passed to hook(user, state, program state, exact, object,
+ * material) once, with the draw that asked (either may be NULL). It is not in
+ * t3_renderer_generated_missing. Off by default (three.js r187 has no such
+ * lookup: its renderer builds every program). The hook installs nothing: an
+ * extension program needs its fill hook (t3_renderer_set_extension) before the
+ * draw, so an embedder that accepts another extension installs it from hook. */
+typedef int (*t3_cover_extension_fn)(void *user, const char *want, const char *have, bool caster);
+typedef void (*t3_cover_hook)(void *user, const char *state, const char *program_state, bool exact, const t3_object *object, const t3_material *material);
+void t3_renderer_set_cover(t3_renderer *r, bool on, t3_cover_extension_fn ext, t3_cover_hook hook, void *user);
+const char *t3_renderer_generated_covered(const t3_renderer *r);
+#define T3_COVER 1 /* t3_renderer_set_cover (0.187.22) */
 /* t3_pmrem_scene_options.min_size and t3_pmrem_scene_job_* (v0.187.6) */
 #define T3_PMREM_SCENE_JOB 1
 /* t3_renderer_render_depth into a caller's depth-only target rect: color is

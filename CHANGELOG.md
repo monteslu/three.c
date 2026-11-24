@@ -5,6 +5,28 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.22 (2026-11-24)
+
+### Added
+- **`t3_renderer_set_cover`**: a draw whose program state is in none of the tables no longer has to be skipped. With
+  cover on, it draws with the nearest program of the same material kind that covers it: exactly (the same pixels)
+  with more lights of each kind, as any draw, and with fog the draw has none of, filled with inert values (a range
+  fog from 1e30 to 2e30, a density of 0: the factor is exactly 0); approximately when the program lacks fog, received
+  shadows (with reversed depth) or the scene's environment map, or carries another extension that the embedder's
+  `cover_ext` accepts (it gets the material's extension and the program's, and whether it is a caster's depth
+  program; a shadow caster with an extension no table has takes the depth program cover_ext accepts at the lowest
+  cost). Every other feature must be the draw's own (a program reading a map, bones or an alpha test the draw does
+  not bind is never used). Exact covers win, then the fewest approximations, then the fewest lights. Each covered
+  state is listed once in `t3_renderer_generated_covered` ("<state> <program state>" a line), passed to the hook
+  with the draw's object and material and whether the cover is exact, and written to `T3_MISSING_LOG` (the state
+  still belongs in the table); it is not in `t3_renderer_generated_missing`. Off by default, so three.c draws as
+  three.js r187 (which builds every program) unless an embedder asks. `T3_COVER` says it exists.
+  test/test_cover.c (GLES and WebGPU) links the core table and registers parts of the full table: Lambert under one
+  light drawn with `lambert+fog` (one more light, inert fog) is byte-identical to its own `lambert+l1000`; a received
+  shadow the only program lacks draws unshadowed and is listed as approximate; an extension the embedder lets go of
+  draws with the plain program and the plain caster; a map no program has stays missing and undrawn. Its control
+  (cover off) skips those draws and fails.
+
 ## v0.187.21 (2026-11-23)
 
 ### Fixed

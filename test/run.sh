@@ -150,6 +150,12 @@ run test_flip_copies node test/test_flip_copies.mjs
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -DFULL test/test_missing_hook.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_missing_hook_full
 run test_missing_hook env EGL_PLATFORM=surfaceless ./build/test/test_missing_hook
 run test_missing_hook_full env EGL_PLATFORM=surfaceless ./build/test/test_missing_hook_full
+# t3_renderer_set_cover: the core table plus parts of the full table (compiled in under another name); a covering
+# program with inert fog draws byte-identical to the state's own; the control (cover off) skips the draws and must fail
+"$CC" -std=c99 -O2 -w -c -I include -I src -Dt3_gen_base_gl=t3_full_gl src/gen/programs_gl.c -o build/test/full_gl.o
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_cover.c build/test/full_gl.o build/native_core/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_cover
+run test_cover env EGL_PLATFORM=surfaceless ./build/test/test_cover
+run test_cover_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_cover >/dev/null 2>&1"
 # a project's own program table with three.c's core table: the same picture as the full table
 if [ -d build/gen-programs ] && ls build/gen-programs/standard+map+nearest.gl.json >/dev/null 2>&1; then
   T3_TABLE=core ./build.sh >/dev/null 2>&1
@@ -292,6 +298,17 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
     if [ $st = 0 ]; then echo "ok    test_vertex_buffers_wgpu"; elif [ $st = 77 ]; then echo "skip  test_vertex_buffers_wgpu (no WebGPU adapter)"
     else echo "FAIL  test_vertex_buffers_wgpu"; grep -v '^Warning' build/test/test_vertex_buffers_wgpu.log; fail=1; fi
   fi
+  # t3_renderer_set_cover on WebGPU (the GLES run is above); the control must fail
+  [ -f build/native-wgpu_core/libthree.a ] || WGPU=1 T3_TABLE=core ./build.sh >/dev/null 2>&1 || true
+  "$CC" -std=c99 -O2 -w -c -DT3_WGPU -I include -I src -I "$ND/include" -Dt3_gen_base_wgpu=t3_full_wgpu src/gen/programs_wgpu.c -o build/test/full_wgpu.o
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_cover.c build/test/full_wgpu.o \
+    build/native-wgpu_core/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_cover_wgpu
+  set +e; ./build/test/test_cover_wgpu > build/test/test_cover_wgpu.log 2>&1; st=$?; set -e
+  if [ $st = 0 ]; then echo "ok    test_cover_wgpu"; elif [ $st = 77 ]; then echo "skip  test_cover_wgpu (no WebGPU adapter)"
+  else echo "FAIL  test_cover_wgpu"; grep -v '^Warning' build/test/test_cover_wgpu.log; fail=1; fi
+  set +e; T3_TEST_CONTROL=1 ./build/test/test_cover_wgpu > /dev/null 2>&1; st=$?; set -e
+  if [ $st = 1 ]; then echo "ok    test_cover_wgpu_control"; elif [ $st = 77 ]; then echo "skip  test_cover_wgpu_control (no WebGPU adapter)"
+  else echo "FAIL  test_cover_wgpu_control (cover off drew everything)"; fail=1; fi
   # ... and on a compatibility-mode device (as wasmcart gives carts): a texture binds only with the view dimension it was made with
   set +e; ./build/test/test_extension_wgpu compat > build/test/test_extension_wgpu_compat.log 2>&1; st=$?; set -e
   if [ $st = 0 ]; then echo "ok    test_extension_wgpu_compat"; elif [ $st = 77 ]; then echo "skip  test_extension_wgpu_compat (no WebGPU adapter)"

@@ -301,6 +301,12 @@ struct t3_renderer {
   char *gen_missing;      /* table states the scenes asked for and the table lacks, one per line */
   /* t3_renderer_set_missing_hook, and the item whose program is being looked up (for it) */
   t3_missing_hook missing_hook; void *missing_user;
+  /* t3_renderer_set_cover: draw a state no table has with the nearest program that covers it */
+  bool cover_on;
+  t3_cover_extension_fn cover_ext; t3_cover_hook cover_hook; void *cover_user;
+  char *gen_covered;      /* "<state> <program state>" a line, each state the tables lacked and a cover drew */
+  struct gen_cover_memo { char name[96]; const void *src; } *cover_memo;   /* (a t3_gen_program) */   /* casters: by name */
+  int cover_memo_n, cover_memo_cap;
   /* t3_renderer_set_extension_miss_hook */
   t3_extension_miss_hook ext_miss_hook; void *ext_miss_user;
   const t3_object *gen_cur_obj; const t3_material *gen_cur_mat;
@@ -475,6 +481,8 @@ void t3_renderer_destroy(t3_renderer *r) {
     if (r->gen_sh[i].fbo) glDeleteFramebuffers(1, &r->gen_sh[i].fbo);
   }
   free(r->gen_missing);
+  free(r->gen_covered);
+  free(r->cover_memo);
   free(r->gen_stage);
   free(r->opaque.items);
   free(r->transparent.items);
@@ -546,6 +554,7 @@ void t3_renderer_set_external_encoder(t3_renderer *r, uintptr_t enc) {
   r->bk->set_external_encoder(r->bk, enc);
 }
 void t3_renderer_set_missing_hook(t3_renderer *r, t3_missing_hook fn, void *user) { r->missing_hook = fn; r->missing_user = user; }
+const char *t3_renderer_generated_covered(const t3_renderer *r) { return r->gen_covered ? r->gen_covered : ""; }
 void t3_renderer_set_extension_miss_hook(t3_renderer *r, t3_extension_miss_hook fn, void *user) { r->ext_miss_hook = fn; r->ext_miss_user = user; }
 void t3_renderer_set_encoder_hook(t3_renderer *r, t3_encoder_hook fn, void *user) {
 #ifdef T3_WGPU
