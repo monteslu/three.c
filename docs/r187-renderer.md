@@ -370,8 +370,28 @@ per property, and splits them into per-frame operations (camera, lights, fog)
 and per-draw ones (matrices, material values). Per-draw uniform blocks for
 the whole frame are packed into one buffer:
 
-- on GLES, uploaded once and bound with `glBindBufferRange`;
+- on GLES, written as one slice of a ring buffer and bound with `glBindBufferRange`;
 - on WebGPU, streamed and bound with dynamic offsets.
+
+The GLES ring is one uniform buffer that every render call's per-draw blocks
+and every shadow caster pass's go into, slice after slice, wrapping at the
+end. Nothing is orphaned: before the ring, each render call and each caster
+pass gave its buffer new storage (`glBufferData` with no data), which made
+the driver find a store and rebind it every call. A slice is written with an
+unsynchronized `glMapBufferRange` once the fence put after the draws that
+read the slices before it has signalled (frames later, in practice); a slice
+that would land on one still in use, or that does not fit, makes a new store
+twice the size instead of waiting, up to 16 MB, past which it waits for the
+oldest slice in the way. Each draw's bone matrices and morph influences go to
+a second ring the same way, a slice a draw bound by range, where each draw
+used to write them into the program's one buffer while the draw before might
+still be reading it. In a cart (the wasmcart `gl` module has no
+unsynchronized map) the slices go up with `glBufferSubData`, which GL orders
+against the draws that read them, and no fence is kept.
+`test/test_ubo_ring.c` checks it: 300 frames of three render calls with
+shadows, 240 boxes of a material each and six skinned walkers make 9 uniform
+buffer stores in all where the orphaning made 7210, and the frames match a
+fresh renderer's.
 
 On GLES the GLSL is compiled with fixed attribute locations. In the default
 fast path the program also gets an epilogue that encodes sRGB, so it can

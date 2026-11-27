@@ -313,10 +313,19 @@ struct t3_renderer {
   /* every draw's per-draw block of the frame, packed at the uniform-buffer
    * offset alignment, uploaded once per frame (glBindBufferRange per draw) */
   uint8_t *gen_stage; size_t gen_stage_n, gen_stage_cap;
-  GLuint gen_ubo; size_t gen_ubo_size;
-  /* the buffer streamed draws bind their block from (gen_ubo, or cast_ubo
-   * while a caster pass draws) */
-  GLuint gen_stream_ubo;
+  /* the ring every render call's and caster pass's per-draw blocks are
+   * suballocated from (renderer_gen.inc gl_ring): no buffer is orphaned or
+   * reallocated per call; a slice is written again only once the fence put
+   * after the draws that read it has signalled */
+  struct gl_ring {
+    GLuint buf; size_t size, head;
+    struct gl_ring_reg { size_t lo, hi; void *fence; } reg[64]; int r0, nr;   /* a FIFO of fenced slices (GLsync; none in a cart) */
+    size_t pend_lo, pend_hi; bool pend;   /* written since the last fence */
+    unsigned grows;                       /* (new stores: the ring outgrew its size or met a slice still in use) */
+  } ubo_ring, draw_ring;   /* draw_ring: each draw's bone matrices and morph influences */
+  /* the buffer streamed draws bind their block from (the ring) and the
+   * offset of the current slice in it: an item's gen_off is relative to it */
+  GLuint gen_stream_ubo; size_t gen_stream_base;
   /* a caster pass (gen_casters) collects its draws, then uploads their
    * per-draw blocks with one call, as gen_prepare does for render's lists */
   struct cast_item { render_item it; struct t3_gen_gl *gl; } *cast; int cast_n, cast_cap;
@@ -328,7 +337,6 @@ struct t3_renderer {
   GLuint cast_inst_vbo;
   GLuint batch_vbo;   /* the instance buffer batched draws read: inst_vbo, or cast_inst_vbo while casters draw */
   uint8_t *cast_stage; size_t cast_stage_n, cast_stage_cap;
-  GLuint cast_ubo; size_t cast_ubo_size;
   GLint gen_align;
   GLuint gen_bound_buf[T3_GEN_MAX_GROUPS]; int gen_bound_off[T3_GEN_MAX_GROUPS];
   int gen_n, gen_cap;
@@ -441,6 +449,7 @@ t3_renderer *t3_renderer_new(int width, int height) {
   return r;
 }
 
+static void gl_ring_free(struct gl_ring *g);   /* (renderer_gen.inc) */
 void t3_renderer_destroy(t3_renderer *r) {
   if (!r) return;
   tu_forget_all();
@@ -472,8 +481,7 @@ void t3_renderer_destroy(t3_renderer *r) {
   if (gl && r->out_fbo) { glDeleteFramebuffers(1, &r->out_fbo); glDeleteTextures(1, &r->out_tex); glDeleteRenderbuffers(1, &r->out_depth); }
   if (gl && r->out_vao) { glDeleteVertexArrays(1, &r->out_vao); glDeleteBuffers(1, &r->out_vbo); }
   if (gl && r->dfg_tex) glDeleteTextures(1, &r->dfg_tex);
-  if (gl && r->gen_ubo) glDeleteBuffers(1, &r->gen_ubo);
-  if (gl && r->cast_ubo) glDeleteBuffers(1, &r->cast_ubo);
+  if (gl) gl_ring_free(&r->ubo_ring), gl_ring_free(&r->draw_ring);
   free(r->cast);
   free(r->cast_stage);
   for (int i = 0; gl && i < r->gen_sh_n; i++) {

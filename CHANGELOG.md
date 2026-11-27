@@ -5,6 +5,24 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.23 (2026-11-27)
+
+### Changed
+- **GLES: the per-draw uniform blocks come from a ring, not an orphaned buffer.** Every render call's per-draw blocks
+  and every shadow caster pass's are one slice of a ring buffer bound with `glBindBufferRange`; before, each call
+  gave its buffer new storage (`glBufferData` with no data: 1930 times in 300 frames of a four-view race), which
+  made the driver find a store and rebind it every time. A slice is written with an unsynchronized
+  `glMapBufferRange` once the fence put after the draws that read the slices before it has signalled; a slice that
+  would meet one still in use, or does not fit, makes a new store twice the size (up to 16 MB, then the oldest slice
+  in the way is waited for). In a cart the slices go up with `glBufferSubData` (the wasmcart `gl` module has no
+  unsynchronized map), with no fences.
+- **GLES: each draw's bone matrices and morph influences go to a second ring**, a slice a draw bound by range. Each
+  skinned or morphed draw used to write them into its program's one uniform buffer, which the draw before could still
+  be reading: some drivers then copy through a staging buffer and wait between the two draws.
+- `test/test_ubo_ring.c`: 300 frames of three render calls with shadows over 240 boxes of a material each and six
+  skinned walkers make 9 uniform buffer stores in all (7210 with the old orphaning, the control
+  `T3_TEST_UBO_ORPHAN=1`), and frames 1, 150 and 300 match a fresh renderer's byte for byte.
+
 ## v0.187.22 (2026-11-24)
 
 ### Added

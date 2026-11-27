@@ -1110,6 +1110,154 @@ static bool gen_dump(void) {
   if (on < 0) on = getenv("T3_GEN_DUMP") != NULL;
   return on;
 }
+/* ── the per-draw block ring (GLES) ──
+ * Every render call's per-draw blocks (gen_prepare) and every caster pass's
+ * (gen_casters) go to one uniform buffer as slices, one after the other,
+ * wrapping at the end. Nothing is orphaned (glBufferData(NULL) a call made the
+ * driver find a new store and rebind it, every render call): a slice is
+ * written unsynchronized once the fence put after the draws that read the
+ * slices before it has signalled, frames later in practice. A slice that would
+ * land on one still in use, or one that does not fit, makes a new, larger
+ * store (the old one is freed by GL once its draws are done). In a cart the
+ * host's GL has no unsynchronized map: slices go up with glBufferSubData,
+ * which GL orders against the draws that read them, and no fence is kept. */
+#define GL_RING_MIN ((size_t)256 << 10)
+#define GL_RING_REGS 64
+#define GL_RING_MAX ((size_t)16 << 20)   /* grown past this, a slice in use is waited for instead */
+/* T3_TEST_UBO_ORPHAN=1 (test/test_ubo_ring.c's control): every write orphans the store, as before the ring */
+static bool gl_ring_orphan(void) {
+  static int on = -1;
+  if (on < 0) on = getenv("T3_TEST_UBO_ORPHAN") != NULL;
+  return on;
+}
+static void gl_ring_drop_fences(struct gl_ring *g) {
+#ifndef T3_WASMCART
+  for (int i = 0; i < g->nr; i++) glDeleteSync((GLsync)g->reg[(g->r0 + i) % GL_RING_REGS].fence);
+#endif
+  g->r0 = g->nr = 0;
+}
+static void gl_ring_free(struct gl_ring *g) {
+  gl_ring_drop_fences(g);
+  if (g->buf) glDeleteBuffers(1, &g->buf);
+  memset(g, 0, sizeof *g);
+}
+/* the slices written since the last fence: every draw that reads them has been issued */
+static void gl_ring_fence(struct gl_ring *g) {
+  if (!g->pend) return;
+#ifndef T3_WASMCART
+  if (g->nr == GL_RING_REGS) return;   /* (kept pending: a slice that would meet it makes a new store) */
+  struct gl_ring_reg *e = &g->reg[(g->r0 + g->nr) % GL_RING_REGS];
+  e->lo = g->pend_lo;
+  e->hi = g->pend_hi;
+  e->fence = (void *)glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+  g->nr++;
+#endif
+  g->pend = false;
+}
+static bool gl_ring_busy(const struct gl_ring *g, size_t lo, size_t hi) {
+#ifndef T3_WASMCART
+  if (g->pend && lo < g->pend_hi && g->pend_lo < hi) return true;
+  for (int i = 0; i < g->nr; i++) {
+    const struct gl_ring_reg *e = &g->reg[(g->r0 + i) % GL_RING_REGS];
+    if (lo < e->hi && e->lo < hi) return true;
+  }
+#else
+  (void)g; (void)lo; (void)hi;
+#endif
+  return false;
+}
+static void gl_ring_grow(struct gl_ring *g, size_t size) {
+  gl_ring_drop_fences(g);
+  if (g->buf) glDeleteBuffers(1, &g->buf);
+  glGenBuffers(1, &g->buf);
+  glBindBuffer(GL_UNIFORM_BUFFER, g->buf);
+  glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)size, NULL, GL_STREAM_DRAW);
+  g->size = size;
+  g->head = 0;
+  g->pend = false;
+  g->grows++;
+}
+/* at the size limit: the slices in the way waited for, oldest first (flushed) */
+static void gl_ring_wait(struct gl_ring *g, size_t lo, size_t hi) {
+#ifndef T3_WASMCART
+  if (g->pend && lo < g->pend_hi && g->pend_lo < hi) {
+    if (g->nr == GL_RING_REGS) {   /* (no room for its fence: the oldest waited for first) */
+      struct gl_ring_reg *e = &g->reg[g->r0];
+      glClientWaitSync((GLsync)e->fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000u);
+      glDeleteSync((GLsync)e->fence);
+      g->r0 = (g->r0 + 1) % GL_RING_REGS;
+      g->nr--;
+    }
+    gl_ring_fence(g);
+  }
+  while (g->nr && gl_ring_busy(g, lo, hi)) {
+    struct gl_ring_reg *e = &g->reg[g->r0];
+    glClientWaitSync((GLsync)e->fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000u);
+    glDeleteSync((GLsync)e->fence);
+    g->r0 = (g->r0 + 1) % GL_RING_REGS;
+    g->nr--;
+  }
+#else
+  (void)g; (void)lo; (void)hi;
+#endif
+}
+/* a slice of n bytes at the alignment, written with data; returns its offset.
+ * *moved: the ring's buffer is a new one (bindings to the old name are stale) */
+static size_t gl_ring_write(struct gl_ring *g, const void *data, size_t n, size_t align, bool *moved) {
+  *moved = false;
+#ifndef T3_WASMCART
+  while (g->nr) {   /* the slices whose draws are done */
+    struct gl_ring_reg *e = &g->reg[g->r0];
+    GLenum st = glClientWaitSync((GLsync)e->fence, 0, 0);
+    if (st != GL_ALREADY_SIGNALED && st != GL_CONDITION_SATISFIED) break;
+    glDeleteSync((GLsync)e->fence);
+    g->r0 = (g->r0 + 1) % GL_RING_REGS;
+    g->nr--;
+  }
+#endif
+  if (g->pend && g->pend_hi - g->pend_lo >= g->size / 8) gl_ring_fence(g);
+  size_t off = (g->head + align - 1) / align * align;
+  if (!g->buf || n * 4 > g->size) {
+    size_t sz = GL_RING_MIN;
+    while (sz < n * 8) sz *= 2;
+    if (g->size * 2 > sz) sz = g->size * 2;
+    gl_ring_grow(g, sz);
+    *moved = true;
+    off = 0;
+  } else {
+    if (off + n > g->size) {   /* wrap: the slices before the end are fenced first */
+      gl_ring_fence(g);
+      off = 0;
+    }
+    if (gl_ring_busy(g, off, off + n)) {
+      if (g->size < GL_RING_MAX) {
+        gl_ring_grow(g, g->size * 2);
+        *moved = true;
+        off = 0;
+      } else
+        gl_ring_wait(g, off, off + n);   /* (an embedder that never lets the GPU catch up: no endless growth) */
+    }
+  }
+  if (gl_ring_orphan()) {   /* (the test control: the old way, a new store each write) */
+    glBindBuffer(GL_UNIFORM_BUFFER, g->buf);
+    glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)g->size, NULL, GL_STREAM_DRAW);
+    off = 0;
+  }
+  glBindBuffer(GL_UNIFORM_BUFFER, g->buf);
+#ifndef T3_WASMCART
+  void *p = glMapBufferRange(GL_UNIFORM_BUFFER, (GLintptr)off, (GLsizeiptr)n,
+                             GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+  if (p) {
+    memcpy(p, data, n);
+    glUnmapBuffer(GL_UNIFORM_BUFFER);
+  } else
+#endif
+    glBufferSubData(GL_UNIFORM_BUFFER, (GLintptr)off, (GLsizeiptr)n, data);
+  g->head = off + n;
+  if (!g->pend) g->pend_lo = off, g->pend = true;
+  g->pend_hi = off + n;
+  return off;
+}
 static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *sc);
 /* the caster draws: on GLES collected, their per-draw blocks packed and
  * uploaded with one call, then drawn (one upload a shadow map, not one a
@@ -1156,16 +1304,16 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
     prev_gl = gl;
     prev_off = (int)off;
   }
+  size_t keep_base = r->gen_stream_base, cast_base = 0;
   if (r->cast_stage_n) {
-    if (!r->cast_ubo) glGenBuffers(1, &r->cast_ubo);
-    glBindBuffer(GL_UNIFORM_BUFFER, r->cast_ubo);
-    if (r->cast_stage_n > r->cast_ubo_size) r->cast_ubo_size = r->cast_stage_n * 2;
-    /* orphaned each time: the GPU may still read the last pass's blocks */
-    glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)r->cast_ubo_size, NULL, GL_STREAM_DRAW);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)r->cast_stage_n, r->cast_stage);
+    bool moved;
+    cast_base = gl_ring_write(&r->ubo_ring, r->cast_stage, r->cast_stage_n, (size_t)r->gen_align, &moved);
+    /* (a new store: every binding to the old name, the main lists' too, is stale) */
+    if (moved) for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) r->gen_bound_buf[i] = 0;
   }
   GLuint keep = r->gen_stream_ubo;
-  r->gen_stream_ubo = r->cast_ubo;
+  r->gen_stream_ubo = r->ubo_ring.buf;
+  r->gen_stream_base = cast_base;
   r->batch_vbo = r->cast_inst_vbo;   /* (batched casters read the pass's own instance stream) */
   /* the caster's state: the material with r187's shadow overrides, copied
    * once for a run of casters sharing a material */
@@ -1186,10 +1334,10 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
     }
     gen_draw_gl(r, &c->it, sc, c->gl, &state);
   }
-  r->gen_stream_ubo = keep;
+  /* (the main lists' slice: its draws bind their ranges again, by offset) */
+  r->gen_stream_ubo = keep ? r->ubo_ring.buf : 0;
+  r->gen_stream_base = keep_base;
   r->batch_vbo = 0;
-  /* the main lists bind gen_ubo again (the slots now hold cast_ubo ranges) */
-  for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) if (r->gen_bound_buf[i] == r->cast_ubo) r->gen_bound_buf[i] = 0;
 }
 static void gen_cast_one(t3_renderer *r, t3_object *o, t3_geometry *g, const t3_material *src, const t3_group *grp,
                          const t3_camera *sc, int count, int offset);
@@ -1465,16 +1613,9 @@ static void gen_prepare(t3_renderer *r, const t3_camera *cam) {
   }
   for (int i = 0; i < T3_GEN_MAX_GROUPS; i++) r->gen_bound_buf[i] = 0;
   if (!r->gen_stage_n) return;
-  if (!r->gen_ubo) glGenBuffers(1, &r->gen_ubo);
-  r->gen_stream_ubo = r->gen_ubo;
-  glBindBuffer(GL_UNIFORM_BUFFER, r->gen_ubo);
-  if (r->gen_stage_n > r->gen_ubo_size) {
-    r->gen_ubo_size = r->gen_stage_n * 2;
-    glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)r->gen_ubo_size, NULL, GL_STREAM_DRAW);
-  } else {
-    glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)r->gen_ubo_size, NULL, GL_STREAM_DRAW);   /* orphan: the GPU may still read last frame's */
-  }
-  glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)r->gen_stage_n, r->gen_stage);
+  bool moved;   /* (the bindings were all forgotten above) */
+  r->gen_stream_base = gl_ring_write(&r->ubo_ring, r->gen_stage, r->gen_stage_n, (size_t)r->gen_align, &moved);
+  r->gen_stream_ubo = r->ubo_ring.buf;
 }
 
 static void gen_draw(t3_renderer *r, const render_item *it, const t3_camera *cam) {
@@ -1568,10 +1709,11 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
   }
   if (streamed) {
     int dg = gl->draw_group;
-    if (r->gen_bound_buf[dg] != r->gen_stream_ubo || r->gen_bound_off[dg] != it->gen_off) {
-      glBindBufferRange(GL_UNIFORM_BUFFER, (GLuint)dg, r->gen_stream_ubo, it->gen_off, (GLsizeiptr)gl->bytes[dg]);
+    int at = (int)(r->gen_stream_base + (size_t)it->gen_off);   /* (the slice's offset in the ring + the block's in it) */
+    if (r->gen_bound_buf[dg] != r->gen_stream_ubo || r->gen_bound_off[dg] != at) {
+      glBindBufferRange(GL_UNIFORM_BUFFER, (GLuint)dg, r->gen_stream_ubo, at, (GLsizeiptr)gl->bytes[dg]);
       r->gen_bound_buf[dg] = r->gen_stream_ubo;
-      r->gen_bound_off[dg] = it->gen_off;
+      r->gen_bound_off[dg] = at;
     }
   } else if (gl->draw_group >= 0) {
     /* not prepared (drawn outside render's lists): upload the block itself */
@@ -1582,20 +1724,29 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
     r->gen_bound_buf[dg] = gl->ubo[dg];
     r->gen_bound_off[dg] = -1;
   }
-  /* the extra buffers: bone matrices (morph influences: later), per draw */
+  /* the extra buffers: bone matrices and morph influences, per draw, each a slice of the draw ring bound by range
+   * (not written into the program's one buffer, which the draw before may still be reading: some drivers then wait
+   * for it, between every pair of draws) */
   for (int i = 0; i < gl->n_buffers; i++) {
+    const void *slice = NULL;
+    float mv[4 * 64];
     if (gl->buf[i].kind == T3_SRC_MORPH_INFLUENCES) {
       const t3_mesh *mesh = (const t3_mesh *)o;
-      float v[4 * 64] = { 0 };
+      memset(mv, 0, sizeof mv);
       int nm = g->morph_count < 64 ? g->morph_count : 64;
-      for (int k = 0; k < nm; k++) v[k * 4] = mesh->morph_influences ? mesh->morph_influences[k] : 0;
-      glBindBuffer(GL_UNIFORM_BUFFER, gl->buf[i].ubo);
-      glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)gl->buf[i].bytes, v);
+      for (int k = 0; k < nm; k++) mv[k * 4] = mesh->morph_influences ? mesh->morph_influences[k] : 0;
+      slice = mv;
     }
-    if (gl->buf[i].kind == T3_SRC_BONES && o->type == T3_SKINNED_MESH) {
-      const t3_skeleton *sk = ((const t3_skinned_mesh *)o)->skeleton;
-      glBindBuffer(GL_UNIFORM_BUFFER, gl->buf[i].ubo);
-      glBufferSubData(GL_UNIFORM_BUFFER, 0, (GLsizeiptr)gl->buf[i].bytes, sk->bone_matrices);
+    if (gl->buf[i].kind == T3_SRC_BONES && o->type == T3_SKINNED_MESH) slice = ((const t3_skinned_mesh *)o)->skeleton->bone_matrices;
+    if (slice && gl->buf[i].bytes && gl->buf[i].bytes <= (gl->buf[i].kind == T3_SRC_MORPH_INFLUENCES ? sizeof mv : (size_t)-1)) {
+      bool moved;
+      if (!r->gen_align) {
+        glGetIntegerv(0x8A34 /* GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT */, &r->gen_align);
+        if (r->gen_align <= 0) r->gen_align = 256;
+      }
+      size_t off = gl_ring_write(&r->draw_ring, slice, gl->buf[i].bytes, (size_t)r->gen_align, &moved);
+      glBindBufferRange(GL_UNIFORM_BUFFER, gl->buf[i].point, r->draw_ring.buf, (GLintptr)off, (GLsizeiptr)gl->buf[i].bytes);
+      continue;
     }
     if (gl->buf[i].mirror && gl->buf[i].dirty) {
       /* an extension's buffer, as its hook left it for this draw */
