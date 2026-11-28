@@ -66,3 +66,25 @@ jobs:
         run: |
           tools/fetch-emdawnwebgpu.sh
           WGPU=1 SCENES="01-cubes r4-env-map p2-transmission" wasm/build.sh
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, carts]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: GitHub release from the tag's CHANGELOG section
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          awk -v h="## $TAG " 'index($0,h)==1{f=1;next} /^## /{if(f)exit} f' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "CHANGELOG.md has no section for $TAG"; exit 1; }
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md
+          fi
