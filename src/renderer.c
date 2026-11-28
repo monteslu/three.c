@@ -138,6 +138,7 @@ struct t3_renderer {
   bool shadow_manual;
   bool shadow_hold;       /* t3_renderer_set_shadow_hold */
   t3_object *const *only; int only_n;   /* t3_renderer_render_objects: the objects drawn instead of the scene's */
+  bool only_lit;                        /* t3_renderer_render_objects_lit: with the scene's lights and fog */
   t3_shadow_map_type shadow_map_type;
   t3_color_space output_color_space;
   t3_tone_mapping tone_mapping;
@@ -2107,6 +2108,19 @@ static void project_scene(t3_renderer *r, t3_object *root, uint32_t camera_layer
   }
 }
 
+/* the scene's lights alone, as project_scene finds them (visible, on the camera's layers; a hidden parent hides them) */
+static void project_lights(t3_renderer *r, t3_object *root, uint32_t camera_layers) {
+  scene_flat *f = flatten_scene(root);
+  for (int i = 0; i < f->n;) {
+    t3_object *o = f->obj[i];
+    if (!o->visible) { i = f->end[i]; continue; }
+    if ((o->layers & camera_layers) && (o->type == T3_AMBIENT_LIGHT || o->type == T3_HEMISPHERE_LIGHT || o->type == T3_DIRECTIONAL_LIGHT ||
+                                        o->type == T3_POINT_LIGHT || o->type == T3_SPOT_LIGHT))
+      project_one(r, o, -1);
+    i++;
+  }
+}
+
 /* r187 RenderList painterSortStable: groupOrder, renderOrder, z, id */
 static int painter_sort(const void *pa, const void *pb) {
   const render_item *a = pa, *b = pb;
@@ -2595,8 +2609,9 @@ static void view_lists(t3_renderer *r, t3_scene *scene, t3_camera *cam, int o0, 
   r->caster_count = 0;
   r->fog = scene->fog.type != T3_FOG_NONE ? &scene->fog : NULL;
   batch_table_reset(r, r->m_n);
-  if (r->only) {   /* t3_renderer_render_objects: these alone, no lights, no fog */
-    r->fog = NULL;
+  if (r->only) {   /* t3_renderer_render_objects: these alone, no lights, no fog (_lit: the scene's lights and fog) */
+    if (r->only_lit) project_lights(r, &scene->base, cam->base.layers);
+    else r->fog = NULL;
     for (int i = 0; i < r->only_n; i++) {
       t3_object *o = r->only[i];
       if (o && o->visible && (o->layers & cam->base.layers) && o->type != T3_AMBIENT_LIGHT && o->type != T3_HEMISPHERE_LIGHT &&
@@ -2652,6 +2667,13 @@ void t3_renderer_render_objects(t3_renderer *r, t3_scene *scene, t3_camera *cam,
   scene->auto_update = au;
   r->shadow_hold = hold;
   r->only = NULL, r->only_n = 0;
+}
+
+void t3_renderer_render_objects_lit(t3_renderer *r, t3_scene *scene, t3_camera *cam, t3_object *const *objects, int count) {
+  if (!r) return;
+  r->only_lit = true;
+  t3_renderer_render_objects(r, scene, cam, objects, count);
+  r->only_lit = false;
 }
 
 void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {

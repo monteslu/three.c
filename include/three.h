@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.24"
+#define T3_VERSION "0.187.25"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1223,6 +1223,13 @@ void t3_renderer_render_transparent(t3_renderer *r, t3_scene *scene, t3_camera *
 void t3_renderer_render_objects(t3_renderer *r, t3_scene *scene, t3_camera *camera, t3_object *const *objects, int count);
 /* t3_renderer_render_objects exists */
 #define T3_RENDER_OBJECTS 1
+/* As t3_renderer_render_objects, lit as a render lights them: the scene's lights (visible, on the camera's layers),
+ * its environment and its fog, and the shadow maps the last render drew (none is drawn). For a pass that draws a few
+ * lit meshes after the rest of the frame (a surface that samples a copy of what was drawn under it, a decal over the
+ * scene's colour), with the same light as had they been drawn in the scene's render. */
+void t3_renderer_render_objects_lit(t3_renderer *r, t3_scene *scene, t3_camera *camera, t3_object *const *objects, int count);
+/* t3_renderer_render_objects_lit exists */
+#define T3_RENDER_OBJECTS_LIT 1
 /* A depth prepass for an embedder's scene target. Opaque material shaders
  * preserve alpha discard/displacement, but write no colour. Skips sky/output
  * conversion; normal clearing/target rules apply. Restores colour writes on

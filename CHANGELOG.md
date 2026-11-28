@@ -5,6 +5,11 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.25 (2026-11-28)
+
+### Added
+- **`t3_renderer_render_objects_lit`**: as `t3_renderer_render_objects`, a few meshes of a scene drawn without walking it, but lit as the scene's render lights them: the scene's lights (visible, on the camera's layers), its environment and its fog, with the shadow maps the last render drew (none is drawn). For a pass that draws a few lit meshes after the rest of the frame, such as a surface that samples a copy of what was drawn under it. `T3_RENDER_OBJECTS_LIT` says it exists. `test/test_render_objects_lit.c`: a lit, shadowed set drawn this way equals the scene drawn with everything else hidden, byte for byte; the control draws it unlit and must fail.
+
 ## v0.187.24 (2026-11-28)
 
 ### Fixed

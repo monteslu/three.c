@@ -102,6 +102,11 @@ run test_ubo_ring_control_stream sh -c "! T3_TEST_CONTROL=stream EGL_PLATFORM=su
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_render_objects.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_render_objects
 run test_render_objects env EGL_PLATFORM=surfaceless ./build/test/test_render_objects
 run test_render_objects_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_render_objects >/dev/null 2>&1"
+# t3_renderer_render_objects_lit: the lit set drawn alone equals the scene with the rest hidden (lights, fog, held shadow
+# maps); the control draws it unlit and must fail
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_render_objects_lit.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_render_objects_lit
+run test_render_objects_lit env EGL_PLATFORM=surfaceless ./build/test/test_render_objects_lit
+run test_render_objects_lit_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_render_objects_lit >/dev/null 2>&1"
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_cast_batch.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_cast_batch
 run test_cast_batch env EGL_PLATFORM=surfaceless ./build/test/test_cast_batch
 run test_cast_batch_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_cast_batch >/dev/null 2>&1"
