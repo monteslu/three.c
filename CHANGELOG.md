@@ -5,6 +5,11 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.26 (2026-11-28)
+
+### Added
+- **`test/test_render_objects_lit_wgpu.c`**: `t3_renderer_render_objects_lit` checked on WebGPU, drawn as an embedder draws (into its own colour and depth views through `t3_renderer_set_external_target`, every pass on its own command encoder through `t3_renderer_set_external_encoder`, read back by it). The scene and the check are those of `test/test_render_objects_lit.c`: a lit set with PCF shadows drawn alone, with the shadow maps held, equals the scene drawn with everything else hidden, byte for byte, at three frames, and no WebGPU validation error is raised. Its control (`T3_TEST_CONTROL=1`) draws the set unlit with `t3_renderer_render_objects` and must fail on that comparison; `test/run.sh` runs both in its WebGPU block. No change to the library: WebGPU already drew the set as the scene does.
+
 ## v0.187.25 (2026-11-28)
 
 ### Added

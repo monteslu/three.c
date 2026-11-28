@@ -233,6 +233,18 @@ if [ -f build/native-wgpu/libthree.a ] && [ -f "$ND/include/webgpu/webgpu.h" ]; 
   elif [ $st != 0 ] && grep -q "FAIL  keep_multisampled: the render left its resolve view untouched" build/test/test_wgpu_external_control.log \
     && grep -q "FAIL  depth prepass: no colour written" build/test/test_wgpu_external_control.log; then echo "ok    test_wgpu_external_control"
   else echo "FAIL  test_wgpu_external_control (the control passed)"; fail=1; fi
+  # t3_renderer_render_objects_lit through an external target and encoder: the lit, shadowed set drawn alone equals the
+  # scene with the rest hidden, byte for byte; its control (T3_TEST_CONTROL=1: the set drawn unlit) must fail on that check
+  "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_render_objects_lit_wgpu.c \
+    build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_render_objects_lit_wgpu
+  set +e; ./build/test/test_render_objects_lit_wgpu > build/test/test_render_objects_lit_wgpu.log 2>&1; st=$?; set -e
+  if [ $st = 0 ]; then echo "ok    test_render_objects_lit_wgpu"; elif [ $st = 77 ]; then echo "skip  test_render_objects_lit_wgpu (no WebGPU adapter)"
+  else echo "FAIL  test_render_objects_lit_wgpu"; grep -v '^Warning' build/test/test_render_objects_lit_wgpu.log; fail=1; fi
+  set +e; T3_TEST_CONTROL=1 ./build/test/test_render_objects_lit_wgpu > build/test/test_render_objects_lit_wgpu_control.log 2>&1; st=$?; set -e
+  if [ $st = 77 ]; then echo "skip  test_render_objects_lit_wgpu_control (no WebGPU adapter)"
+  elif [ $st != 0 ] && grep -q "FAIL  frame [0-9]*: the set drawn alone differs from the scene with the rest hidden" \
+    build/test/test_render_objects_lit_wgpu_control.log; then echo "ok    test_render_objects_lit_wgpu_control"
+  else echo "FAIL  test_render_objects_lit_wgpu_control (the control passed)"; fail=1; fi
   # texture sampling (mipmaps, anisotropy, sampler fields changed after the upload): GLES and WebGPU draw the same
   "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -DT3_WGPU -I include -I src -I "$ND/include" test/test_texture_parity.c \
     build/native-wgpu/libthree.a -L "$ND/lib" -lwebgpu_dawn -Wl,-rpath,"$ND/lib" -lEGL -lGLESv2 -lz -lm -o build/test/test_texture_parity
