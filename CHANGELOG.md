@@ -5,6 +5,32 @@ What each release added, changed and fixed. Releases are git tags named
 says which one a checkout is. Releases before 0.186.19 are described by their
 tag's commit message.
 
+## v0.187.24 (2026-11-28)
+
+### Fixed
+- **GLES: a skinned crowd no longer costs the main thread a millisecond a frame** (a regression of 0.187.23). Each
+  skinned or morphed draw wrote its bone matrices (or morph influences) to the draw ring by itself: a
+  `glMapBufferRange`, a `glUnmapBuffer` and a fence poll a draw, each of which waits for Mesa's glthread driver thread.
+  They are now packed after the per-draw blocks of the render call or caster pass they draw in and go up with them,
+  one write; a draw outside the prepared lists still writes its own. A third-person scene with 34 animated figures on
+  a Radeon RX 7600 (radeonsi): the frame's CPU time 1.2 ms lower than 0.187.23's in every one of 8 paired rounds.
+  `T3_TEST_RING_SLICE_EACH=1` writes a slice a draw again (a control). The same packing applies in a cart, where each
+  of those writes was a `glBufferSubData` crossing into the host.
+
+### Changed
+- **GLES: the uniform ring's store is `GL_DYNAMIC_DRAW`**, not `GL_STREAM_DRAW`: radeonsi keeps a stream buffer in
+  system memory, so on a discrete card every per-draw block and bone matrix was read over the bus (about 0.15 ms of
+  GPU time a frame in the scene above). `T3_TEST_RING_STREAM=1` is the control.
+
+### Added
+- `t3_renderer_render_objects(renderer, scene, camera, objects, count)` (`T3_RENDER_OBJECTS`): draws only the listed
+  meshes with the camera, as a render would draw them, without walking the scene: their world matrices as they are,
+  culled, sorted and drawn as a render's lists into the current target; no lights (for unlit materials), no fog, no
+  background, no shadow maps. `test/test_render_objects.c`: a set of boxes, an instanced mesh and two skinned walkers
+  drawn alone equals the whole scene drawn with everything else hidden, byte for byte; the control adds a mesh.
+- `test/test_ubo_ring.c` also counts the uniform buffer writes (at most 12 a frame; the control
+  `T3_TEST_CONTROL=each` must fail) and the stores' usage (`GL_DYNAMIC_DRAW`; `T3_TEST_CONTROL=stream` must fail).
+
 ## v0.187.23 (2026-11-27)
 
 ### Changed

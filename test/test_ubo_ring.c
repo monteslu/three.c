@@ -12,7 +12,14 @@
  * slices that wrapped round the ring held the right blocks. The control
  * (T3_TEST_CONTROL=1) sets T3_TEST_UBO_ORPHAN=1, the old way (a new store each
  * write): the frames still match and the count fails. glFlush ends each frame,
- * as a swap would. */
+ * as a swap would.
+ *
+ * The writes: every slice goes up with the slices of its render call or caster pass, the skinned draws' bone
+ * matrices packed after the per-draw blocks, so a frame writes the ring once a render call and once a caster pass
+ * (6 here), not once a skinned draw (the ring's writes are its glMapBufferRange calls, counted by --wrap; the
+ * programs' per-frame blocks go up with glBufferSubData and are not counted); every store is GL_DYNAMIC_DRAW (radeonsi keeps a GL_STREAM_DRAW buffer in system memory). Controls:
+ * T3_TEST_CONTROL=each (T3_TEST_RING_SLICE_EACH=1, a ring write a skinned draw, as 0.187.23) must fail the write
+ * count; T3_TEST_CONTROL=stream (T3_TEST_RING_STREAM=1) must fail the usage. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,11 +34,21 @@
 #define N 240
 #define FRAMES 300
 
-static unsigned ubo_stores;
+static unsigned ubo_stores, ubo_not_dynamic, ubo_writes, ubo_maps;
 void __real_glBufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
 void __wrap_glBufferData(GLenum target, GLsizeiptr size, const void *data, GLenum usage) {
-  if (target == GL_UNIFORM_BUFFER) ubo_stores++;
+  if (target == GL_UNIFORM_BUFFER) ubo_stores++, ubo_not_dynamic += usage != GL_DYNAMIC_DRAW;
   __real_glBufferData(target, size, data, usage);
+}
+void *__real_glMapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access);
+void *__wrap_glMapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access) {
+  if (target == GL_UNIFORM_BUFFER) ubo_writes++, ubo_maps++;
+  return __real_glMapBufferRange(target, offset, length, access);
+}
+void __real_glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
+void __wrap_glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void *data) {
+  if (target == GL_UNIFORM_BUFFER) ubo_writes++;
+  __real_glBufferSubData(target, offset, size, data);
 }
 
 static int setup(void) {
@@ -164,7 +181,10 @@ static t3_renderer *renderer(void) {
 }
 
 int main(void) {
-  if (getenv("T3_TEST_CONTROL")) setenv("T3_TEST_UBO_ORPHAN", "1", 1);
+  const char *ctl = getenv("T3_TEST_CONTROL");
+  if (ctl && !strcmp(ctl, "each")) setenv("T3_TEST_RING_SLICE_EACH", "1", 1);
+  else if (ctl && !strcmp(ctl, "stream")) setenv("T3_TEST_RING_STREAM", "1", 1);
+  else if (ctl) setenv("T3_TEST_UBO_ORPHAN", "1", 1);
   int st = setup();
   if (st) return st;
   world w;
@@ -172,12 +192,14 @@ int main(void) {
   t3_renderer *r = renderer();
   static uint8_t got[W * H * 4], want[W * H * 4];
   int fail = 0, checked = 0;
-  unsigned stores = 0;
+  unsigned stores = 0, writes = 0, max_maps = 0;
   for (int f = 1; f <= FRAMES; f++) {
     pose(&w, f);
-    unsigned before = ubo_stores;
+    unsigned before = ubo_stores, wb = ubo_writes, mb = ubo_maps;
     draw_frame(r, &w);
     stores += ubo_stores - before;
+    writes += ubo_writes - wb;
+    if (f > 1 && ubo_maps - mb > max_maps) max_maps = ubo_maps - mb;
     if (f == 1 || f == FRAMES / 2 || f == FRAMES) {
       glReadPixels(0, 0, W, H, GL_RGBA, GL_UNSIGNED_BYTE, got);
       /* the reference: a fresh renderer's one frame of the same state (its ring has not wrapped) */
@@ -201,6 +223,9 @@ int main(void) {
   if (e && *e) printf("renderer error: %s\n", e), fail = 1;
   printf("%u uniform buffer stores in %d frames of 3 renders (%d checked)\n", stores, FRAMES, checked);
   if (stores > 12) printf("FAIL: the per-draw blocks orphan their buffer (%u stores, at most 12 expected)\n", stores), fail = 1;
+  printf("%u uniform buffer writes in all; the ring written at most %u times a frame after the first (3 renders and their caster passes, %d skinned walkers)\n", writes, max_maps, WALKERS);
+  if (max_maps > 6) printf("FAIL: the bone matrices go up a draw at a time (the ring written %u times a frame, at most 6 expected)\n", max_maps), fail = 1;
+  if (ubo_not_dynamic) printf("FAIL: %u uniform buffer stores are not GL_DYNAMIC_DRAW\n", ubo_not_dynamic), fail = 1;
   t3_renderer_destroy(r);
   world_free(&w);
   return fail;

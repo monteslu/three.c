@@ -44,6 +44,9 @@ typedef struct {
    * per-draw uniform block in the frame's streamed buffer (-1: none) */
   struct t3_gen_gl *gen_gl;
   int gen_off;
+  /* GLES: the byte offset + 1 of the draw's bone matrices and morph influences in the same stream, packed after
+   * the per-draw blocks (0: not staged; the draw writes its own to the draw ring) */
+  int buf_at;
 } render_item;
 
 typedef struct {
@@ -134,6 +137,7 @@ struct t3_renderer {
   /* r187 shadowMap.autoUpdate (false: shadow_manual) */
   bool shadow_manual;
   bool shadow_hold;       /* t3_renderer_set_shadow_hold */
+  t3_object *const *only; int only_n;   /* t3_renderer_render_objects: the objects drawn instead of the scene's */
   t3_shadow_map_type shadow_map_type;
   t3_color_space output_color_space;
   t3_tone_mapping tone_mapping;
@@ -2591,6 +2595,15 @@ static void view_lists(t3_renderer *r, t3_scene *scene, t3_camera *cam, int o0, 
   r->caster_count = 0;
   r->fog = scene->fog.type != T3_FOG_NONE ? &scene->fog : NULL;
   batch_table_reset(r, r->m_n);
+  if (r->only) {   /* t3_renderer_render_objects: these alone, no lights, no fog */
+    r->fog = NULL;
+    for (int i = 0; i < r->only_n; i++) {
+      t3_object *o = r->only[i];
+      if (o && o->visible && (o->layers & cam->base.layers) && o->type != T3_AMBIENT_LIGHT && o->type != T3_HEMISPHERE_LIGHT &&
+          o->type != T3_DIRECTIONAL_LIGHT && o->type != T3_POINT_LIGHT && o->type != T3_SPOT_LIGHT)
+        project_one(r, o, -1);
+    }
+  } else
   project_scene(r, &scene->base, cam->base.layers);
   setup_lights(r, cam);
   ies_update_matrices(r);
@@ -2621,6 +2634,24 @@ static const t3_camera *mv_enter(t3_renderer *r, int k) {
     gl_scissor_box(r, true, v->vp[0], y, v->vp[2], v->vp[3]);
   }
   return v->cam;
+}
+
+void t3_renderer_render_objects(t3_renderer *r, t3_scene *scene, t3_camera *cam, t3_object *const *objects, int count) {
+  if (!r || !scene || !cam || cam->base.type == T3_ARRAY_CAMERA || count <= 0 || !objects) return;
+  bool hold = r->shadow_hold, au = scene->auto_update;
+  bool had_bg = scene->has_background;
+  t3_texture *bg = scene->background_texture;
+  r->only = objects, r->only_n = count;
+  r->shadow_hold = true;
+  scene->auto_update = false;
+  scene->has_background = false;
+  scene->background_texture = NULL;
+  t3_renderer_render(r, scene, cam);
+  scene->background_texture = bg;
+  scene->has_background = had_bg;
+  scene->auto_update = au;
+  r->shadow_hold = hold;
+  r->only = NULL, r->only_n = 0;
 }
 
 void t3_renderer_render(t3_renderer *r, t3_scene *scene, t3_camera *cam) {

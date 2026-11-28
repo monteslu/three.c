@@ -1130,6 +1130,19 @@ static bool gl_ring_orphan(void) {
   if (on < 0) on = getenv("T3_TEST_UBO_ORPHAN") != NULL;
   return on;
 }
+/* T3_TEST_RING_STREAM=1 (a control): the ring's store is a GL_STREAM_DRAW buffer, as in v0.187.23 */
+static bool gl_ring_stream(void) {
+  static int on = -1;
+  if (on < 0) on = getenv("T3_TEST_RING_STREAM") != NULL;
+  return on;
+}
+/* T3_TEST_RING_SLICE_EACH=1 (a control): each draw writes its own bone matrices and morph influences to the draw
+ * ring, one ring write a draw, as in v0.187.23 */
+static bool gl_ring_slice_each(void) {
+  static int on = -1;
+  if (on < 0) on = getenv("T3_TEST_RING_SLICE_EACH") != NULL;
+  return on;
+}
 static void gl_ring_drop_fences(struct gl_ring *g) {
 #ifndef T3_WASMCART
   for (int i = 0; i < g->nr; i++) glDeleteSync((GLsync)g->reg[(g->r0 + i) % GL_RING_REGS].fence);
@@ -1171,7 +1184,10 @@ static void gl_ring_grow(struct gl_ring *g, size_t size) {
   if (g->buf) glDeleteBuffers(1, &g->buf);
   glGenBuffers(1, &g->buf);
   glBindBuffer(GL_UNIFORM_BUFFER, g->buf);
-  glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)size, NULL, GL_STREAM_DRAW);
+  /* DYNAMIC, not STREAM: radeonsi keeps a stream buffer in system memory (GTT), so on a discrete card every draw's
+   * block and bone matrices were read over PCIe; a dynamic one is in VRAM the CPU can write. T3_TEST_RING_STREAM=1
+   * (a control) makes it a stream buffer again. */
+  glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)size, NULL, gl_ring_stream() ? GL_STREAM_DRAW : GL_DYNAMIC_DRAW);
   g->size = size;
   g->head = 0;
   g->pend = false;
@@ -1258,6 +1274,53 @@ static size_t gl_ring_write(struct gl_ring *g, const void *data, size_t n, size_
   g->pend_hi = off + n;
   return off;
 }
+/* a draw's extra buffer i as its program reads it: a skinned mesh's bone matrices, or the morph influences (written
+ * into mv, 4 x 64 floats); NULL for any other buffer (an extension's own) */
+static const void *gen_buf_slice(const t3_gen_gl *gl, int i, const t3_object *o, const t3_geometry *g, float *mv) {
+  if (!gl->buf[i].bytes) return NULL;
+  if (gl->buf[i].kind == T3_SRC_MORPH_INFLUENCES) {
+    if (gl->buf[i].bytes > sizeof(float) * 4 * 64) return NULL;
+    const t3_mesh *mesh = (const t3_mesh *)o;
+    memset(mv, 0, sizeof(float) * 4 * 64);
+    int nm = g->morph_count < 64 ? g->morph_count : 64;
+    for (int k = 0; k < nm; k++) mv[k * 4] = mesh->morph_influences ? mesh->morph_influences[k] : 0;
+    return mv;
+  }
+  if (gl->buf[i].kind == T3_SRC_BONES && o->type == T3_SKINNED_MESH) return ((const t3_skinned_mesh *)o)->skeleton->bone_matrices;
+  return NULL;
+}
+/* GLES: a draw's bone matrices and morph influences packed into the stage its per-draw blocks go to, each slice at
+ * the uniform-buffer offset alignment, so they go up with the blocks in one write (one ring write a draw cost a map,
+ * an unmap and a fence poll each: with Mesa's glthread every one of them waits for the driver thread). Returns the
+ * offset + 1 of the first slice (0: none). Slices equal to the last draw's (a skinned mesh's groups, one after
+ * another) reuse its offset. */
+static int gen_stage_bufs(t3_renderer *r, uint8_t **stage, size_t *stage_n, size_t *cap, const t3_gen_gl *gl,
+                          const t3_object *o, const t3_geometry *g, int *prev_at, size_t *prev_n) {
+  if (!gl->n_buffers) return 0;
+  size_t a = (size_t)r->gen_align, start = (*stage_n + a - 1) / a * a, end = start;
+  float mv[4 * 64];
+  int slices = 0;
+  for (int i = 0; i < gl->n_buffers; i++) {
+    const void *src = gen_buf_slice(gl, i, o, g, mv);
+    if (!src) continue;
+    size_t off = (end + a - 1) / a * a, n = gl->buf[i].bytes;
+    if (off + n > *cap) {
+      *cap = (off + n) * 2 + 4096;
+      *stage = realloc(*stage, *cap);
+      T3_CHECK_ALLOC(*stage);
+    }
+    memcpy(*stage + off, src, n);
+    end = off + n;
+    slices++;
+  }
+  if (!slices) return 0;
+  size_t len = end - start;
+  if (*prev_at && *prev_n == len && !memcmp(*stage + (*prev_at - 1), *stage + start, len)) return *prev_at;   /* (not kept) */
+  *stage_n = end;
+  *prev_at = (int)start + 1;
+  *prev_n = len;
+  return *prev_at;
+}
 static void gen_collect_casters(t3_renderer *r, t3_object *o, const t3_camera *sc);
 /* the caster draws: on GLES collected, their per-draw blocks packed and
  * uploaded with one call, then drawn (one upload a shadow map, not one a
@@ -1279,12 +1342,14 @@ static void gen_casters(t3_renderer *r, t3_object *o, const t3_camera *sc) {
   r->cast_stage_n = 0;
   r->ext_cam = sc;
   t3_gen_gl *prev_gl = NULL;
-  int prev_off = -1;
+  int prev_off = -1, prev_at = 0;
+  size_t prev_bn = 0;
   for (int i = 0; i < r->cast_n; i++) {
     struct cast_item *c = &r->cast[i];
     t3_gen_gl *gl = c->gl;
     c->it.gen_gl = gl;
     c->it.gen_off = -1;
+    c->it.buf_at = gen_stage_bufs(r, &r->cast_stage, &r->cast_stage_n, &r->cast_stage_cap, gl, c->it.object, c->it.geometry, &prev_at, &prev_bn);
     if (gl->draw_group < 0) continue;
     gen_set_aux(r, c->it.material);
     gen_fill_draw(r, gl, c->it.material, c->it.object, c->it.batch_count > 0);
@@ -1564,14 +1629,17 @@ static void gen_bind_textures_g(t3_renderer *r, t3_gen_gl *gl, const t3_material
 static void gen_prepare_list(t3_renderer *r, render_list *l, const t3_camera *cam) {
   r->ext_cam = cam;
   t3_gen_gl *prev_gl = NULL;
-  int prev_off = -1;
+  int prev_off = -1, prev_at = 0;
+  size_t prev_bn = 0;
   for (int i = 0; i < l->n; i++) {
     render_item *it = &l->items[i];
     it->gen_gl = NULL;
     it->gen_off = -1;
+    it->buf_at = 0;
     t3_gen_gl *gl = gen_pick(r, it->material, it->object, it->geometry, it->batch_count > 0);
     if (!gl) continue;
     it->gen_gl = gl;
+    it->buf_at = gen_stage_bufs(r, &r->gen_stage, &r->gen_stage_n, &r->gen_stage_cap, gl, it->object, it->geometry, &prev_at, &prev_bn);
     if (gl->draw_group < 0) continue;
     gen_set_aux(r, it->material);
     gen_fill_draw(r, gl, it->material, it->object, it->batch_count > 0);
@@ -1727,18 +1795,18 @@ static void gen_draw_gl(t3_renderer *r, const render_item *it, const t3_camera *
   /* the extra buffers: bone matrices and morph influences, per draw, each a slice of the draw ring bound by range
    * (not written into the program's one buffer, which the draw before may still be reading: some drivers then wait
    * for it, between every pair of draws) */
+  /* (staged with the per-draw blocks: the slices follow each other from buf_at in the stream this draw binds from) */
+  size_t staged = it->buf_at && it->gen_gl == gl && r->gen_stream_ubo && !gl_ring_slice_each() ? r->gen_stream_base + (size_t)(it->buf_at - 1) : 0;
   for (int i = 0; i < gl->n_buffers; i++) {
-    const void *slice = NULL;
     float mv[4 * 64];
-    if (gl->buf[i].kind == T3_SRC_MORPH_INFLUENCES) {
-      const t3_mesh *mesh = (const t3_mesh *)o;
-      memset(mv, 0, sizeof mv);
-      int nm = g->morph_count < 64 ? g->morph_count : 64;
-      for (int k = 0; k < nm; k++) mv[k * 4] = mesh->morph_influences ? mesh->morph_influences[k] : 0;
-      slice = mv;
+    const void *slice = gen_buf_slice(gl, i, o, g, mv);
+    if (slice && staged) {
+      size_t a = (size_t)r->gen_align, at = (staged + a - 1) / a * a;
+      glBindBufferRange(GL_UNIFORM_BUFFER, gl->buf[i].point, r->gen_stream_ubo, (GLintptr)at, (GLsizeiptr)gl->buf[i].bytes);
+      staged = at + gl->buf[i].bytes;
+      continue;
     }
-    if (gl->buf[i].kind == T3_SRC_BONES && o->type == T3_SKINNED_MESH) slice = ((const t3_skinned_mesh *)o)->skeleton->bone_matrices;
-    if (slice && gl->buf[i].bytes && gl->buf[i].bytes <= (gl->buf[i].kind == T3_SRC_MORPH_INFLUENCES ? sizeof mv : (size_t)-1)) {
+    if (slice) {
       bool moved;
       if (!r->gen_align) {
         glGetIntegerv(0x8A34 /* GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT */, &r->gen_align);

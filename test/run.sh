@@ -93,9 +93,15 @@ fi
 # the control draws the casters one by one in both renderers and must fail
 # the per-draw block ring: 300 frames of three renders with shadows make a handful of uniform buffer stores, not one a
 # render call, and wrapped slices draw the same picture as a fresh renderer; the control orphans each write and must fail
-"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_ubo_ring.c build/native/libthree.a -Wl,--wrap=glBufferData -lEGL -lGLESv2 -lz -lm -o build/test/test_ubo_ring
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_ubo_ring.c build/native/libthree.a -Wl,--wrap=glBufferData,--wrap=glMapBufferRange,--wrap=glBufferSubData -lEGL -lGLESv2 -lz -lm -o build/test/test_ubo_ring
 run test_ubo_ring env EGL_PLATFORM=surfaceless ./build/test/test_ubo_ring
 run test_ubo_ring_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_ubo_ring >/dev/null 2>&1"
+run test_ubo_ring_control_each sh -c "! T3_TEST_CONTROL=each EGL_PLATFORM=surfaceless ./build/test/test_ubo_ring >/dev/null 2>&1"
+run test_ubo_ring_control_stream sh -c "! T3_TEST_CONTROL=stream EGL_PLATFORM=surfaceless ./build/test/test_ubo_ring >/dev/null 2>&1"
+# t3_renderer_render_objects: the set drawn alone equals the scene with the rest hidden; the control adds a mesh
+"$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_render_objects.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_render_objects
+run test_render_objects env EGL_PLATFORM=surfaceless ./build/test/test_render_objects
+run test_render_objects_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_render_objects >/dev/null 2>&1"
 "$CC" -std=c99 -O2 -D_POSIX_C_SOURCE=200809L -I include -I src test/test_cast_batch.c build/native/libthree.a -lEGL -lGLESv2 -lz -lm -o build/test/test_cast_batch
 run test_cast_batch env EGL_PLATFORM=surfaceless ./build/test/test_cast_batch
 run test_cast_batch_control sh -c "! T3_TEST_CONTROL=1 EGL_PLATFORM=surfaceless ./build/test/test_cast_batch >/dev/null 2>&1"

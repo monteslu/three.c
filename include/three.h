@@ -37,7 +37,7 @@ extern "C" {
 
 #define T3_REVISION "187"   /* three.js 0.187.0 */
 /* three.c's own version: 0.<three.js revision>.<three.c release> */
-#define T3_VERSION "0.187.23"
+#define T3_VERSION "0.187.24"
 
 /* ── math ─────────────────────────────────────────────────────────── */
 typedef struct { float x, y; } t3_vec2;
@@ -1212,6 +1212,17 @@ void t3_renderer_render_opaque(t3_renderer *r, t3_scene *scene, t3_camera *camer
 void t3_renderer_render_transparent(t3_renderer *r, t3_scene *scene, t3_camera *camera);
 /* t3_renderer_render_transparent exists (an embedder can test for it) */
 #define T3_RENDER_TRANSPARENT 1
+/* Draw only these objects (meshes, each on its own: not its children) with the camera, as a render would draw
+ * them, without walking the scene: an embedder's pass over a few meshes of a large scene (the meshes that moved,
+ * into a motion target). Their world matrices are used as they are (the scene's auto update is not run), they are
+ * culled against the camera's frustum, sorted and drawn as a render's opaque and transparent lists, into the
+ * current target. No light is gathered (meant for unlit materials: a lit one draws as with no lights), the scene's
+ * fog and background are not used, no shadow map is drawn (as t3_renderer_set_shadow_hold), and the
+ * target is cleared only as a render with autoClear would (turn it off to draw over what is there). An ArrayCamera
+ * is not taken (nothing is drawn). */
+void t3_renderer_render_objects(t3_renderer *r, t3_scene *scene, t3_camera *camera, t3_object *const *objects, int count);
+/* t3_renderer_render_objects exists */
+#define T3_RENDER_OBJECTS 1
 /* A depth prepass for an embedder's scene target. Opaque material shaders
  * preserve alpha discard/displacement, but write no colour. Skips sky/output
  * conversion; normal clearing/target rules apply. Restores colour writes on

@@ -382,16 +382,29 @@ unsynchronized `glMapBufferRange` once the fence put after the draws that
 read the slices before it has signalled (frames later, in practice); a slice
 that would land on one still in use, or that does not fit, makes a new store
 twice the size instead of waiting, up to 16 MB, past which it waits for the
-oldest slice in the way. Each draw's bone matrices and morph influences go to
-a second ring the same way, a slice a draw bound by range, where each draw
-used to write them into the program's one buffer while the draw before might
-still be reading it. In a cart (the wasmcart `gl` module has no
+oldest slice in the way. The store is a `GL_DYNAMIC_DRAW` buffer: radeonsi
+keeps a `GL_STREAM_DRAW` one in system memory, so on a discrete card every
+block was read over the bus. Each draw's bone matrices and morph influences
+are packed into the same slice, after the per-draw blocks of the render call
+or caster pass, and bound by range: one write a render call, where a write a
+skinned draw (each a map, an unmap and a fence poll, and with Mesa's glthread
+each of those waits for the driver thread) cost a crowd of figures about a
+millisecond of the main thread a frame. A draw outside the prepared lists
+writes its own to a second ring. In a cart (the wasmcart `gl` module has no
 unsynchronized map) the slices go up with `glBufferSubData`, which GL orders
 against the draws that read them, and no fence is kept.
 `test/test_ubo_ring.c` checks it: 300 frames of three render calls with
 shadows, 240 boxes of a material each and six skinned walkers make 9 uniform
-buffer stores in all where the orphaning made 7210, and the frames match a
-fresh renderer's.
+buffer stores in all where the orphaning made 7210, at most a few writes a
+frame (not one a skinned draw), every store `GL_DYNAMIC_DRAW`, and the frames
+match a fresh renderer's.
+
+`t3_renderer_render_objects` draws a list of meshes with a camera as a render
+would, without walking the scene (an embedder's pass over the few meshes that
+moved, into a motion target): their world matrices as they are, culled,
+sorted and drawn as the opaque and transparent lists, with no lights, fog,
+background or shadow maps. `test/test_render_objects.c` holds it to the
+picture of a whole-scene render with everything else hidden, byte for byte.
 
 On GLES the GLSL is compiled with fixed attribute locations. In the default
 fast path the program also gets an epilogue that encodes sRGB, so it can
